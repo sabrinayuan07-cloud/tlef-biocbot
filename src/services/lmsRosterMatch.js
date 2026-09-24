@@ -2,14 +2,13 @@
  * Matches an LMS course roster against BiocBot accounts.
  *
  * Grade snapshots are stored against a BiocBot `localUserId`, so before any
- * grades can be imported the two systems have to agree on who is who. The
- * strongest key at UBC is Canvas's integration_id (the CWL PUID). Student
- * number, email, and username remain fallbacks for deployments or tokens where
- * that field is unavailable. Display names are never
- * used to match automatically — "J. Smith" vs "Jane Smith" vs a second Jane
- * Smith is exactly the ambiguity that silently attaches one student's grades to
- * another. Anyone who cannot be matched is reported back so the instructor can
- * fix it at the source instead of guessing.
+ * grades can be imported the two systems have to agree on who is who. Only two
+ * keys are trusted, in this order: Canvas's integration_id (the CWL PUID at
+ * UBC), then the email address. Weaker keys — usernames, the part of an email
+ * before the @, display names — are never used: each can pair a real student
+ * with somebody else's account and file their grades there. Anyone who cannot
+ * be matched is reported back so the instructor can fix it at the source
+ * instead of guessing.
  */
 
 const { normalizeEmail } = require('./authorization');
@@ -21,15 +20,11 @@ function normalizeKey(value) {
     return normalized || null;
 }
 
-function emailLocalPart(email) {
-    const normalized = normalizeEmail(email);
-    return normalized?.includes('@') ? normalized.split('@')[0] : null;
-}
-
 /**
  * Matching rules, strongest evidence first. Each rule names the key to read
  * from the LMS roster entry and the key to read from the BiocBot account; a
- * rule only fires when both sides produce the same non-empty value.
+ * rule only fires when both sides produce the same non-empty value and the
+ * rule's `conflicts` check (if any) does not veto the pair.
  */
 const MATCH_STRATEGIES = Object.freeze([
     {
@@ -40,31 +35,19 @@ const MATCH_STRATEGIES = Object.freeze([
         localKeys: (user) => [normalizeKey(user.puid)]
     },
     {
-        id: 'sis',
-        label: 'student number',
-        // Populated on BiocBot accounts created by the academic-API roster sync.
-        lmsKey: (entry) => normalizeKey(entry.sisId),
-        localKeys: (user) => [normalizeKey(user.academicStudentId)]
-    },
-    {
         id: 'email',
         label: 'email address',
         lmsKey: (entry) => normalizeEmail(entry.email),
-        localKeys: (user) => [normalizeEmail(user.email)]
-    },
-    {
-        id: 'username',
-        label: 'username',
-        lmsKey: (entry) => normalizeKey(entry.loginId),
-        localKeys: (user) => [normalizeKey(user.username)]
-    },
-    {
-        id: 'email-local-part',
-        label: 'email name before the @',
-        // Covers deployments where BiocBot stores the CWL as the username and
-        // the LMS only exposes the full institutional email.
-        lmsKey: (entry) => emailLocalPart(entry.email),
-        localKeys: (user) => [normalizeKey(user.username)]
+        localKeys: (user) => [normalizeEmail(user.email)],
+        // Two different PUIDs are two different people, whatever the email
+        // says, and an account whose PUID is on another roster row belongs to
+        // that row. The email fallback is only for rows where a PUID is missing.
+        conflicts: (entry, user, rosterPuids) => {
+            const integrationId = normalizeKey(entry.integrationId);
+            const puid = normalizeKey(user.puid);
+            if (!puid) return false;
+            return integrationId ? integrationId !== puid : rosterPuids.has(puid);
+        }
     }
 ]);
 
@@ -104,8 +87,7 @@ async function listLocalCandidates(db, course) {
         username: 1,
         email: 1,
         displayName: 1,
-        puid: 1,
-        academicStudentId: 1
+        puid: 1
     }).toArray();
 
     return users.map((user) => ({
@@ -113,7 +95,6 @@ async function listLocalCandidates(db, course) {
         username: user.username || '',
         email: user.email || '',
         puid: user.puid || '',
-        academicStudentId: user.academicStudentId || '',
         displayName: user.displayName || user.username || String(user.userId)
     }));
 }
@@ -145,13 +126,39 @@ function indexLocalCandidates(localUsers) {
     return indexes;
 }
 
-function matchRosterEntry(entry, indexes) {
+/**
+ * Pairs roster rows with accounts one strategy at a time across the whole
+ * roster, so a PUID match anywhere wins over an email match anywhere. Matching
+ * row by row instead would let an earlier row take an account by email before
+ * the row carrying that account's PUID was reached.
+ *
+ * The mapping collection holds one row per local user, so a later row that
+ * reaches an already-claimed account is a data problem in the LMS (a duplicate
+ * account) and is reported rather than silently overwriting the first.
+ * @returns {Array<{ localUser: Object, matchedBy: string } | { duplicate: true } | null>}
+ *   One result per roster entry, in roster order.
+ */
+function matchRosterEntries(entries, indexes) {
+    const rosterPuids = new Set(entries.map((entry) => normalizeKey(entry.integrationId)).filter(Boolean));
+    const results = entries.map(() => null);
+    const claimedLocalUserIds = new Set();
+
     for (const strategy of MATCH_STRATEGIES) {
-        const key = strategy.lmsKey(entry);
-        const localUser = key ? indexes.get(strategy.id).get(key) : null;
-        if (localUser) return { localUser, matchedBy: strategy.id };
+        entries.forEach((entry, index) => {
+            if (results[index]) return;
+            const key = strategy.lmsKey(entry);
+            const localUser = key ? indexes.get(strategy.id).get(key) : null;
+            if (!localUser) return;
+            if (claimedLocalUserIds.has(localUser.localUserId)) {
+                results[index] = { duplicate: true };
+                return;
+            }
+            if (strategy.conflicts?.(entry, localUser, rosterPuids)) return;
+            claimedLocalUserIds.add(localUser.localUserId);
+            results[index] = { localUser, matchedBy: strategy.id };
+        });
     }
-    return null;
+    return results;
 }
 
 /**
@@ -173,27 +180,42 @@ async function matchCourseRoster({ db, course, provider, roster, matchedBy }) {
     const unmatchedLmsStudents = [];
     const claimedLocalUserIds = new Set();
 
-    for (const entry of roster.entries) {
-        const match = matchRosterEntry(entry, indexes);
-        const entryExternalUserId = externalUserId(entry);
-        // The mapping collection holds one row per local user, so a second LMS
-        // row claiming an already-matched account is a data problem in the LMS
-        // (duplicate account) and is surfaced rather than silently overwritten.
-        if (!match || claimedLocalUserIds.has(match.localUser.localUserId)) {
+    matchRosterEntries(roster.entries, indexes).forEach((match, index) => {
+        const entry = roster.entries[index];
+        if (!match?.localUser) {
             unmatchedLmsStudents.push({
-                externalUserId: entryExternalUserId,
+                externalUserId: externalUserId(entry),
                 name: entry.name,
                 email: entry.email,
-                reason: match ? 'duplicate-biocbot-account' : 'no-biocbot-account'
+                reason: match?.duplicate ? 'duplicate-biocbot-account' : 'no-biocbot-account'
             });
-            continue;
+            return;
         }
         claimedLocalUserIds.add(match.localUser.localUserId);
         matched.push({ entry, ...match });
+    });
+
+    // Clear every row this sync does not reproduce exactly — students who left
+    // the LMS course, and accounts now paired with a different LMS user —
+    // before writing. Upserting first would collide with the unique
+    // local-user index whenever an account moves to a new LMS user id.
+    const mappings = db.collection('lms_identity_mappings');
+    const pairs = new Map(matched.map(({ entry, localUser }) => [externalUserId(entry), localUser.localUserId]));
+    const existingMappings = await mappings.find({ courseId: course.courseId, provider, externalCourseId }).toArray();
+    const staleExternalIds = existingMappings
+        .filter((mapping) => pairs.get(String(mapping.externalUserId)) !== String(mapping.localUserId))
+        .map((mapping) => String(mapping.externalUserId));
+    if (staleExternalIds.length) {
+        await mappings.deleteMany({
+            courseId: course.courseId,
+            provider,
+            externalCourseId,
+            externalUserId: { $in: staleExternalIds }
+        });
     }
 
     if (matched.length) {
-        await db.collection('lms_identity_mappings').bulkWrite(matched.map(({ entry, localUser, matchedBy: strategy }) => ({
+        await mappings.bulkWrite(matched.map(({ entry, localUser, matchedBy: strategy }) => ({
             updateOne: {
                 filter: {
                     courseId: course.courseId,
@@ -215,16 +237,6 @@ async function matchCourseRoster({ db, course, provider, roster, matchedBy }) {
             }
         })));
     }
-
-    // Anyone who dropped the course in the LMS should stop appearing here, and
-    // stale rows would also collide with the unique local-user index above.
-    const keptExternalIds = matched.map(({ entry }) => externalUserId(entry));
-    await db.collection('lms_identity_mappings').deleteMany({
-        courseId: course.courseId,
-        provider,
-        externalCourseId,
-        externalUserId: { $nin: keptExternalIds }
-    });
 
     return {
         provider,
@@ -259,9 +271,9 @@ async function syncCourseRoster({ db, course, provider, client, externalCourseId
     const toolkit = injectedToolkit || loadRosterToolkit();
     const entries = await toolkit[provider].getCourseUsers(client, externalCourseId);
     const coverage = toolkit.rosterFieldCoverage(entries);
-    if (entries.length && !entries.some((entry) => entry.integrationId || entry.sisId || entry.email || entry.loginId)) {
+    if (entries.length && !entries.some((entry) => entry.integrationId || entry.email)) {
         console.warn(
-            `⚠️ ${provider} roster for course ${externalCourseId} exposed no integration id, student number, email, or login id — nothing can be matched.`
+            `⚠️ ${provider} roster for course ${externalCourseId} exposed no integration id or email — nothing can be matched.`
         );
     }
     const report = await matchCourseRoster({
@@ -274,12 +286,54 @@ async function syncCourseRoster({ db, course, provider, client, externalCourseId
     return { ...report, coverage };
 }
 
+const CANVAS_ENROLLMENT_CHECK_CONCURRENCY = 4;
+
+/**
+ * Which of these Canvas users Canvas confirms have no active or invited
+ * student enrollment left in the course, in any section.
+ *
+ * Absence from a roster read proves nothing on its own: Canvas filters roster
+ * reads to the reader's sections, so to a teacher limited to one section a
+ * student who moved to another section looks exactly like one who left. Asking
+ * for one user's enrollments in the course (user_id=...) is answered from all
+ * of that user's enrollments without the section filter, for anyone who can
+ * read the roster.
+ *
+ * Fails safe: a user whose lookup errors is never reported as having left.
+ * @returns {Promise<Set<string>>}
+ */
+async function confirmLeftCanvasCourse(client, externalCourseId, externalUserIds) {
+    const path = `/courses/${encodeURIComponent(String(externalCourseId))}/enrollments`;
+    const pending = [...new Set(externalUserIds.map(String))];
+    const left = new Set();
+
+    async function worker() {
+        while (pending.length) {
+            const userId = pending.shift();
+            try {
+                const enrollments = await client.getAll(path, {
+                    user_id: userId,
+                    type: ['StudentEnrollment'],
+                    state: ['active', 'invited']
+                });
+                if (!enrollments.length) left.add(userId);
+            } catch (error) {
+                console.warn(`⚠️ Could not confirm Canvas enrollment for user ${userId} in course ${externalCourseId}: ${error.message}`);
+            }
+        }
+    }
+
+    await Promise.all(Array.from({ length: CANVAS_ENROLLMENT_CHECK_CONCURRENCY }, worker));
+    return left;
+}
+
 module.exports = {
     MATCH_STRATEGIES,
     SUPPORTED_PROVIDERS,
+    confirmLeftCanvasCourse,
     indexLocalCandidates,
     listLocalCandidates,
     matchCourseRoster,
-    matchRosterEntry,
+    matchRosterEntries,
     syncCourseRoster
 };

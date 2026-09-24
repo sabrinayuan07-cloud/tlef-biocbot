@@ -323,9 +323,17 @@ async function readLmsJson(response) {
     try {
         return JSON.parse(text);
     } catch (error) {
+        // A reverse proxy that gives up on a request answers with its own HTML
+        // page, and BiocBot may still finish the work behind it.
+        if (response.status === 502 || response.status === 504) {
+            throw new Error(
+                `BiocBot did not answer (HTTP ${response.status}). If this was a long import or sync, it may `
+                + 'still be finishing — wait a minute and reload the page before trying again.'
+            );
+        }
         throw new Error(
             `LMS endpoint returned HTTP ${response.status} with a non-JSON response. ` +
-            'Check the staging LMS startup diagnostics to confirm its routes were mounted.'
+            'Check the server\'s LMS startup diagnostics to confirm its routes were mounted.'
         );
     }
 }
@@ -447,11 +455,8 @@ function gradeLabel(value) {
 }
 
 const MATCH_STRATEGY_LABELS = {
-    integration: 'Canvas integration ID',
-    sis: 'student number',
-    email: 'email',
-    username: 'username',
-    'email-local-part': 'email name'
+    integration: 'PUID (Canvas integration ID)',
+    email: 'email'
 };
 
 function providerLabel(provider) {
@@ -533,6 +538,10 @@ function renderUnmatchedPanel(match) {
     const noBiocBotAccount = lms.filter((entry) => entry.reason === 'no-biocbot-account');
     const identityConflicts = lms.filter((entry) => entry.reason !== 'no-biocbot-account');
     const local = match?.unmatchedBiocBotStudents || [];
+    const dropCandidates = match?.dropCandidates || [];
+    const dropCandidateIds = new Set(dropCandidates.map((entry) => String(entry.localUserId)));
+    const accessDisabled = local.filter((entry) => entry.accessDisabled);
+    const notOnRoster = local.filter((entry) => !entry.accessDisabled && !dropCandidateIds.has(String(entry.localUserId)));
     if (!lms.length && !local.length) {
         panel.hidden = true;
         return;
@@ -547,7 +556,7 @@ function renderUnmatchedPanel(match) {
     const coveragePercent = coverage.total
         ? Math.round(((coverage.integrationId || 0) / coverage.total) * 100)
         : 0;
-    const canDrop = match.prune?.allowed && match.syncToken && local.length > 0;
+    const canDrop = match.prune?.allowed && match.syncToken && dropCandidates.length > 0;
     body.innerHTML = `
         ${match.provider === 'canvas' ? `
             <p class="lms-roster-coverage"><strong>Canvas integration_id coverage:</strong> ${coveragePercent}% (${coverage.integrationId || 0}/${coverage.total || 0})</p>
@@ -566,14 +575,14 @@ function renderUnmatchedPanel(match) {
             <ul>${list(identityConflicts, (entry) => `${escapeHTML(entry.name)}${entry.email ? ` &lt;${escapeHTML(entry.email)}&gt;` : ''}`)}</ul>
             </section>
         ` : ''}
-        ${local.length ? `
+        ${dropCandidates.length ? `
             <section class="lms-unmatched-group">
-            <p><strong>In BiocBot, not in ${escapeHTML(provider)} (${local.length})</strong></p>
-            <p>These are soft-drop candidates. Disabling access keeps their account and history intact.</p>
-            <ul>${list(local, (entry) => `${escapeHTML(entry.displayName)}${entry.email ? ` &lt;${escapeHTML(entry.email)}&gt;` : ' (no email on file)'}`)}</ul>
+            <p><strong>Left the ${escapeHTML(provider)} course (${dropCandidates.length})</strong></p>
+            <p>An earlier sync put these students on this course from ${escapeHTML(provider)}, and ${escapeHTML(provider)} confirms they are no longer enrolled in it, in any section. Disabling access keeps their account and history intact.</p>
+            <ul>${list(dropCandidates, (entry) => `${escapeHTML(entry.displayName)}${entry.email ? ` &lt;${escapeHTML(entry.email)}&gt;` : ' (no email on file)'}`)}</ul>
             ${canDrop ? `
                 <button id="drop-unmatched-lms-students" class="btn-small btn-danger" type="button">
-                    Disable access for ${local.length} student${local.length === 1 ? '' : 's'}
+                    Disable access for ${dropCandidates.length} student${dropCandidates.length === 1 ? '' : 's'}
                 </button>
             ` : `
                 <p class="lms-prune-disabled">Drop action unavailable: ${match.provider !== 'canvas'
@@ -586,6 +595,20 @@ function renderUnmatchedPanel(match) {
             `}
             </section>
         ` : ''}
+        ${notOnRoster.length ? `
+            <section class="lms-unmatched-group">
+            <p><strong>In BiocBot, not on the synced ${escapeHTML(provider)} roster (${notOnRoster.length})</strong></p>
+            <p>Nothing shows these students left the ${escapeHTML(provider)} course. They may have joined with a course code, have no PUID or email that matches a ${escapeHTML(provider)} student, or be in a section your ${escapeHTML(provider)} account cannot see. Syncing does not change their access.</p>
+            <ul>${list(notOnRoster, (entry) => `${escapeHTML(entry.displayName)}${entry.email ? ` &lt;${escapeHTML(entry.email)}&gt;` : ' (no email on file)'}`)}</ul>
+            </section>
+        ` : ''}
+        ${accessDisabled.length ? `
+            <section class="lms-unmatched-group">
+            <p><strong>Access already disabled (${accessDisabled.length})</strong></p>
+            <p>These students are not on the synced ${escapeHTML(provider)} roster, and their BiocBot access for this course is already off.</p>
+            <ul>${list(accessDisabled, (entry) => `${escapeHTML(entry.displayName)}${entry.email ? ` &lt;${escapeHTML(entry.email)}&gt;` : ' (no email on file)'}`)}</ul>
+            </section>
+        ` : ''}
     `;
     document.getElementById('drop-unmatched-lms-students')?.addEventListener('click', dropUnmatchedLmsStudents);
 }
@@ -594,7 +617,8 @@ async function dropUnmatchedLmsStudents() {
     const match = currentRosterMatch;
     const button = document.getElementById('drop-unmatched-lms-students');
     if (!match?.syncToken || !currentGradeCourseId || !button) return;
-    if (!confirm(`Disable course access for ${match.unmatchedBiocBotStudents.length} students who are not in Canvas? Their accounts and history will be kept.`)) return;
+    const count = match.dropCandidates?.length || 0;
+    if (!confirm(`Disable course access for ${count} student${count === 1 ? '' : 's'} who left the Canvas course? Their accounts and history will be kept.`)) return;
 
     button.disabled = true;
     button.textContent = 'Disabling access…';
@@ -624,9 +648,11 @@ async function dropUnmatchedLmsStudents() {
 
 /**
  * Fills the course picker from the provider's own course list and preselects
- * whichever course grades currently come from.
+ * whichever course grades currently come from. Only an `interactive` call —
+ * one the instructor started with a click — may send them off to Canvas to
+ * connect; a page load just offers the Connect button.
  */
-async function loadGradeCourseOptions(courseId, provider) {
+async function loadGradeCourseOptions(courseId, provider, { interactive = false } = {}) {
     const select = document.getElementById('lms-grade-course');
     const note = document.getElementById('lms-grades-source-note');
     const connectButton = document.getElementById('connect-lms-grade-provider');
@@ -648,7 +674,14 @@ async function loadGradeCourseOptions(courseId, provider) {
         );
         const result = await readLmsJson(response);
         if (!response.ok || !result.success) {
-            if (reauthorizeCanvas(provider, response)) return;
+            if (isCanvasNotConnected(provider, response, result)) {
+                if (interactive) {
+                    reauthorizeCanvas(provider, response, result);
+                } else {
+                    showUnlinkedGradeCourse(provider, `Connect ${providerLabel(provider)} to see or change the course grades come from.`);
+                }
+                return;
+            }
             throw new Error(result.message || `HTTP ${response.status}`);
         }
 
@@ -681,7 +714,7 @@ async function loadGradeCourseOptions(courseId, provider) {
     updateLinkCourseButton();
 }
 
-function showUnlinkedGradeCourse(provider) {
+function showUnlinkedGradeCourse(provider, noteText) {
     const select = document.getElementById('lms-grade-course');
     const note = document.getElementById('lms-grades-source-note');
     const connectButton = document.getElementById('connect-lms-grade-provider');
@@ -694,7 +727,7 @@ function showUnlinkedGradeCourse(provider) {
     select.disabled = true;
     if (note) {
         note.textContent = provider
-            ? `Connect ${providerLabel(provider)} when you are ready to choose a grade source.`
+            ? (noteText || `Connect ${providerLabel(provider)} when you are ready to choose a grade source.`)
             : '';
     }
     if (connectButton) {
@@ -712,7 +745,7 @@ async function connectLmsGradeProvider() {
 
     button.disabled = true;
     button.textContent = `Connecting ${providerLabel(provider)}…`;
-    await loadGradeCourseOptions(currentGradeCourseId, provider);
+    await loadGradeCourseOptions(currentGradeCourseId, provider, { interactive: true });
     button.disabled = false;
     button.textContent = `Connect ${providerLabel(provider)}`;
 }
@@ -743,7 +776,7 @@ async function linkLmsGradeCourse() {
         );
         const result = await readLmsJson(response);
         if (!response.ok || !result.success) {
-            if (reauthorizeCanvas(provider, response)) return;
+            if (reauthorizeCanvas(provider, response, result)) return;
             throw new Error(result.message || `HTTP ${response.status}`);
         }
 
@@ -821,12 +854,22 @@ async function loadLmsGrades(courseId, provider = '') {
 }
 
 /**
- * Canvas access can lapse while the page is open. Bouncing through its OAuth
- * flow and back is the only way to recover, so it is handled here rather than
+ * Whether the server said BiocBot holds no usable Canvas connection for this
+ * instructor. Canvas refusing a request (403, CANVAS_ACCESS_DENIED) is not
+ * this: connecting again cannot fix a permission, and a redirect would loop.
+ */
+function isCanvasNotConnected(provider, response, result) {
+    return provider === 'canvas' && response.status === 401 && result?.connected === false;
+}
+
+/**
+ * Canvas access can lapse while the page is open. When an action the
+ * instructor started finds it gone, bouncing through Canvas's OAuth flow and
+ * back is the only way to recover, so it is handled here rather than
  * surfacing a bare 401 the instructor cannot act on.
  */
-function reauthorizeCanvas(provider, response) {
-    if (response.status !== 401 || provider !== 'canvas') return false;
+function reauthorizeCanvas(provider, response, result) {
+    if (!isCanvasNotConnected(provider, response, result)) return false;
     const returnTo = `${window.location.pathname}${window.location.search}`;
     window.location.assign(`/api/lms/canvas/auth/login?returnTo=${encodeURIComponent(returnTo)}`);
     return true;
@@ -855,7 +898,7 @@ async function matchLmsStudents() {
         );
         const result = await readLmsJson(response);
         if (!response.ok || !result.success) {
-            if (reauthorizeCanvas(provider, response)) return;
+            if (reauthorizeCanvas(provider, response, result)) return;
             throw new Error(result.message || result.error || `HTTP ${response.status}`);
         }
 
@@ -900,7 +943,7 @@ async function importLmsGrades() {
         );
         const result = await readLmsJson(response);
         if (!response.ok || !result.success) {
-            if (reauthorizeCanvas(provider, response)) return;
+            if (reauthorizeCanvas(provider, response, result)) return;
             throw new Error(result.message || result.error || `HTTP ${response.status}`);
         }
         applyLmsGradeView(result.data);
@@ -1318,11 +1361,9 @@ window.saveEnrollment = async function(courseId, studentId) {
 };
 
 function escapeHTML(str) {
-    if (!str) return '';
-    return String(str).replace(/[&<>"]+/g, function(s) {
-        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' };
-        return map[s] || s;
-    });
+    if (str === null || str === undefined) return '';
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    return String(str).replace(/[&<>"']/g, (character) => map[character]);
 }
 
 function shortenId(value) {

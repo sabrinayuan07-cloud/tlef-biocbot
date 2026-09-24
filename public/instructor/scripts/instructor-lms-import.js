@@ -550,6 +550,7 @@
                 const body = await response.json().catch(() => ({}));
                 const error = new Error(body.message || `Import failed (${response.status})`);
                 error.status = response.status;
+                error.body = body;
                 error.code = body.code;
                 error.diagnostic = body.diagnostic;
                 throw error;
@@ -596,6 +597,7 @@
             element('lms-import-next').textContent = state.importedDocument ? 'Review topics' : 'Done';
             if (typeof loadDocuments === 'function') await loadDocuments();
         } catch (error) {
+            if (await returnToConnectStep(error)) return;
             renderImportStages(lastStage, { failed: true });
             const message = error.status === 409
                 ? `That ${provider.label} file is already in this BiocBot course.`
@@ -612,6 +614,26 @@
 
     // ---------------------------------------------------------------- movement
 
+    /**
+     * The server answers 401 with connected:false once BiocBot holds no usable
+     * token (expired and not refreshable, or issued under older scopes). The
+     * only step that can fix that is Connect, so go there with the reason.
+     */
+    async function returnToConnectStep(error) {
+        if (error?.status !== 401 || error.body?.connected !== false) return false;
+        state.importing = false;
+        state.connected = false;
+        setChipState(state.provider, 'Not connected', 'disconnected');
+        await goToStep(0);
+        // The toolkit's own not-connected answer carries no message.
+        setMessage(
+            error.body.message
+                || `${config().label} is no longer connected — the connection expired or was removed. Connect again to continue.`,
+            'error'
+        );
+        return true;
+    }
+
     async function goToStep(index) {
         state.stepIndex = index;
         renderStep();
@@ -624,6 +646,7 @@
             if (stepId === 'file') await loadProviderFiles();
             if (stepId === 'destination') renderSummary();
         } catch (error) {
+            if (await returnToConnectStep(error)) return;
             setMessage(error.message, 'error');
         }
         refreshNextButton();
@@ -664,6 +687,7 @@
             if (stepId === 'destination') return await runImport();
             await goToStep(state.stepIndex + 1);
         } catch (error) {
+            if (await returnToConnectStep(error)) return;
             setMessage(error.message, 'error');
             next.disabled = false;
         }

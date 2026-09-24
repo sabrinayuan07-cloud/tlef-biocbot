@@ -2,11 +2,12 @@ const crypto = require('crypto');
 const express = require('express');
 
 const { getGradeSource } = require('../services/lmsGradeImport');
-const { syncCourseRoster } = require('../services/lmsRosterMatch');
+const { confirmLeftCanvasCourse, syncCourseRoster } = require('../services/lmsRosterMatch');
 const {
     requireManagedCourseMiddleware,
     requireSelectedProviderAuth
 } = require('./lmsGrades');
+const { lmsErrorResponse } = require('../services/lmsErrors');
 
 const DEFAULT_PRUNE_MIN_INTEGRATION_COVERAGE = 0.8;
 
@@ -54,7 +55,22 @@ async function claimCanvasRosterOwnership(db, course) {
     return result.matchedCount > 0;
 }
 
-async function persistCanvasSync({ db, course, externalCourseId, report, syncedBy }) {
+/**
+ * Whether a BiocBot student might have left the linked Canvas course, judged
+ * from this sync alone. Only students this Canvas course put on the roster
+ * qualify — never someone who joined with a course code, came from Academic
+ * Sync, or was never matched — and only when their Canvas user id is gone
+ * from the roster the sync read. That read is filtered to the reader's
+ * sections, so a student who passes still has to be confirmed with Canvas
+ * (confirmLeftCanvasCourse) before being offered for soft-drop.
+ */
+function isDropCandidate(enrollment, { externalCourseId, rosterExternalUserIds }) {
+    if (!enrollment || enrollment.source !== 'canvas' || enrollment.enrolled === false) return false;
+    if (String(enrollment.externalCourseId || '') !== String(externalCourseId)) return false;
+    return Boolean(enrollment.externalUserId) && !rosterExternalUserIds.has(String(enrollment.externalUserId));
+}
+
+async function persistCanvasSync({ db, course, externalCourseId, report, confirmLeft = async () => new Set(), syncedBy }) {
     const mappings = await db.collection('lms_identity_mappings').find({
         courseId: course.courseId,
         provider: 'canvas',
@@ -65,6 +81,25 @@ async function persistCanvasSync({ db, course, externalCourseId, report, syncedB
     const now = new Date();
     const syncToken = crypto.randomUUID();
     const prune = buildPruneSafety(report.coverage, 'canvas');
+    // Anyone the roster read returned is still on the course, whether or not
+    // BiocBot could match them.
+    const rosterExternalUserIds = new Set([
+        ...mappings.map((mapping) => String(mapping.externalUserId)),
+        ...(report.unmatchedLmsStudents || []).map((student) => String(student.externalUserId))
+    ]);
+    const enrollmentOf = (student) => existingEnrollment[String(student.localUserId)];
+    const unmatchedBiocBotStudents = (report.unmatchedBiocBotStudents || []).map((student) => ({
+        ...student,
+        accessDisabled: enrollmentOf(student)?.enrolled === false
+    }));
+    const absent = unmatchedBiocBotStudents.filter((student) => isDropCandidate(
+        enrollmentOf(student),
+        { externalCourseId, rosterExternalUserIds }
+    ));
+    const confirmedLeft = absent.length
+        ? await confirmLeft(absent.map((student) => String(enrollmentOf(student).externalUserId)))
+        : new Set();
+    const dropCandidates = absent.filter((student) => confirmedLeft.has(String(enrollmentOf(student).externalUserId)));
     const set = {
         rosterSource: 'canvas',
         lmsRosterSync: {
@@ -75,7 +110,7 @@ async function persistCanvasSync({ db, course, externalCourseId, report, syncedB
             syncToken,
             coverage: report.coverage,
             prune,
-            unmatchedLocalUserIds: report.unmatchedBiocBotStudents.map((student) => String(student.localUserId))
+            dropCandidateIds: dropCandidates.map((student) => String(student.localUserId))
         },
         updatedAt: now
     };
@@ -87,6 +122,7 @@ async function persistCanvasSync({ db, course, externalCourseId, report, syncedB
             enrolled: true,
             source: 'canvas',
             externalUserId: String(mapping.externalUserId),
+            externalCourseId: String(externalCourseId),
             syncedAt: now,
             updatedAt: now
         };
@@ -98,12 +134,13 @@ async function persistCanvasSync({ db, course, externalCourseId, report, syncedB
         { $set: set }
     );
 
-    return { syncToken, prune };
+    return { syncToken, prune, dropCandidates, unmatchedBiocBotStudents };
 }
 
 function createLmsRosterSyncRouter(integration, dependencies = {}) {
     const router = express.Router();
     const matchRoster = dependencies.matchRoster || syncCourseRoster;
+    const confirmLeft = dependencies.confirmLeft || confirmLeftCanvasCourse;
 
     router.use(express.json());
 
@@ -153,6 +190,7 @@ function createLmsRosterSyncRouter(integration, dependencies = {}) {
                     course,
                     externalCourseId: source.courseId,
                     report,
+                    confirmLeft: (externalUserIds) => confirmLeft(req.canvasApi, source.courseId, externalUserIds),
                     syncedBy: req.user.userId
                 });
 
@@ -195,7 +233,17 @@ function createLmsRosterSyncRouter(integration, dependencies = {}) {
                     return res.status(409).json({ success: false, code: 'ROSTER_PRUNE_ALREADY_APPLIED', message: 'This roster sync was already applied' });
                 }
 
-                const candidateIds = [...new Set((sync.unmatchedLocalUserIds || []).map(String))];
+                // Syncs stored before drops were limited to this Canvas course
+                // carry no candidate list; they have to be re-run, not guessed at.
+                if (!Array.isArray(sync.dropCandidateIds)) {
+                    return res.status(409).json({ success: false, code: 'ROSTER_SYNC_STALE', message: 'Sync the Canvas roster again before dropping students' });
+                }
+                // An instructor who changed a student's access by hand since the
+                // sync has taken that student out of Canvas's hands.
+                const candidateIds = [...new Set(sync.dropCandidateIds.map(String))].filter((localUserId) => {
+                    const enrollment = course.studentEnrollment?.[localUserId];
+                    return enrollment?.source === 'canvas' && enrollment.enrolled !== false;
+                });
                 const now = new Date();
                 const set = {
                     'lmsRosterSync.lastPrunedAt': now,
@@ -238,17 +286,20 @@ function createLmsRosterSyncRouter(integration, dependencies = {}) {
         }
     );
 
-    router.use((error, req, res, next) => {
+    router.use(async (error, req, res, next) => {
         if (res.headersSent) return next(error);
         console.error('LMS roster sync route error:', error);
-        const status = error.statusCode && error.statusCode >= 400 && error.statusCode < 600
-            ? error.statusCode
-            : 502;
-        return res.status(status).json({
-            success: false,
-            provider: req.lmsGradeProvider || null,
-            message: error.message || 'LMS roster sync failed'
-        });
+        try {
+            const { status, body } = await lmsErrorResponse(error, {
+                provider: req.lmsGradeProvider || null,
+                config: req.lmsGradeIntegration?.config,
+                req,
+                fallbackMessage: 'LMS roster sync failed'
+            });
+            return res.status(status).json(body);
+        } catch (responseError) {
+            return next(responseError);
+        }
     });
 
     return router;
@@ -259,6 +310,7 @@ module.exports = {
     buildPruneSafety,
     createLmsRosterSyncRouter,
     effectiveRosterSource,
+    isDropCandidate,
     persistCanvasSync,
     pruneCoverageThreshold
 };

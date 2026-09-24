@@ -11,6 +11,7 @@ const {
     setGradeSource
 } = require('../services/lmsGradeImport');
 const { syncCourseRoster } = require('../services/lmsRosterMatch');
+const { lmsErrorResponse } = require('../services/lmsErrors');
 
 async function requireManagedCourse(req, res) {
     const db = req.app.locals.db;
@@ -243,17 +244,20 @@ function createLmsGradesRouter(integration, dependencies = {}) {
         }
     );
 
-    router.use((error, req, res, next) => {
+    router.use(async (error, req, res, next) => {
         if (res.headersSent) return next(error);
         console.error('LMS grade route error:', error);
-        const status = error.statusCode && error.statusCode >= 400 && error.statusCode < 600
-            ? error.statusCode
-            : 502;
-        res.status(status).json({
-            success: false,
-            provider: req.lmsGradeProvider || null,
-            message: error.message || 'LMS grade import failed'
-        });
+        try {
+            const { status, body } = await lmsErrorResponse(error, {
+                provider: req.lmsGradeProvider || null,
+                config: req.lmsGradeIntegration?.config,
+                req,
+                fallbackMessage: 'LMS grade import failed'
+            });
+            return res.status(status).json(body);
+        } catch (responseError) {
+            return next(responseError);
+        }
     });
 
     return router;

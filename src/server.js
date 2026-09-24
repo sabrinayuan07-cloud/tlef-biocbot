@@ -56,10 +56,20 @@ const AuthService = require('./services/authService');
 const { isAcademicApiEnabled } = require('./services/academicApi');
 const { createLmsIntegration, ensureLmsIndexes, getLmsDiagnostics } = require('./services/lmsIntegration');
 const createAuthMiddleware = require('./middleware/auth');
+const { crossSiteGuard, parseTrustProxy } = require('./middleware/crossSiteGuard');
 const initializePassport = require('./config/passport');
 
 const app = express();
 const port = process.env.TLEF_BIOCBOT_PORT || 8080;
+
+// Behind the TLS-terminating proxy this process speaks plain HTTP, so the
+// Secure session cookie below is only issued when Express trusts the proxy's
+// X-Forwarded-Proto. TRUST_PROXY overrides the same-host default.
+app.set('trust proxy', parseTrustProxy(process.env.TRUST_PROXY));
+
+// Production cookies are SameSite=None so the cross-site CWL SAML POST still
+// carries the session, which also means other sites' form posts carry it.
+const crossSiteCookies = process.env.NODE_ENV === 'production';
 
 // Configure CORS to allow requests from localhost:3002 (browser-sync proxy)
 app.use(cors({
@@ -222,7 +232,13 @@ async function initializeLms() {
     if (lmsIntegration.canvas) {
         console.log('✅ Canvas LMS integration configured');
     } else if (lmsIntegration.canvasStatus.partial) {
-        console.warn(`⚠️ Canvas LMS integration disabled; missing: ${lmsIntegration.canvasStatus.missing.join(', ')}`);
+        const { missing, invalidScopes = [] } = lmsIntegration.canvasStatus;
+        if (missing.length) {
+            console.warn(`⚠️ Canvas LMS integration disabled; missing: ${missing.join(', ')}`);
+        }
+        if (invalidScopes.length) {
+            console.warn(`⚠️ Canvas LMS integration disabled; CANVAS_SCOPES entries are not Canvas scopes: ${invalidScopes.join(', ')}`);
+        }
     } else {
         console.log('ℹ️ Canvas LMS integration is not configured');
     }
@@ -238,10 +254,14 @@ function disabledLmsProviderHandler(provider) {
     return (req, res) => {
         const diagnostic = getLmsDiagnostics(lmsIntegration).providers[provider];
         const status = diagnostic.environment === 'absent' ? 404 : 503;
+        const problems = [
+            diagnostic.missing.length ? `missing: ${diagnostic.missing.join(', ')}` : null,
+            diagnostic.invalid?.length ? `invalid: ${diagnostic.invalid.join(', ')}` : null
+        ].filter(Boolean);
         const message = diagnostic.reason === 'toolkit_unavailable'
             ? `${provider} is configured, but the LMS integration package is unavailable in this deployment`
             : diagnostic.reason === 'environment_partial'
-                ? `${provider} configuration is incomplete; missing: ${diagnostic.missing.join(', ')}`
+                ? `${provider} configuration is incomplete; ${problems.join('; ')}`
                 : `${provider} is not configured for this deployment`;
 
         console.warn('[LMS] Request reached a disabled provider route:', JSON.stringify({
@@ -250,7 +270,8 @@ function disabledLmsProviderHandler(provider) {
             provider,
             status,
             reason: diagnostic.reason,
-            missing: diagnostic.missing
+            missing: diagnostic.missing,
+            invalid: diagnostic.invalid
         }));
         res.status(status).json({
             success: false,
@@ -331,11 +352,20 @@ app.use(session({
     cookie: {
         secure: process.env.NODE_ENV === 'production',
         httpOnly: true,
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+        sameSite: crossSiteCookies ? 'none' : 'lax',
         maxAge: 24 * 60 * 60 * 1000 // 24 hours
     },
     name: 'biocbot.sid'
 }));
+
+if (crossSiteCookies) {
+    app.use('/api', crossSiteGuard({
+        // The CWL IdP posts its SAML response here from its own site.
+        exemptPaths: ['/auth/saml/callback'],
+        // Public URLs of this app, for proxies that rewrite the Host header.
+        trustedOrigins: [process.env.SAML_CALLBACK_URL, process.env.CANVAS_REDIRECT_URI].filter(Boolean)
+    }));
+}
 
 
 

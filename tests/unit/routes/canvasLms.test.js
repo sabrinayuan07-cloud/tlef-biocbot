@@ -8,6 +8,14 @@ const instructor = { userId: 'inst-1', role: 'instructor' };
 function canvasHarness({ client, getCourses, getSections, getFiles, downloadFile } = {}) {
     const authRouter = express.Router();
     authRouter.get('/login', (req, res) => res.json({ returnTo: req.query.returnTo || null }));
+    // Stands in for the toolkit's code exchange: it clears the session state
+    // like the real one, then succeeds or fails on demand.
+    authRouter.get('/callback', (req, res, next) => {
+        delete req.session.canvasOAuthState;
+        delete req.session.canvasOAuthReturnTo;
+        if (req.query.code === 'bad-code') return next(new Error('Canvas token exchange failed with status 401'));
+        return res.redirect('/instructor/after-connect');
+    });
     authRouter.post('/logout', (req, res) => res.status(204).end());
     const canvasClient = client || { get: jest.fn() };
     const api = {
@@ -20,7 +28,9 @@ function canvasHarness({ client, getCourses, getSections, getFiles, downloadFile
         getCourses: getCourses || jest.fn(async () => []),
         getCourseSections: getSections || jest.fn(async () => []),
         getCourseFiles: getFiles || jest.fn(async () => []),
-        downloadFile: downloadFile || jest.fn()
+        downloadFile: downloadFile || jest.fn(),
+        refreshTokens: jest.fn(async () => ({ accessToken: 'fresh-access-token' })),
+        revokeToken: jest.fn(async () => {})
     };
     return {
         api,
@@ -30,7 +40,10 @@ function canvasHarness({ client, getCourses, getSections, getFiles, downloadFile
             config: {
                 canvasDomain: 'http://canvas.test',
                 getUserKey: jest.fn((req) => req.user.userId),
-                tokenStore: { get: jest.fn(async () => ({ accessToken: 'canvas-access-token' })) }
+                tokenStore: {
+                    get: jest.fn(async () => ({ accessToken: 'canvas-access-token' })),
+                    delete: jest.fn(async () => {})
+                }
             }
         }
     };
@@ -359,14 +372,144 @@ describe('Canvas LMS routes', () => {
             .expect(400);
     });
 
-    test('exposes the toolkit logout endpoint for explicit Canvas disconnect', async () => {
+    test('rejects return paths a browser would read as another site', async () => {
         const harness = canvasHarness();
-        const app = makeRouteApp(createCanvasLmsRouter(harness.integration), {
-            db: memoryDb(),
-            user: instructor
-        });
+        const app = makeRouteApp(createCanvasLmsRouter(harness.integration), { db: memoryDb(), user: instructor });
 
-        await request(app).post('/auth/logout').expect(204);
+        for (const returnTo of ['/%09/evil.example', '/%0A/evil.example', '/%5Cevil.example']) {
+            await request(app).get(`/auth/login?returnTo=${returnTo}`).expect(400);
+        }
+        // Repeated params arrive as an array, not a string.
+        await request(app).get('/auth/login?returnTo=/a&returnTo=/b').expect(400);
+        await request(app).get('/auth/login?returnTo=%2Finstructor%2Fstudent-hub%3FcourseId%3DBIOC-1').expect(200);
     });
 
+    test('disconnect revokes the Canvas grant — refreshing first — and deletes it, whatever scopes it was issued under', async () => {
+        const harness = canvasHarness();
+        const stale = { accessToken: 'expired-access', refreshToken: 'refresh-1', scopeStamp: 'old' };
+        harness.integration.config.tokenStore.get = jest.fn(async () => null);
+        harness.integration.config.tokenStore.peek = jest.fn(async () => stale);
+        const app = makeRouteApp(createCanvasLmsRouter(harness.integration), { db: memoryDb(), user: instructor });
+
+        await request(app).post('/auth/logout').expect(204);
+
+        expect(harness.api.refreshTokens).toHaveBeenCalledWith(harness.integration.config, 'refresh-1');
+        expect(harness.api.revokeToken).toHaveBeenCalledWith(harness.integration.config, 'fresh-access-token');
+        expect(harness.integration.config.tokenStore.delete).toHaveBeenCalledWith('inst-1');
+    });
+
+    test('disconnect still forgets the grant when Canvas will not revoke it', async () => {
+        const harness = canvasHarness();
+        harness.api.refreshTokens.mockRejectedValue(new Error('invalid_grant'));
+        harness.api.revokeToken.mockRejectedValue(new Error('Canvas token revoke failed with status 401'));
+        const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const app = makeRouteApp(createCanvasLmsRouter(harness.integration), { db: memoryDb(), user: instructor });
+
+        await request(app).post('/auth/logout').expect(204);
+        warn.mockRestore();
+
+        expect(harness.api.revokeToken).toHaveBeenCalledWith(harness.integration.config, 'canvas-access-token');
+        expect(harness.integration.config.tokenStore.delete).toHaveBeenCalledWith('inst-1');
+    });
+
+    test('disconnect with nothing stored is a no-op', async () => {
+        const harness = canvasHarness();
+        harness.integration.config.tokenStore.get = jest.fn(async () => null);
+        const app = makeRouteApp(createCanvasLmsRouter(harness.integration), { db: memoryDb(), user: instructor });
+
+        await request(app).post('/auth/logout').expect(204);
+
+        expect(harness.api.revokeToken).not.toHaveBeenCalled();
+        expect(harness.integration.config.tokenStore.delete).not.toHaveBeenCalled();
+    });
+
+    describe('OAuth callback errors', () => {
+        function callbackApp(session) {
+            const harness = canvasHarness();
+            return makeRouteApp(createCanvasLmsRouter(harness.integration), { db: memoryDb(), user: instructor, session });
+        }
+        const pending = () => ({ canvasOAuthState: 'state-1', canvasOAuthReturnTo: '/instructor/student-hub?courseId=BIOC-1' });
+
+        test('passes a matching callback with a code through to the token exchange', async () => {
+            const res = await request(callbackApp(pending())).get('/auth/callback?state=state-1&code=good').expect(302);
+            expect(res.headers.location).toBe('/instructor/after-connect');
+        });
+
+        test.each([
+            ['access_denied', 400, 'You chose not to authorize BiocBot'],
+            ['invalid_scope', 502, 'refused the permissions BiocBot asked for'],
+            ['unauthorized_client', 502, 'not switched on for this Canvas account']
+        ])('explains a Canvas %s answer and links back to where the instructor started', async (error, status, text) => {
+            const session = pending();
+            const res = await request(callbackApp(session))
+                .get(`/auth/callback?state=state-1&error=${error}&error_description=${encodeURIComponent('<b>raw</b>')}`)
+                .expect(status);
+
+            expect(res.headers['content-type']).toMatch(/text\/html/);
+            expect(res.text).toContain(text);
+            expect(res.text).toContain('href="/instructor/student-hub?courseId=BIOC-1"');
+            // Canvas's own description is logged, never echoed into the page.
+            expect(res.text).not.toContain('<b>raw</b>');
+            expect(session.canvasOAuthState).toBeUndefined();
+        });
+
+        test('refuses a callback whose state does not match the session, without exchanging the code', async () => {
+            const res = await request(callbackApp(pending())).get('/auth/callback?state=forged&code=good').expect(400);
+            expect(res.text).toContain('could not be matched to your BiocBot session');
+            expect(res.text).toContain('href="/instructor/student-hub?courseId=BIOC-1"');
+        });
+
+        test('shows a page, not JSON, when the token exchange fails', async () => {
+            const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+            const res = await request(callbackApp(pending())).get('/auth/callback?state=state-1&code=bad-code').expect(502);
+            error.mockRestore();
+
+            expect(res.text).toContain('could not finish it');
+            expect(res.text).toContain('href="/instructor/student-hub?courseId=BIOC-1"');
+        });
+
+        test.each(['//evil.example', '/\t/evil.example', '/\n/evil.example', '/\\evil.example'])(
+            'never links back off-site, whatever the session holds (%j)',
+            async (returnTo) => {
+                const res = await request(callbackApp({ canvasOAuthState: 'state-1', canvasOAuthReturnTo: returnTo }))
+                    .get('/auth/callback?state=state-1&error=access_denied')
+                    .expect(400);
+                expect(res.text).toContain('href="/instructor"');
+            }
+        );
+    });
+
+    describe('Canvas refusals after the connection check', () => {
+        const refusal = (statusCode) => Object.assign(new Error(`Canvas API request to /api/v1/courses returned ${statusCode}`), { statusCode });
+
+        async function listCourses({ statusCode, tokensStored }) {
+            const harness = canvasHarness({ getCourses: jest.fn(async () => { throw refusal(statusCode); }) });
+            harness.integration.config.tokenStore.get = jest.fn(async () => (tokensStored ? { accessToken: 'still-here' } : null));
+            const app = makeRouteApp(createCanvasLmsRouter(harness.integration), { db: memoryDb(), user: instructor });
+            const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+            const res = await request(app).get('/courses');
+            error.mockRestore();
+            return res;
+        }
+
+        test('reports "not connected" when the refresh failed and the tokens were cleared', async () => {
+            const res = await listCourses({ statusCode: 401, tokensStored: false });
+            expect(res.status).toBe(401);
+            expect(res.body).toMatchObject({ connected: false, code: 'CANVAS_NOT_CONNECTED' });
+        });
+
+        test('reports a Canvas refusal, not a lost connection, when the tokens are still stored', async () => {
+            const res = await listCourses({ statusCode: 401, tokensStored: true });
+            expect(res.status).toBe(403);
+            expect(res.body).toMatchObject({ code: 'CANVAS_ACCESS_DENIED' });
+            expect(res.body.connected).toBeUndefined();
+        });
+
+        test('labels a Canvas 403 as a refusal that may be throttling', async () => {
+            const res = await listCourses({ statusCode: 403, tokensStored: true });
+            expect(res.status).toBe(403);
+            expect(res.body).toMatchObject({ code: 'CANVAS_FORBIDDEN' });
+            expect(res.body.message).toContain('wait a minute');
+        });
+    });
 });

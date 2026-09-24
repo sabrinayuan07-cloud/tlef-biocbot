@@ -194,8 +194,9 @@ upstream error text. The HTTP listener opens only after startup succeeds.
 11. **LMS Grades** (optional): In the Student Hub, run **Match students** to tie the linked LMS
     roster to BiocBot accounts, then **Import grades** to pull a read-only snapshot. Grades appear
     on each student's card, with the field that produced the match; anyone who could not be matched
-    is listed above the cards. Matching prefers the student number, then email, then username —
-    never the display name. See [`agents_canvas.md`](https://github.com/ubc/ubc-genai-toolkit-lms-integration/blob/main/agents_canvas.md) for the full rules.
+    is listed above the cards. Matching uses the Canvas integration_id (the CWL PUID) first, then
+    email; an email match is refused when the two sides carry different PUIDs. Student number,
+    username and display name are never used. See [`agents_canvas.md`](https://github.com/ubc/ubc-genai-toolkit-lms-integration/blob/main/agents_canvas.md) for the full rules.
 
 ### For Students
 

@@ -97,15 +97,66 @@ function listGradeSources(course, integration = {}) {
     });
 }
 
-async function readProviderGrades(api, client, provider, externalCourseId) {
+// Each Canvas assignment read is itself two requests (the assignment and its
+// submissions), and Canvas throttles a token that runs many at once. Canvas
+// answers a throttled request with 403, like a refusal, so a short backoff is
+// the cheap way to tell the two apart.
+const CANVAS_GRADE_READ_CONCURRENCY = 3;
+const CANVAS_THROTTLE_RETRIES = 2;
+const CANVAS_THROTTLE_RETRY_DELAY_MS = 1000;
+
+const wait = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
+
+// `run.failed` is set by the first read that fails for good, so the rest of
+// the import stops instead of reading on — and retrying — after the instructor
+// has already been shown the error.
+async function retryWhenThrottled(read, { retries, retryDelayMs, run }) {
+    for (let attempt = 0; ; attempt += 1) {
+        try {
+            return await read();
+        } catch (error) {
+            if (error?.statusCode !== 403 || attempt >= retries || run.failed) throw error;
+            await wait(retryDelayMs * 2 ** attempt);
+            if (run.failed) throw error;
+        }
+    }
+}
+
+async function mapWithConcurrency(items, limit, mapper, run) {
+    const results = new Array(items.length);
+    let next = 0;
+    async function worker() {
+        while (!run.failed && next < items.length) {
+            const index = next;
+            next += 1;
+            results[index] = await mapper(items[index]);
+        }
+    }
+    await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+    return results;
+}
+
+async function readProviderGrades(api, client, provider, externalCourseId, {
+    concurrency = CANVAS_GRADE_READ_CONCURRENCY,
+    retries = CANVAS_THROTTLE_RETRIES,
+    retryDelayMs = CANVAS_THROTTLE_RETRY_DELAY_MS
+} = {}) {
     const gradeItems = await api.getGradeItems(client, externalCourseId);
     if (provider === 'canvas') {
-        const [totals, ...itemGrades] = await Promise.all([
-            api.getGrades(client, { courseId: externalCourseId }),
-            ...gradeItems.map((item) => api.getGrades(client, {
-                courseId: externalCourseId,
-                gradeItemId: item.id
-            }))
+        const run = { failed: false };
+        const read = async (fetchGrades) => {
+            try {
+                return await retryWhenThrottled(fetchGrades, { retries, retryDelayMs, run });
+            } catch (error) {
+                run.failed = true;
+                throw error;
+            }
+        };
+        const [totals, itemGrades] = await Promise.all([
+            read(() => api.getGrades(client, { courseId: externalCourseId })),
+            mapWithConcurrency(gradeItems, concurrency, (item) => read(
+                () => api.getGrades(client, { courseId: externalCourseId, gradeItemId: item.id })
+            ), run)
         ]);
         return { gradeItems, grades: [...totals, ...itemGrades.flat()] };
     }

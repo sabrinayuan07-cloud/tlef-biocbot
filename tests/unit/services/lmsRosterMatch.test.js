@@ -1,5 +1,6 @@
 const { memoryDb } = require('../helpers/memory-db');
 const {
+    confirmLeftCanvasCourse,
     matchCourseRoster,
     syncCourseRoster
 } = require('../../../src/services/lmsRosterMatch');
@@ -86,18 +87,102 @@ describe('LMS roster matching', () => {
         expect(summary.matchedCount).toBe(0);
     });
 
-    test('prefers the student number over the email when both are present', async () => {
+    test('falls back to email when the BiocBot account has no PUID yet', async () => {
+        const db = memoryDb({ users: [localUser({ puid: '' })] });
+        const summary = await runMatch(db, [rosterEntry({ integrationId: 'puid-ada' })]);
+
+        expect(summary.matchedCount).toBe(1);
+        expect(summary.matchedBy.email).toBe(1);
+    });
+
+    test('refuses an email match when the Canvas row and the account carry different PUIDs', async () => {
+        const db = memoryDb({ users: [localUser({ puid: 'puid-someone-else' })] });
+        const summary = await runMatch(db, [rosterEntry({ integrationId: 'puid-ada' })]);
+
+        expect(summary.matchedCount).toBe(0);
+        expect(summary.unmatchedLmsStudents).toEqual([
+            expect.objectContaining({ externalUserId: '900', reason: 'no-biocbot-account' })
+        ]);
+        expect(await db.collection('lms_identity_mappings').find({}).toArray()).toEqual([]);
+    });
+
+    test('never matches on student number, username, or the email name before the @', async () => {
         const db = memoryDb({
             users: [
-                localUser({ userId: 'user-1', academicStudentId: '12345678', email: 'stale@ubc.ca' }),
-                localUser({ userId: 'user-2', username: 'grace', email: 'ada@student.ubc.ca', displayName: 'Grace Hopper' })
+                localUser({ userId: 'user-1', academicStudentId: '12345678', email: 'one@ubc.ca', username: 'someone' }),
+                localUser({ userId: 'user-2', username: 'ada', email: 'two@ubc.ca' }),
+                localUser({ userId: 'user-3', username: 'lovelace', email: 'three@ubc.ca' })
             ]
         });
-        const summary = await runMatch(db, [rosterEntry({ sisId: '12345678', loginId: '' })]);
+        const summary = await runMatch(db, [
+            rosterEntry({ externalUserId: '900', sisId: '12345678', email: '', loginId: '' }),
+            rosterEntry({ externalUserId: '901', email: '', loginId: 'ada' }),
+            rosterEntry({ externalUserId: '902', email: 'lovelace@student.ubc.ca', loginId: '' })
+        ]);
 
-        expect(summary.matchedBy.sis).toBe(1);
+        expect(summary.matchedCount).toBe(0);
+        expect(summary.matchedBy).toEqual({ integration: 0, email: 0 });
+    });
+
+    test('lets a PUID match win even when an email-only row for the same account comes first', async () => {
+        const db = memoryDb({ users: [localUser({ puid: 'puid-ada' })] });
+        const summary = await runMatch(db, [
+            rosterEntry({ externalUserId: '901', name: 'Ada (guest account)' }),
+            rosterEntry({ externalUserId: '900', integrationId: 'puid-ada' })
+        ]);
+
+        expect(summary.matchedBy).toEqual({ integration: 1, email: 0 });
+        expect(summary.unmatchedLmsStudents).toEqual([
+            expect.objectContaining({ externalUserId: '901', reason: 'duplicate-biocbot-account' })
+        ]);
         const [mapping] = await db.collection('lms_identity_mappings').find({}).toArray();
-        expect(mapping.localUserId).toBe('user-1');
+        expect(mapping).toMatchObject({ externalUserId: '900', localUserId: 'user-1', matchedBy: 'integration' });
+    });
+
+    test('never gives an account to an email row when another roster row carries its PUID', async () => {
+        // Two accounts share the PUID, so the PUID row cannot claim either one;
+        // the email row still must not take the account that PUID belongs to.
+        const db = memoryDb({
+            users: [
+                localUser({ userId: 'user-1', puid: 'puid-ada' }),
+                localUser({ userId: 'user-2', puid: 'puid-ada', email: 'other@ubc.ca' })
+            ]
+        });
+        const summary = await runMatch(db, [
+            rosterEntry({ externalUserId: '901' }),
+            rosterEntry({ externalUserId: '900', integrationId: 'puid-ada', email: '' })
+        ]);
+
+        expect(summary.matchedCount).toBe(0);
+    });
+
+    test('moves an account to its new LMS user id without breaking the one-row-per-account index', async () => {
+        const db = memoryDb({
+            users: [localUser({ puid: 'puid-ada' })],
+            lms_identity_mappings: [{
+                courseId: 'BIOC-1',
+                provider: 'canvas',
+                externalCourseId: '77',
+                externalUserId: '901',
+                localUserId: 'user-1',
+                matchedBy: 'username'
+            }]
+        });
+        // The real collection has a unique index on the local user; fail the
+        // way Mongo would if a write ever leaves two rows for one account.
+        const mappings = db.collection('lms_identity_mappings');
+        const bulkWrite = mappings.bulkWrite.bind(mappings);
+        mappings.bulkWrite = async (operations) => {
+            const result = await bulkWrite(operations);
+            const localIds = (await mappings.find({}).toArray()).map((mapping) => mapping.localUserId);
+            if (new Set(localIds).size !== localIds.length) throw new Error('E11000 duplicate key error');
+            return result;
+        };
+
+        await runMatch(db, [rosterEntry({ externalUserId: '900', integrationId: 'puid-ada' })]);
+
+        const rows = await mappings.find({}).toArray();
+        expect(rows).toEqual([expect.objectContaining({ externalUserId: '900', localUserId: 'user-1', matchedBy: 'integration' })]);
     });
 
     test('ignores an email shared by two BiocBot accounts rather than guessing', async () => {
@@ -170,6 +255,29 @@ describe('LMS roster matching', () => {
 });
 
 describe('LMS roster readers', () => {
+    test('asks Canvas per student whether any student enrollment in the course remains', async () => {
+        const client = {
+            getAll: jest.fn(async (path, query) => {
+                if (query.user_id === '902') throw new Error('Canvas API request returned 403');
+                // 901 moved to a section the syncing teacher cannot see.
+                return query.user_id === '901' ? [{ user_id: 901, course_section_id: 12 }] : [];
+            })
+        };
+        const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+        const left = await confirmLeftCanvasCourse(client, '77', ['900', '901', '902', '900']);
+
+        expect([...left]).toEqual(['900']);
+        expect(client.getAll).toHaveBeenCalledTimes(3);
+        expect(client.getAll).toHaveBeenCalledWith('/courses/77/enrollments', {
+            user_id: '900',
+            type: ['StudentEnrollment'],
+            state: ['active', 'invited']
+        });
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('user 902'));
+        warn.mockRestore();
+    });
+
     test('reads the Canvas roster as active student enrollments', async () => {
         const client = {
             getAll: jest.fn(async () => [
