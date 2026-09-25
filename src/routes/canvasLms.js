@@ -369,11 +369,15 @@ function createCanvasLmsRouter(
             progress = createImportProgressStream(req, res, { diagnostics });
             if (progress) progress.step('download', `${normalized.name} from Canvas`);
             else diagnostics.step('download', { detail: `${normalized.name} from Canvas` });
+            // Through a signed public_url link (toolkit 1.4.0+): the file's own
+            // /files/:id/download URL is not an /api/v1 path, so a token from
+            // a key with Enforce Scopes on is refused there. Falls back to that
+            // URL when Canvas will not issue a link.
             const download = await canvas.downloadFile(
                 req.canvasApi,
                 canvasCourseId,
                 canvasFileId,
-                { maxBytes: MAX_DOCUMENT_BYTES }
+                { maxBytes: MAX_DOCUMENT_BYTES, via: 'public-url' }
             );
             const buffer = Buffer.from(download.data);
             const { result, courseResult, qdrantResult } = await ingestFile({
