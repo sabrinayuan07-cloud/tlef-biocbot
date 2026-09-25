@@ -1378,6 +1378,7 @@ router.get('/:courseId', async (req, res) => {
                 id: lecture.id || lecture.name,
                 name: lecture.name,
                 displayName: lecture.displayName || null,
+                showUnitNumber: lecture.showUnitNumber !== false,
                 isPublished: lecture.isPublished || false,
                 documents: lecture.documents || [],
                 questions: lecture.questions || [],
@@ -1814,6 +1815,7 @@ async function getCourseForStudent(req, res, courseId) {
                 id: lecture.id || lecture.name,
                 name: lecture.name,
                 displayName: lecture.displayName || null,
+                showUnitNumber: lecture.showUnitNumber !== false,
                 isPublished: lecture.isPublished || false,
                 documents: lecture.documents || [],
                 questions: lecture.questions || [],
@@ -4224,8 +4226,15 @@ router.delete('/:courseId/units/:unitName', async (req, res) => {
 router.put('/:courseId/units/:unitName/rename', async (req, res) => {
     try {
         const { courseId, unitName } = req.params;
-        const { displayName, instructorId } = req.body;
-        
+        const { displayName, instructorId, showUnitNumber } = req.body;
+
+        if (typeof showUnitNumber !== 'undefined' && typeof showUnitNumber !== 'boolean') {
+            return res.status(400).json({
+                success: false,
+                message: 'showUnitNumber must be a boolean'
+            });
+        }
+
         if (!instructorId) {
             return res.status(400).json({
                 success: false,
@@ -4272,28 +4281,30 @@ router.put('/:courseId/units/:unitName/rename', async (req, res) => {
         
         // Update the unit display name
         const result = await CourseModel.updateUnitDisplayName(
-            db, 
-            courseId, 
-            decodeURIComponent(unitName), 
-            displayName, 
-            user.userId
+            db,
+            courseId,
+            decodeURIComponent(unitName),
+            displayName,
+            user.userId,
+            showUnitNumber
         );
-        
+
         if (!result.success) {
             return res.status(404).json({
                 success: false,
                 message: result.error || 'Unit not found'
             });
         }
-        
+
         console.log(`Updated display name for ${unitName} to "${displayName || '(cleared)'}" in course ${courseId}`);
-        
+
         res.json({
             success: true,
             message: displayName ? `Unit renamed to "${displayName}"` : 'Unit name cleared',
             data: {
                 unitName: decodeURIComponent(unitName),
-                displayName: result.displayName
+                displayName: result.displayName,
+                showUnitNumber: result.showUnitNumber
             }
         });
         

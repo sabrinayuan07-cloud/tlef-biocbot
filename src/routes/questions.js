@@ -1313,12 +1313,6 @@ router.post('/generate-ai', async (req, res) => {
             }
         }
         
-        // Format unit name for prompts - use displayName if available
-        const unitNum = lectureName.match(/\d+/)?.[0] || '';
-        const formattedUnitName = unit.displayName 
-            ? `${unitNum}. ${unit.displayName}` 
-            : lectureName;
-        
         const documents = unit.documents || [];
         
         if (documents.length === 0) {

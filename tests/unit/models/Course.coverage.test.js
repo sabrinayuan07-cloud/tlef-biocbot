@@ -216,10 +216,27 @@ describe('Course onboarding/unit lifecycle', () => {
         const db = memoryDb({ courses: [{ courseId: 'C1', lectures: [{ name: 'Unit 1', displayName: 'Old' }] }] });
         await expect(Course.updateUnitDisplayName(db, 'C1', 'missing', 'Name', 'i1'))
             .resolves.toEqual({ success: false, error: 'Unit not found' });
+        // showUnitNumber omitted -> defaults to true
         await expect(Course.updateUnitDisplayName(db, 'C1', 'Unit 1', '  New name ', 'i1'))
-            .resolves.toMatchObject({ success: true, displayName: 'New name' });
+            .resolves.toMatchObject({ success: true, displayName: 'New name', showUnitNumber: true });
         await expect(Course.updateUnitDisplayName(db, 'C1', 'Unit 1', '   ', 'i1'))
-            .resolves.toMatchObject({ success: true, displayName: null });
+            .resolves.toMatchObject({ success: true, displayName: null, showUnitNumber: true });
+    });
+
+    test('updateUnitDisplayName persists showUnitNumber: false and unsets it when the title is cleared', async () => {
+        const db = memoryDb({ courses: [{ courseId: 'C1', lectures: [{ name: 'Unit 1' }] }] });
+
+        await expect(Course.updateUnitDisplayName(db, 'C1', 'Unit 1', 'Biology', 'i1', false))
+            .resolves.toMatchObject({ success: true, displayName: 'Biology', showUnitNumber: false });
+        let saved = await db.collection('courses').findOne({ courseId: 'C1' });
+        expect(saved.lectures[0]).toMatchObject({ displayName: 'Biology', showUnitNumber: false });
+
+        // Clearing the title removes showUnitNumber too, so the unit returns to a clean state
+        await expect(Course.updateUnitDisplayName(db, 'C1', 'Unit 1', '', 'i1'))
+            .resolves.toMatchObject({ success: true, displayName: null, showUnitNumber: true });
+        saved = await db.collection('courses').findOne({ courseId: 'C1' });
+        expect(saved.lectures[0]).not.toHaveProperty('displayName');
+        expect(saved.lectures[0]).not.toHaveProperty('showUnitNumber');
     });
 
     test('updateUnitDisplayName fails when its positional write no longer matches', async () => {

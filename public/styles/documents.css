@@ -247,7 +247,95 @@
     opacity: 0.65;
 }
 
+.unit-rename-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 1px solid #c7d0db;
+    border-radius: 4px;
+    background: #fff;
+    color: var(--primary-color);
+    cursor: pointer;
+    line-height: 1;
+}
 
+.unit-rename-btn:hover {
+    background: rgba(74, 111, 165, 0.08);
+    border-color: var(--primary-color);
+}
+
+.unit-rename-btn:focus-visible {
+    outline: 3px solid rgba(74, 111, 165, 0.25);
+    outline-offset: 1px;
+}
+
+.unit-rename-edit {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.unit-rename-input {
+    padding: 6px 10px;
+    border: 2px solid var(--primary-color);
+    border-radius: 4px;
+    font-size: 14px;
+    width: 200px;
+    outline: none;
+}
+
+.unit-rename-input:focus-visible {
+    box-shadow: 0 0 0 2px rgba(74, 111, 165, 0.25);
+}
+
+.unit-show-number-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 10px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #666;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+}
+
+.unit-show-number-input {
+    cursor: pointer;
+}
+
+.unit-save-btn,
+.unit-cancel-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 1px solid #c7d0db;
+    border-radius: 4px;
+    background: #fff;
+    color: var(--primary-color);
+    cursor: pointer;
+    line-height: 1;
+}
+
+.unit-save-btn:hover,
+.unit-cancel-btn:hover {
+    background: rgba(74, 111, 165, 0.08);
+    border-color: var(--primary-color);
+}
+
+.unit-save-btn:focus-visible,
+.unit-cancel-btn:focus-visible {
+    outline: 3px solid rgba(74, 111, 165, 0.25);
+    outline-offset: 1px;
+}
 
 .publish-toggle {
     display: flex;

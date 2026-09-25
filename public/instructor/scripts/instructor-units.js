@@ -264,6 +264,25 @@ function generateUnitsFromOnboarding(onboardingData) {
 }
 
 /**
+ * Build the label shown for a unit, honouring the per-unit "show number" choice.
+ *
+ * The number is the unit's current position among the units that still exist,
+ * not a digit parsed out of its internal name - deleting or reordering a unit
+ * changes everyone else's position, so a name-derived number would go stale
+ * (e.g. "Unit 2" deleted from Unit 1/2/3 would otherwise leave "1." and "3.").
+ * @param {string} unitName - Internal name of the unit (e.g., "Unit 1"), used as the fallback label
+ * @param {string} displayName - Custom title, or '' / null / undefined if none is set
+ * @param {boolean} showUnitNumber - Whether to prefix the title with "<N>. "
+ * @param {number} unitPosition - 1-based position among the currently existing units
+ * @returns {string}
+ */
+function formatUnitLabel(unitName, displayName, showUnitNumber, unitPosition) {
+    if (!displayName) return unitName;
+    if (showUnitNumber === false) return displayName;
+    return `${unitPosition}. ${displayName}`;
+}
+
+/**
  * Create a unit element with all its sections
  * @param {string} unitName - Name of the unit (e.g., "Unit 1")
  * @param {Object} unitData - Existing unit data from database
@@ -277,25 +296,34 @@ function createUnitElement(unitName, unitData, isExpanded = false, canDelete = t
     const unitDiv = document.createElement('div');
     unitDiv.className = 'accordion-item';
     unitDiv.setAttribute('data-unit-name', unitName);
-    
+    unitDiv.setAttribute('data-unit-position', unitIndex + 1);
+
     const unitId = unitName.toLowerCase().replace(/\s+/g, '-');
-    
-    // Extract unit number for display (e.g., "1" from "Unit 1")
-    const unitNum = unitName.match(/\d+/)?.[0] || '';
-    
+
     // Use displayName if available, otherwise just show the unit name
     const displayName = unitData?.displayName || '';
-    const formattedName = displayName ? `${unitNum}. ${displayName}` : unitName;
-    
+    const showUnitNumber = unitData?.showUnitNumber !== false;
+    const formattedName = formatUnitLabel(unitName, displayName, showUnitNumber, unitIndex + 1);
+
     unitDiv.innerHTML = `
         <div class="accordion-header" role="button" tabindex="0" aria-expanded="${isExpanded}">
             <div class="unit-name-container">
                 <span class="folder-name">${formattedName}</span>
-                <button class="unit-rename-btn" onclick="event.stopPropagation(); openRenameUnitInput('${unitName}')" title="Rename unit">✏️</button>
-                <div class="unit-rename-edit" style="display: none;">
+                <button class="unit-rename-btn" onclick="event.stopPropagation(); openRenameUnitInput('${unitName}')" title="Rename unit">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"></path><path d="m15 5 4 4"></path></svg>
+                </button>
+                <div class="unit-rename-edit" style="display: none;" data-last-saved-name="${displayName}" data-last-saved-show-number="${showUnitNumber}">
                     <input type="text" class="unit-rename-input" placeholder="Enter unit title..." value="${displayName}" data-unit-name="${unitName}">
-                    <button class="unit-save-btn" onclick="event.stopPropagation(); saveUnitDisplayName('${unitName}')" title="Save">✓</button>
-                    <button class="unit-cancel-btn" onclick="event.stopPropagation(); cancelRenameUnit('${unitName}')" title="Cancel">✕</button>
+                    <label class="unit-show-number-label" onclick="event.stopPropagation()">
+                        <input type="checkbox" class="unit-show-number-input" data-unit-name="${unitName}" ${showUnitNumber ? 'checked' : ''}>
+                        Show unit number
+                    </label>
+                    <button class="unit-save-btn" onclick="event.stopPropagation(); saveUnitDisplayName('${unitName}')" title="Save">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+                    </button>
+                    <button class="unit-cancel-btn" onclick="event.stopPropagation(); cancelRenameUnit('${unitName}')" title="Cancel">
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+                    </button>
                 </div>
             </div>
             <div class="header-actions">
@@ -788,30 +816,33 @@ function openRenameUnitInput(unitName) {
     const renameBtn = accordionItem.querySelector('.unit-rename-btn');
     const editContainer = accordionItem.querySelector('.unit-rename-edit');
     const input = accordionItem.querySelector('.unit-rename-input');
-    
+    const checkbox = accordionItem.querySelector('.unit-show-number-input');
+
     // Hide the folder name and pencil button, show the edit container
     if (folderName) folderName.style.display = 'none';
     if (renameBtn) renameBtn.style.display = 'none';
     if (editContainer) editContainer.style.display = 'flex';
-    
+
     // Focus and select input
     if (input) {
         input.focus();
         input.select();
     }
-    
-    // Add Enter key handler
-    if (input) {
-        input.onkeydown = (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                saveUnitDisplayName(unitName);
-            } else if (e.key === 'Escape') {
-                e.preventDefault();
-                cancelRenameUnit(unitName);
-            }
-        };
-    }
+
+    // Enter saves, Escape cancels, from either the text input or the
+    // "Show unit number" checkbox - the instructor may tab/click straight to
+    // the checkbox without touching the input first.
+    const handleEditKeydown = (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            saveUnitDisplayName(unitName);
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            cancelRenameUnit(unitName);
+        }
+    };
+    if (input) input.onkeydown = handleEditKeydown;
+    if (checkbox) checkbox.onkeydown = handleEditKeydown;
 }
 
 /**
@@ -821,37 +852,46 @@ function openRenameUnitInput(unitName) {
 async function saveUnitDisplayName(unitName) {
     const accordionItem = document.querySelector(`.accordion-item[data-unit-name="${unitName}"]`);
     if (!accordionItem) return;
-    
+
     const input = accordionItem.querySelector('.unit-rename-input');
     const displayName = input ? input.value.trim() : '';
-    
+    const checkbox = accordionItem.querySelector('.unit-show-number-input');
+    const showUnitNumber = checkbox ? checkbox.checked : true;
+
     try {
         const courseId = await getCurrentCourseId();
         const instructorId = getCurrentInstructorId();
-        
+
         const response = await fetch(`/api/courses/${courseId}/units/${encodeURIComponent(unitName)}/rename`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ displayName, instructorId })
+            body: JSON.stringify({ displayName, instructorId, showUnitNumber })
         });
-        
+
         if (!response.ok) {
             throw new Error('Failed to rename unit');
         }
-        
+
         const result = await response.json();
-        
-        // Update the folder name display
+
+        // Update the folder name display using the values that were just saved
         const folderName = accordionItem.querySelector('.folder-name');
-        const unitNum = unitName.match(/\d+/)?.[0] || '';
-        const formattedName = displayName ? `${unitNum}. ${displayName}` : unitName;
-        
+        const unitPosition = Number(accordionItem.dataset.unitPosition) || 1;
+        const formattedName = formatUnitLabel(unitName, displayName, showUnitNumber, unitPosition);
+
         if (folderName) {
             folderName.textContent = formattedName;
         }
-        
+
+        // Remember this as the last-saved state so a future Cancel restores to it
+        const editContainer = accordionItem.querySelector('.unit-rename-edit');
+        if (editContainer) {
+            editContainer.dataset.lastSavedName = displayName;
+            editContainer.dataset.lastSavedShowNumber = String(showUnitNumber);
+        }
+
         showNotification(result.message || 'Unit renamed successfully', 'success');
         
     } catch (error) {
@@ -870,11 +910,20 @@ async function saveUnitDisplayName(unitName) {
 function cancelRenameUnit(unitName) {
     const accordionItem = document.querySelector(`.accordion-item[data-unit-name="${unitName}"]`);
     if (!accordionItem) return;
-    
+
     const folderName = accordionItem.querySelector('.folder-name');
     const renameBtn = accordionItem.querySelector('.unit-rename-btn');
     const editContainer = accordionItem.querySelector('.unit-rename-edit');
-    
+    const input = accordionItem.querySelector('.unit-rename-input');
+    const checkbox = accordionItem.querySelector('.unit-show-number-input');
+
+    // Reset the input and checkbox back to the last-saved state, discarding
+    // whatever the instructor typed/toggled without saving.
+    if (editContainer) {
+        if (input) input.value = editContainer.dataset.lastSavedName || '';
+        if (checkbox) checkbox.checked = editContainer.dataset.lastSavedShowNumber !== 'false';
+    }
+
     // Show the folder name and pencil button, hide the edit container
     if (folderName) folderName.style.display = '';
     if (renameBtn) renameBtn.style.display = '';
