@@ -177,11 +177,12 @@ describe('Canvas LMS routes', () => {
             .expect(201);
 
         expect(res.body.data).toMatchObject({ documentId: 'doc-1', chunksStored: 2 });
+        // Through a signed link, which works under Enforce Scopes.
         expect(downloadFile).toHaveBeenCalledWith(
             harness.canvasClient,
             '10',
             '31',
-            { maxBytes: 50 * 1024 * 1024 }
+            { maxBytes: 50 * 1024 * 1024, via: 'public-url' }
         );
         expect(ingestFile).toHaveBeenCalledWith(expect.objectContaining({
             courseId: 'BIOC-1',
