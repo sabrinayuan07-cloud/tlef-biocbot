@@ -116,7 +116,7 @@
 
 .super-course-history-panel {
     border-bottom: 1px solid var(--border-color, #e0e0e0);
-    background: #fff;
+    background: #eceef1;
 }
 
 .super-course-history-header {
@@ -152,18 +152,29 @@
 }
 
 .super-course-history-refresh {
-    padding: 5px 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
     border: 1px solid #cdd7e6;
-    border-radius: 6px;
+    border-radius: 50%;
     background: #fff;
     color: #2f3a4a;
-    font-size: 12px;
-    font-weight: 600;
     cursor: pointer;
+    line-height: 1;
 }
 
 .super-course-history-refresh:hover {
     background: #f5f7fb;
+    border-color: var(--primary-color, #0055b7);
+    color: var(--primary-color, #0055b7);
+}
+
+.super-course-history-refresh:focus-visible {
+    outline: 3px solid rgba(0, 85, 183, 0.25);
+    outline-offset: 1px;
 }
 
 .super-course-history-list {
@@ -191,7 +202,7 @@
     padding: 10px;
     border: 1px solid #d9e2f0;
     border-radius: 8px;
-    background: #fbfcff;
+    background: #fff;
     cursor: pointer;
 }
 
