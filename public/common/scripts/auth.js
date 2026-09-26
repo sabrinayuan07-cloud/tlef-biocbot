@@ -83,6 +83,44 @@ window.applyLLMBodyTag = applyLLMBodyTag;
 window.applyLLMTagClassesToElement = applyLLMTagClassesToElement;
 window.getCurrentLLMTagClasses = getCurrentLLMTagClasses;
 
+/**
+ * The six granular TA permissions, matching src/services/permissions.js's
+ * PERMISSION_KEYS. Kept as a plain array here (not fetched) since it's
+ * static; role presets themselves are NOT duplicated here - fetch those
+ * from GET /api/courses/permissions/presets so there's one source of truth.
+ */
+window.TA_PERMISSION_KEYS = ['materials', 'questions', 'flags', 'roster', 'transcripts', 'settings'];
+
+/**
+ * Display labels for the role a server-computed roleLabel names (see
+ * deriveRoleLabel in src/services/permissions.js). The server returns the
+ * raw preset key (e.g. 'fullTA'); every place that shows a role to a human
+ * - the TA hub's picker, a TA's own settings page, their course cards -
+ * reads through this shared map instead of displaying the key as-is.
+ */
+window.ROLE_PRESET_LABELS = {
+    grader: 'Grader',
+    contentTA: 'Content TA',
+    fullTA: 'Full TA',
+    custom: 'Custom'
+};
+
+/**
+ * Does a fetched permissions object grant `key`? Single shared check so
+ * instructor-ta.js, flagged.js, ta-settings.js, and ta-home.js don't each
+ * hand-roll the same truthy comparison. Named permissionIsGranted (not
+ * hasPermissionForFeature) because each of those files already defines its
+ * own hasPermissionForFeature(feature) with a different signature (union
+ * across a TA's courses, or the currently-selected one) - this is the
+ * single-permissions-object primitive their per-file logic calls into.
+ * @param {Object} permissions - A TA's permission object (any of the 6 keys)
+ * @param {string} key - One of window.TA_PERMISSION_KEYS
+ * @returns {boolean}
+ */
+window.permissionIsGranted = function (permissions, key) {
+    return !!(permissions && permissions[key] === true);
+};
+
 async function initAuth() {
     try {
         // Apply the hidden LLM debug tag in parallel with auth check

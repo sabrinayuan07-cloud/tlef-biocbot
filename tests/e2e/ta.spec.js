@@ -60,7 +60,7 @@ async function getUserIdByUsername(username) {
  *   courseName: string,
  *   instructorId: string,
  *   tas?: string[],
- *   taPermissions?: Record<string, { canAccessCourses: boolean, canAccessFlags: boolean, updatedAt: Date }> | null,
+ *   taPermissions?: Record<string, { materials?: boolean, questions?: boolean, flags?: boolean, roster?: boolean, transcripts?: boolean, settings?: boolean, updatedAt: Date }> | null,
  *   courseCode?: string,
  *   status?: string,
  *   approvedStruggleTopics?: Array<string|Record<string, any>>,
@@ -244,8 +244,8 @@ async function seedTwoAssignedCoursesWithDifferentPermissions() {
                 tas: [taId],
                 taPermissions: {
                     [taId]: {
-                        canAccessCourses: true,
-                        canAccessFlags: false,
+                        materials: true, questions: true, settings: true, transcripts: true,
+                        flags: false, roster: false,
                         updatedAt: now,
                     },
                 },
@@ -258,8 +258,8 @@ async function seedTwoAssignedCoursesWithDifferentPermissions() {
                 tas: [taId],
                 taPermissions: {
                     [taId]: {
-                        canAccessCourses: false,
-                        canAccessFlags: true,
+                        materials: false, questions: false, settings: false, transcripts: false,
+                        flags: true, roster: true,
                         updatedAt: now,
                     },
                 },
@@ -451,7 +451,21 @@ async function loginViaAPI(baseURL) {
 
 test.describe('TA authentication and course access', () => {
     test.beforeEach(async () => {
-        await seedCourseWithTA();
+        // This block tests baseline TA functionality (sign-in, dashboard,
+        // document upload), not permission denial - grant full access so a
+        // brand-new TA's fail-closed default doesn't block it. Permission
+        // *denial* is covered by the dedicated 'TA permission gating' and
+        // 'TA direct API authorization' describe blocks below.
+        const taId = await getUserIdByUsername(user.username);
+        await seedCourseWithTA({
+            taPermissions: {
+                [taId]: {
+                    materials: true, questions: true, flags: true, roster: true,
+                    transcripts: true, settings: true,
+                    updatedAt: new Date(),
+                },
+            },
+        });
     });
 
     test('TA can sign in via the UI and lands on /ta', async ({ page }) => {
@@ -487,7 +501,7 @@ test.describe('TA authentication and course access', () => {
         // Course card is rendered in the courses container with assigned permissions
         const card = page.locator(`.course-card[data-course-id="${COURSE_ID}"]`);
         await expect(card).toBeVisible();
-        await expect(card).toContainText('Course Upload: Allowed');
+        await expect(card).toContainText('Role: Full TA');
     });
 
     test('TA can upload a course document to an assigned course', async ({ page }) => {
@@ -569,13 +583,19 @@ test.describe('TA is blocked from student & instructor-only routes', () => {
 });
 
 test.describe('TA permission gating', () => {
-    test('TA with canAccessCourses=false is denied at /instructor/documents', async ({ page, baseURL }) => {
+    test('TA with materials=false loads /instructor/documents but the materials sections stay hidden', async ({ page, baseURL }) => {
+        // /instructor/documents is no longer gated on a single permission: it
+        // now hosts materials, questions, and settings sections that are
+        // independently toggleable, so a TA who only has e.g. 'questions'
+        // still needs to reach the page. Section-level hiding (verified here)
+        // is what keeps the UI from offering actions the server would reject,
+        // and the underlying API calls remain permission-scoped regardless.
         const taId = await getUserIdByUsername(user.username);
         await seedCourseWithTA({
             taPermissions: {
                 [taId]: {
-                    canAccessCourses: false,
-                    canAccessFlags: false,
+                    materials: false, questions: true, flags: false, roster: false,
+                    transcripts: false, settings: false,
                     updatedAt: new Date(),
                 },
             },
@@ -585,7 +605,14 @@ test.describe('TA permission gating', () => {
 
         const response = await page.goto(`/instructor/documents?courseId=${COURSE_ID}`);
         if (!response) throw new Error('Expected a navigation response for /instructor/documents');
-        expect(response.status()).toBe(403);
+        expect(response.status()).toBe(200);
+
+        const firstUnit = page.locator('.accordion-item').first();
+        await expect(firstUnit).toBeVisible({ timeout: 15_000 });
+        await firstUnit.locator('.accordion-header').click();
+        await expect(firstUnit.locator('.course-materials-section').first()).toBeHidden();
+        await expect(firstUnit.locator('.learning-objectives-section').first()).toBeHidden();
+        await expect(firstUnit.locator('.assessment-questions-section').first()).toBeVisible();
 
         // Independently verify via the permissions API (source of truth for the gate)
         const apiCtx = await request.newContext({ baseURL });
@@ -596,17 +623,26 @@ test.describe('TA permission gating', () => {
         expect(permRes.ok()).toBeTruthy();
         const permBody = await permRes.json();
         expect(permBody.success).toBe(true);
-        expect(permBody.data.permissions.canAccessCourses).toBe(false);
+        expect(permBody.data.permissions.materials).toBe(false);
+        // A materials-gated write is still rejected server-side, even though the section is just hidden client-side.
+        const uploadRes = await apiCtx.post(`/api/documents/text`, {
+            data: {
+                courseId: COURSE_ID, instructorId: taId, lectureName: 'Unit 1',
+                documentType: 'lecture-notes', title: 'x', content: 'x',
+            },
+            failOnStatusCode: false,
+        });
+        expect(uploadRes.status()).toBe(403);
         await apiCtx.dispose();
     });
 
-    test('TA with canAccessFlags=false is hidden from and denied flagged-content access', async ({ page, baseURL }) => {
+    test('TA with flags=false is hidden from and denied flagged-content access', async ({ page, baseURL }) => {
         const taId = await getUserIdByUsername(user.username);
         await seedCourseWithTA({
             taPermissions: {
                 [taId]: {
-                    canAccessCourses: true,
-                    canAccessFlags: false,
+                    materials: true, questions: true, settings: true, transcripts: true,
+                    flags: false, roster: false,
                     updatedAt: new Date(),
                 },
             },
@@ -620,9 +656,12 @@ test.describe('TA permission gating', () => {
         await expect(page.locator('#quick-courses-link')).toBeVisible();
         await expect(page.locator('#quick-support-link')).toBeHidden();
 
-        const response = await page.goto(`/instructor/flagged?courseId=${COURSE_ID}`);
-        if (!response) throw new Error('Expected a navigation response for /instructor/flagged');
-        expect(response.status()).toBe(403);
+        // Denial on this HTML page route redirects a TA to /ta (a friendly
+        // page, not raw JSON in the browser) rather than returning 403 -
+        // page.goto()'s response reflects the followed redirect's 200, so
+        // assert the final URL instead of the response status.
+        await page.goto(`/instructor/flagged?courseId=${COURSE_ID}`);
+        await expect(page).toHaveURL(/\/ta\/?$/);
 
         const apiCtx = await request.newContext({ baseURL });
         await apiCtx.post('/api/auth/login', {
@@ -678,8 +717,8 @@ test.describe('TA permission gating', () => {
         await seedCourseWithTA({
             taPermissions: {
                 [taId]: {
-                    canAccessCourses: false,
-                    canAccessFlags: true,
+                    materials: false, questions: false, settings: false, transcripts: false,
+                    flags: true, roster: true,
                     updatedAt: new Date(),
                 },
             },
@@ -872,8 +911,8 @@ test.describe('TA settings and inactive course display', () => {
             status: 'inactive',
             taPermissions: {
                 [taId]: {
-                    canAccessCourses: true,
-                    canAccessFlags: true,
+                    materials: true, questions: true, flags: true, roster: true,
+                    transcripts: true, settings: true,
                     updatedAt: new Date(),
                 },
             },
@@ -888,8 +927,8 @@ test.describe('TA settings and inactive course display', () => {
         await expect(page.locator('#selected-course-status')).toHaveText('Inactive');
         const card = page.locator(`.course-card[data-course-id="${COURSE_ID}"]`);
         await expect(card).toContainText('Inactive');
-        await expect(card).toContainText('Course Upload: Allowed');
-        await expect(card).toContainText('Flags: Allowed');
+        // All six permissions granted matches the "Full TA" preset exactly.
+        await expect(card).toContainText('Role: Full TA');
         await expect(page.locator('#my-courses-link')).toBeVisible();
         await expect(page.locator('#student-support-link')).toBeVisible();
     });
@@ -899,8 +938,8 @@ test.describe('TA settings and inactive course display', () => {
         await seedCourseWithTA({
             taPermissions: {
                 [taId]: {
-                    canAccessCourses: true,
-                    canAccessFlags: false,
+                    materials: true, questions: false, flags: false, roster: false,
+                    transcripts: false, settings: false,
                     updatedAt: new Date(),
                 },
             },
@@ -911,9 +950,11 @@ test.describe('TA settings and inactive course display', () => {
 
         await expect(page.locator('#ta-id')).toHaveValue(taId, { timeout: 15_000 });
         await expect(page.locator('#ta-email')).toHaveValue(user.email);
-        await expect(page.locator('#permissions-status')).toContainText('Course Access');
+        await expect(page.locator('#permissions-status')).toContainText('Role');
+        await expect(page.locator('#permissions-status')).toContainText('Custom');
+        await expect(page.locator('#permissions-status')).toContainText('Course Materials');
+        await expect(page.locator('#permissions-status')).toContainText('Flagged Content');
         await expect(page.locator('#permissions-status')).toContainText('Allowed');
-        await expect(page.locator('#permissions-status')).toContainText('Student Support');
         await expect(page.locator('#permissions-status')).toContainText('Denied');
         await expect(page.locator('#ta-my-courses-link')).toBeVisible();
         await expect(page.locator('#ta-student-support-link')).toBeHidden();
@@ -942,8 +983,8 @@ test.describe('TA empty, revoked, and settings-context flows', () => {
         await seedCourseWithTA({
             taPermissions: {
                 [taId]: {
-                    canAccessCourses: true,
-                    canAccessFlags: true,
+                    materials: true, questions: true, flags: true, roster: true,
+                    transcripts: true, settings: true,
                     updatedAt: new Date(),
                 },
             },
@@ -964,9 +1005,11 @@ test.describe('TA empty, revoked, and settings-context flows', () => {
             );
         });
 
-        const response = await page.goto(`/instructor/documents?courseId=${COURSE_ID}`);
-        if (!response) throw new Error('Expected a navigation response for stale TA course access');
-        expect(response.status()).toBe(403);
+        // No longer assigned to this course at all: none of
+        // materials/questions/settings can be true, so requireAnyPermission
+        // redirects (denial on an HTML route) rather than returning 403 JSON.
+        await page.goto(`/instructor/documents?courseId=${COURSE_ID}`);
+        await expect(page).toHaveURL(/\/ta\/?$/);
 
         await page.goto('/ta');
         await expect(page.locator('#selected-course-id')).toHaveText('-', { timeout: 15_000 });
@@ -1008,14 +1051,14 @@ test.describe('TA empty, revoked, and settings-context flows', () => {
 });
 
 test.describe('TA direct API authorization for course content', () => {
-    test('TA with canAccessCourses=false cannot mutate topics or unit structure by direct API', async ({ baseURL }) => {
+    test('TA with materials=false cannot mutate topics or unit structure by direct API', async ({ baseURL }) => {
         const instructorId = await getUserIdByUsername(instructorUser.username);
         const taId = await getUserIdByUsername(user.username);
         await seedCourseWithTA({
             taPermissions: {
                 [taId]: {
-                    canAccessCourses: false,
-                    canAccessFlags: false,
+                    materials: false, questions: false, flags: false, roster: false,
+                    transcripts: false, settings: false,
                     updatedAt: new Date(),
                 },
             },
@@ -1066,14 +1109,14 @@ test.describe('TA direct API authorization for course content', () => {
         await apiCtx.dispose();
     });
 
-    test('TA with canAccessCourses=false cannot create, update, or delete assessment questions by direct API', async ({ baseURL }) => {
+    test('TA with questions=false cannot create, update, or delete assessment questions by direct API', async ({ baseURL }) => {
         const instructorId = await getUserIdByUsername(instructorUser.username);
         const taId = await getUserIdByUsername(user.username);
         await seedCourseWithTA({
             taPermissions: {
                 [taId]: {
-                    canAccessCourses: false,
-                    canAccessFlags: false,
+                    materials: false, questions: false, flags: false, roster: false,
+                    transcripts: false, settings: false,
                     updatedAt: new Date(),
                 },
             },
@@ -1154,13 +1197,13 @@ test.describe('TA direct API authorization for course content', () => {
 });
 
 test.describe('TA direct API authorization for flags', () => {
-    test('TA with canAccessFlags=false cannot respond, status-update, or delete flags by direct API', async ({ baseURL }) => {
+    test('TA with flags=false cannot respond, status-update, or delete flags by direct API', async ({ baseURL }) => {
         const taId = await getUserIdByUsername(user.username);
         await seedCourseWithTA({
             taPermissions: {
                 [taId]: {
-                    canAccessCourses: true,
-                    canAccessFlags: false,
+                    materials: true, questions: true, settings: true, transcripts: true,
+                    flags: false, roster: false,
                     updatedAt: new Date(),
                 },
             },
@@ -1216,14 +1259,14 @@ test.describe('TA direct API authorization for flags', () => {
 });
 
 test.describe('TA direct API authorization for documents and settings', () => {
-    test('TA with canAccessCourses=false cannot create, upload, or delete course documents by direct API', async ({ baseURL }) => {
+    test('TA with materials=false cannot create, upload, or delete course documents by direct API', async ({ baseURL }) => {
         const instructorId = await getUserIdByUsername(instructorUser.username);
         const taId = await getUserIdByUsername(user.username);
         await seedCourseWithTA({
             taPermissions: {
                 [taId]: {
-                    canAccessCourses: false,
-                    canAccessFlags: false,
+                    materials: false, questions: false, flags: false, roster: false,
+                    transcripts: false, settings: false,
                     updatedAt: new Date(),
                 },
             },
@@ -1295,13 +1338,17 @@ test.describe('TA direct API authorization for documents and settings', () => {
         await apiCtx.dispose();
     });
 
-    test('TA cannot mutate instructor settings APIs even when course upload permission is allowed', async ({ baseURL }) => {
+    test('TA cannot mutate instructor settings APIs (settings.js) even with every permission granted', async ({ baseURL }) => {
+        // src/routes/settings.js (prompts, quiz config, anonymize-students) has
+        // no TA branch at all, unrelated to the new 'settings' permission
+        // (that one only covers PUT /:courseId - name/status/weeks - and
+        // deliberately excludes LLM keys and this file's admin-only config).
         const taId = await getUserIdByUsername(user.username);
         await seedCourseWithTA({
             taPermissions: {
                 [taId]: {
-                    canAccessCourses: true,
-                    canAccessFlags: true,
+                    materials: true, questions: true, flags: true, roster: true,
+                    transcripts: true, settings: true,
                     updatedAt: new Date(),
                 },
             },
@@ -1417,13 +1464,13 @@ test.describe('TA cross-course API scoping', () => {
         await apiCtx.dispose();
     });
 
-    test('TA with canAccessFlags=false cannot use non-course-scoped flag APIs', async ({ baseURL }) => {
+    test('TA with flags=false cannot use non-course-scoped flag APIs', async ({ baseURL }) => {
         const taId = await getUserIdByUsername(user.username);
         await seedCourseWithTA({
             taPermissions: {
                 [taId]: {
-                    canAccessCourses: true,
-                    canAccessFlags: false,
+                    materials: true, questions: true, settings: true, transcripts: true,
+                    flags: false, roster: false,
                     updatedAt: new Date(),
                 },
             },
@@ -1468,7 +1515,11 @@ test.describe('TA instructor-only guardrails', () => {
     });
 
     test('authorized TA visiting instructor TA management hub is routed to shared course upload page', async ({ page }) => {
-        await seedCourseWithTA();
+        const taId = await getUserIdByUsername(user.username);
+        // Needs at least one of materials/questions/settings to land on
+        // /instructor/documents rather than being bounced onward to /ta -
+        // an unpermissioned new TA (this helper's default) has none.
+        await seedCourseWithTA({ taPermissions: { [taId]: { materials: true, updatedAt: new Date() } } });
         await loginViaUI(page);
 
         await page.goto('/instructor/ta-hub');
@@ -1477,14 +1528,14 @@ test.describe('TA instructor-only guardrails', () => {
         await expect(page).toHaveURL(/\/instructor\/documents/);
     });
 
-    test('TA cannot spoof an instructorId to mutate instructor-only course settings or units', async ({ baseURL }) => {
+    test('TA without settings/materials permissions cannot spoof an instructorId to mutate course settings or units', async ({ baseURL }) => {
         const instructorId = await getUserIdByUsername(instructorUser.username);
         const taId = await getUserIdByUsername(user.username);
         await seedCourseWithTA({
             taPermissions: {
                 [taId]: {
-                    canAccessCourses: false,
-                    canAccessFlags: false,
+                    materials: false, questions: false, flags: false, roster: false,
+                    transcripts: false, settings: false,
                     updatedAt: new Date(),
                 },
             },

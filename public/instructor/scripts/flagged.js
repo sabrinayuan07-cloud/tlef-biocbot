@@ -436,31 +436,21 @@ async function checkTAPermissionsAndNavigate(feature, targetPage) {
         const selectedCourseId = localStorage.getItem('selectedCourseId');
         const selectedCourse = courses.find(course => course.courseId === selectedCourseId) || courses[0];
 
-        // Check permissions for the currently selected course
+        // Check permission for the currently selected course. A failed
+        // fetch denies access (fail-closed) rather than defaulting to
+        // allowed - this previously defaulted to `true` on any non-OK
+        // response, silently granting access whenever the permissions
+        // fetch itself failed.
+        const permissionKey = feature === 'courses' ? 'materials' : feature;
         let hasPermission = false;
-        for (const course of courses) {
-            if (course.courseId !== selectedCourse.courseId) {
-                continue;
-            }
-
-            const permResponse = await authenticatedFetch(`/api/courses/${course.courseId}/ta-permissions/${taId}`);
-            
-            if (permResponse.ok) {
-                const permResult = await permResponse.json();
-                if (permResult.success) {
-                    const permissions = permResult.data.permissions;
-                    if ((feature === 'courses' && permissions.canAccessCourses) || 
-                        (feature === 'flags' && permissions.canAccessFlags)) {
-                        hasPermission = true;
-                        break;
-                    }
-                }
-            } else {
-                // Default permissions if not set
-                hasPermission = true;
+        const permResponse = await authenticatedFetch(`/api/courses/${selectedCourse.courseId}/ta-permissions/${taId}`);
+        if (permResponse.ok) {
+            const permResult = await permResponse.json();
+            if (permResult.success) {
+                hasPermission = window.permissionIsGranted(permResult.data.permissions, permissionKey);
             }
         }
-        
+
         if (!hasPermission) {
             const featureName = feature === 'courses' ? 'My Courses' : 'Student Support';
             showNotification(`You do not have permission to access ${featureName}. Contact your instructor.`, 'error');
@@ -1610,28 +1600,20 @@ async function loadTAPermissions() {
 }
 
 /**
- * Check if TA has permission for a specific feature in any course
+ * Check if TA has permission for a specific feature (nav-link naming:
+ * 'courses' -> the 'materials' permission) in any course - if any course
+ * allows access, grant it.
  */
 function hasPermissionForFeature(feature) {
     // If no permissions loaded, deny access
     if (!window.taPermissions || Object.keys(window.taPermissions).length === 0) {
         return false;
     }
-    
-    // Check permissions for all courses - if any course allows access, grant it
-    for (const courseId in window.taPermissions) {
-        const permissions = window.taPermissions[courseId];
-        if (permissions) {
-            if (feature === 'courses' && permissions.canAccessCourses) {
-                return true;
-            }
-            if (feature === 'flags' && permissions.canAccessFlags) {
-                return true;
-            }
-        }
-    }
-    
-    return false;
+
+    const permissionKey = feature === 'courses' ? 'materials' : feature;
+    return Object.values(window.taPermissions).some(permissions =>
+        window.permissionIsGranted(permissions, permissionKey)
+    );
 }
 
 /**

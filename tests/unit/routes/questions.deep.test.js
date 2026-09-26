@@ -72,16 +72,25 @@ describe('access helpers — system admin and TA branches', () => {
         expect(res.body.data.created).toBe(true);
     });
 
-    test('a TA with default permissions can create a question', async () => {
-        const res = await request(app({ db: courseDb(), user: ta })).post('/').send({
+    test('a TA explicitly granted the questions permission can create a question', async () => {
+        const db = courseDb({ taPermissions: { t1: { questions: true } } });
+        const res = await request(app({ db, user: ta })).post('/').send({
             courseId: 'C1', lectureName: 'Unit 1', instructorId: 'i1',
             questionType: 'short-answer', question: 'TA-created?', correctAnswer: 'yes',
         });
         expect(res.status).toBe(200);
     });
 
-    test('a TA whose course permissions deny "courses" access is blocked from mutating', async () => {
-        const db = courseDb({ taPermissions: { t1: { canAccessCourses: false, canAccessFlags: true } } });
+    test('a TA with no permissions record is blocked from mutating (fail-closed default)', async () => {
+        const res = await request(app({ db: courseDb(), user: ta })).post('/').send({
+            courseId: 'C1', lectureName: 'Unit 1', instructorId: 'i1',
+            questionType: 'short-answer', question: 'Blocked?', correctAnswer: 'yes',
+        });
+        expect(res.status).toBe(403);
+    });
+
+    test('a TA whose questions permission is explicitly denied is blocked from mutating', async () => {
+        const db = courseDb({ taPermissions: { t1: { questions: false, flags: true } } });
         const res = await request(app({ db, user: ta })).post('/').send({
             courseId: 'C1', lectureName: 'Unit 1', instructorId: 'i1',
             questionType: 'short-answer', question: 'Blocked?', correctAnswer: 'yes',
@@ -455,11 +464,21 @@ describe('POST /generate-ai — remaining access, content, and regenerate branch
         expect(res.status).toBe(404);
     });
 
-    test('grants access to a TA listed in the course tas array by identity, not role', async () => {
-        const db = generationDb({ instructorId: 'someone-else', tas: [{ userId: 't1' }] });
+    test('grants access to a TA with the questions permission for this course', async () => {
+        const db = generationDb({
+            instructorId: 'someone-else',
+            tas: ['t1'],
+            taPermissions: { t1: { questions: true } },
+        });
         resolveCourseAi.mockResolvedValueOnce({ llm: { generateAssessmentQuestion: jest.fn(async () => ({ question: 'Q?', answer: 'A' })) } });
         const res = await request(app({ db, user: ta })).post('/generate-ai').send(basePayload);
         expect(res.status).toBe(200);
+    });
+
+    test('blocks a TA listed in course.tas who lacks the questions permission', async () => {
+        const db = generationDb({ instructorId: 'someone-else', tas: ['t1'], taPermissions: { t1: { questions: false } } });
+        const res = await request(app({ db, user: ta })).post('/generate-ai').send(basePayload);
+        expect(res.status).toBe(403);
     });
 
     test('404s when the unit does not exist in the course', async () => {

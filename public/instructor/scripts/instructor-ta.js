@@ -182,7 +182,10 @@ async function loadTAPermissions() {
 }
 
 /**
- * Check if TA has permission for a specific feature in any course
+ * Check if TA has permission for a specific feature (nav-link naming:
+ * 'courses' -> the 'materials' permission, 'flags' -> the 'flags'
+ * permission) in any of their courses, or just the currently-selected one
+ * when one is picked.
  */
 function hasPermissionForFeature(feature) {
     // If no permissions loaded, deny access
@@ -190,24 +193,16 @@ function hasPermissionForFeature(feature) {
         return false;
     }
 
+    const permissionKey = feature === 'courses' ? 'materials' : feature;
+
     const selectedCourseId = getSelectedCourseIdForTA();
     const courseIds = selectedCourseId && window.taPermissions[selectedCourseId]
         ? [selectedCourseId]
         : Object.keys(window.taPermissions);
 
-    for (const courseId of courseIds) {
-        const permissions = window.taPermissions[courseId];
-        if (permissions) {
-            if (feature === 'courses' && permissions.canAccessCourses !== false) {
-                return true;
-            }
-            if (feature === 'flags' && permissions.canAccessFlags !== false) {
-                return true;
-            }
-        }
-    }
-    
-    return false;
+    return courseIds.some(courseId =>
+        window.permissionIsGranted(window.taPermissions[courseId], permissionKey)
+    );
 }
 
 /**
@@ -254,4 +249,11 @@ async function updateTANavigationBasedOnPermissions() {
     }
     
     console.log('🔍 [PERMISSIONS] Navigation updated based on TA permissions');
+
+    // On the documents page, unit sub-sections need the same gating - the
+    // units may already be rendered by the time permissions finish loading
+    // (or vice versa), so re-apply here regardless of order.
+    if (typeof window.applyTASectionPermissions === 'function') {
+        window.applyTASectionPermissions();
+    }
 }

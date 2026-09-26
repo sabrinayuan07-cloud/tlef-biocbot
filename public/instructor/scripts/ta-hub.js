@@ -7,6 +7,37 @@ let currentTAs = [];
 let instructorCourses = [];
 let taToRemove = null;
 let taPermissions = {}; // Store TA permissions for each course
+let rolePresets = {}; // { presetName: { materials, questions, ... } }, loaded once from the server
+
+const PERMISSION_LABELS = {
+    materials: 'Course Materials',
+    questions: 'Question Bank',
+    flags: 'Flagged Content',
+    roster: 'Student Roster',
+    transcripts: 'Student Transcripts',
+    settings: 'Course Settings'
+};
+
+// ROLE_PRESET_LABELS comes from common/scripts/auth.js (window.ROLE_PRESET_LABELS).
+
+/**
+ * The named role presets a TA can be assigned in one action. Fetched once
+ * so the dropdown never hardcodes its own copy of what a preset expands to
+ * - src/services/permissions.js is the single source of truth.
+ */
+async function loadRolePresets() {
+    try {
+        const response = await authenticatedFetch('/api/courses/permissions/presets');
+        if (response.ok) {
+            const result = await response.json();
+            if (result.success) {
+                rolePresets = result.data.presets || {};
+            }
+        }
+    } catch (error) {
+        console.error('Error loading role presets:', error);
+    }
+}
 
 document.addEventListener('DOMContentLoaded', async function() {
     // Wait for authentication to be ready
@@ -21,11 +52,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Initialize TA Hub functionality
     initializeTAHub();
-    
+
     // Load instructor courses
     await loadInstructorCourses();
-    
-    // Load current TAs
+
+    // Load role presets and current TAs
+    await loadRolePresets();
     await loadCurrentTAs();
 });
 
@@ -283,11 +315,28 @@ function displayTAs() {
     // Create TA cards with permission controls
     tasContainer.innerHTML = currentTAs.map(ta => {
         const coursePermissions = taPermissions[ta.courseId] || {};
-        const permissions = coursePermissions[ta.userId] || { canAccessCourses: true, canAccessFlags: true };
+        // Default is now fail-closed (no keys set) rather than the old
+        // fail-open {canAccessCourses:true, canAccessFlags:true} - matches
+        // the server's default for a TA with no permissions record yet.
+        const permissions = coursePermissions[ta.userId] || {};
         const displayLabel = ta.displayName || ta.username || ta.userId;
+        const roleLabel = permissions.roleLabel || 'custom';
+
+        const checkboxes = window.TA_PERMISSION_KEYS.map(key => `
+                        <label class="permission-toggle">
+                            <input type="checkbox"
+                                   id="${key}-permission-${ta.userId}"
+                                   ${permissions[key] ? 'checked' : ''}
+                                   onchange="updateTAPermission('${ta.courseId}', '${ta.userId}', '${key}', this.checked)">
+                            <span class="toggle-label">${PERMISSION_LABELS[key]}</span>
+                        </label>`).join('');
+
+        const presetOptions = Object.keys(rolePresets).map(presetName =>
+            `<option value="${presetName}" ${roleLabel === presetName ? 'selected' : ''}>${ROLE_PRESET_LABELS[presetName] || presetName}</option>`
+        ).join('');
 
         return `
-            <div class="ta-card">
+            <div class="ta-card" data-ta-id="${ta.userId}">
                 <div class="ta-header">
                     <h3 class="ta-name">${displayLabel}</h3>
                     <span class="ta-role">TA</span>
@@ -298,28 +347,21 @@ function displayTAs() {
                     <p><strong>Course:</strong> ${ta.courseName || 'Unknown'}</p>
                     <p><strong>Joined:</strong> ${ta.createdAt ? new Date(ta.createdAt).toLocaleDateString() : 'Unknown'}</p>
                 </div>
-                
+
                 <!-- Permission Controls -->
                 <div class="ta-permissions">
                     <h4>Permissions</h4>
-                    <div class="permission-controls">
-                        <label class="permission-toggle">
-                            <input type="checkbox" 
-                                   id="courses-permission-${ta.userId}" 
-                                   ${permissions.canAccessCourses ? 'checked' : ''}
-                                   onchange="updateTAPermission('${ta.courseId}', '${ta.userId}', 'courses', this.checked)">
-                            <span class="toggle-label">My Courses</span>
-                        </label>
-                        <label class="permission-toggle">
-                            <input type="checkbox" 
-                                   id="flags-permission-${ta.userId}" 
-                                   ${permissions.canAccessFlags ? 'checked' : ''}
-                                   onchange="updateTAPermission('${ta.courseId}', '${ta.userId}', 'flags', this.checked)">
-                            <span class="toggle-label">Flagged Content</span>
-                        </label>
+                    <label class="role-preset-picker">
+                        <span class="toggle-label">Role</span>
+                        <select onchange="applyRolePreset('${ta.courseId}', '${ta.userId}', this.value)">
+                            <option value="custom" ${roleLabel === 'custom' ? 'selected' : ''} disabled>${ROLE_PRESET_LABELS.custom}</option>
+                            ${presetOptions}
+                        </select>
+                    </label>
+                    <div class="permission-controls">${checkboxes}
                     </div>
                 </div>
-                
+
                 <div class="ta-actions">
                     <button class="btn-small btn-danger" onclick="openRemoveTAModal('${ta.userId}', '${displayLabel}')">Remove</button>
                 </div>
@@ -416,65 +458,95 @@ async function handleRemoveTA() {
 }
 
 /**
- * Update TA permission
+ * Toggle a single TA permission. The PUT route accepts a partial body, so
+ * this sends just the one changed key rather than reading the current five
+ * other flags and re-sending all six - removes the read-modify-write race
+ * between two toggles in flight that the old merge-then-PUT dance had.
  */
-async function updateTAPermission(courseId, taId, permissionType, value) {
+async function updateTAPermission(courseId, taId, permissionKey, value) {
     try {
-        // Determine which permission to update
-        const permissions = {
-            canAccessCourses: permissionType === 'courses' ? value : undefined,
-            canAccessFlags: permissionType === 'flags' ? value : undefined
-        };
-        
-        // Get current permissions to preserve the other one
-        const currentPermissions = taPermissions[courseId] && taPermissions[courseId][taId] 
-            ? taPermissions[courseId][taId] 
-            : { canAccessCourses: true, canAccessFlags: true };
-        
-        // Merge with current permissions
-        const updatedPermissions = {
-            canAccessCourses: permissions.canAccessCourses !== undefined ? permissions.canAccessCourses : currentPermissions.canAccessCourses,
-            canAccessFlags: permissions.canAccessFlags !== undefined ? permissions.canAccessFlags : currentPermissions.canAccessFlags
-        };
-        
         const response = await authenticatedFetch(`/api/courses/${courseId}/ta-permissions/${taId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(updatedPermissions)
+            body: JSON.stringify({ [permissionKey]: value })
         });
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
-            // Update local permissions cache
-            if (!taPermissions[courseId]) {
-                taPermissions[courseId] = {};
-            }
-            taPermissions[courseId][taId] = updatedPermissions;
-            
-            const permissionName = permissionType === 'courses' ? 'My Courses' : 'Flagged Content';
+            applyPermissionsToCache(courseId, taId, result.data.permissions, result.data.roleLabel);
+            renderRolePickerForTA(taId, result.data.roleLabel);
+
+            const permissionName = PERMISSION_LABELS[permissionKey] || permissionKey;
             const action = value ? 'enabled' : 'disabled';
             showNotification(`${permissionName} access ${action} for ${taId}`, 'success');
         } else {
             throw new Error(result.message || 'Failed to update TA permission');
         }
-        
+
     } catch (error) {
         console.error('Error updating TA permission:', error);
         showNotification(`Error updating permission: ${error.message}`, 'error');
-        
+
         // Revert the checkbox state
-        const checkbox = document.getElementById(`${permissionType}-permission-${taId}`);
+        const checkbox = document.getElementById(`${permissionKey}-permission-${taId}`);
         if (checkbox) {
             checkbox.checked = !value;
         }
     }
+}
+
+/**
+ * Apply a named role preset (its full six-flag set) to a TA in one action.
+ */
+async function applyRolePreset(courseId, taId, presetName) {
+    try {
+        const response = await authenticatedFetch(`/api/courses/${courseId}/ta-permissions/${taId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ role: presetName })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+            applyPermissionsToCache(courseId, taId, result.data.permissions, result.data.roleLabel);
+            window.TA_PERMISSION_KEYS.forEach(key => {
+                const checkbox = document.getElementById(`${key}-permission-${taId}`);
+                if (checkbox) checkbox.checked = !!result.data.permissions[key];
+            });
+            showNotification(`Applied "${ROLE_PRESET_LABELS[presetName] || presetName}" role to ${taId}`, 'success');
+        } else {
+            throw new Error(result.message || 'Failed to apply role preset');
+        }
+    } catch (error) {
+        console.error('Error applying role preset:', error);
+        showNotification(`Error applying role: ${error.message}`, 'error');
+    }
+}
+
+function applyPermissionsToCache(courseId, taId, permissions, roleLabel) {
+    if (!taPermissions[courseId]) {
+        taPermissions[courseId] = {};
+    }
+    taPermissions[courseId][taId] = { ...permissions, roleLabel };
+}
+
+function renderRolePickerForTA(taId, roleLabel) {
+    const select = document.querySelector(`.ta-card[data-ta-id="${taId}"] .role-preset-picker select`);
+    if (select) select.value = roleLabel;
 }
 
 

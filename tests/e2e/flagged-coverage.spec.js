@@ -120,7 +120,7 @@ function buildMHFlag(overrides = {}) {
  *   courseId?: string | null,
  *   courses?: Array<Record<string, any>>,
  *   instructorCoursesEndpointStatus?: number,
- *   permissions?: Record<string, { canAccessCourses: boolean, canAccessFlags: boolean }>,
+ *   permissions?: Record<string, { materials?: boolean, questions?: boolean, flags?: boolean, roster?: boolean, transcripts?: boolean, settings?: boolean }>,
  *   flags?: FlagShape[],
  *   flagsByCourse?: Record<string, FlagShape[]>,
  *   flagsStatus?: number,
@@ -831,7 +831,7 @@ test.describe('flagged.js — TA sidebar wiring and navigation', () => {
             role: 'ta',
             userId: TA_ID,
             permissions: {
-                [COURSE_ID]: { canAccessCourses: true, canAccessFlags: true },
+                [COURSE_ID]: { materials: true, questions: true, settings: true, transcripts: true, flags: true, roster: true },
             },
             flags: [],
         });
@@ -863,7 +863,7 @@ test.describe('flagged.js — TA sidebar wiring and navigation', () => {
             role: 'ta',
             userId: TA_ID,
             permissions: {
-                [COURSE_ID]: { canAccessCourses: false, canAccessFlags: true },
+                [COURSE_ID]: { materials: false, questions: false, settings: false, transcripts: false, flags: true, roster: true },
             },
             flags: [],
         });

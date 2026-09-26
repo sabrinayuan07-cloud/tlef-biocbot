@@ -210,9 +210,16 @@ describe('review/export and service endpoint branches', () => {
         expect((await request(app({ user: instructor }))[method](path)).status).toBe(500);
     });
 
-    test('TA access covers no course access before permission and instructor success', async () => {
-        Course.userHasCourseAccess.mockResolvedValueOnce(false);
+    test('TA access is gated on checkTAPermission alone, and instructor access on userHasCourseAccess', async () => {
+        // A TA's course membership is implicit in checkTAPermission itself
+        // (it checks course.tas internally) - hasPermission() doesn't call
+        // userHasCourseAccess for the TA branch at all, unlike instructors.
+        Course.checkTAPermission.mockResolvedValueOnce(false);
         expect((await request(app({ user: ta })).get('/feedback/course/C1')).status).toBe(403);
+
+        Course.userHasCourseAccess.mockResolvedValueOnce(false);
+        expect((await request(app({ user: instructor })).get('/feedback/course/C1')).status).toBe(403);
+
         expect((await request(app({ user: instructor })).get('/survey/course/C1')).status).toBe(200);
     });
 

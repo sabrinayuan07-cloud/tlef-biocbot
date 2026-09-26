@@ -413,39 +413,52 @@ describe('TA removal and permissions', () => {
         expect(user.role).toBe('student');
     });
 
-    test('PUT permissions validates booleans and course ownership', async () => {
-        expect((await request(app({ db: taDb(), user: instructor })).put('/C1/ta-permissions/t1').send({ canAccessCourses: true })).status).toBe(400);
+    test('PUT permissions rejects an empty/unrecognized body and validates course ownership', async () => {
+        expect((await request(app({ db: taDb(), user: instructor })).put('/C1/ta-permissions/t1').send({ notAPermission: true })).status).toBe(400);
         expect((await request(app({ db: taDb({ instructorId: 'owner' }), user: instructor })).put('/C1/ta-permissions/t1')
-            .send({ canAccessCourses: true, canAccessFlags: false })).status).toBe(403);
+            .send({ materials: true, flags: false })).status).toBe(403);
     });
 
-    test('PUT permissions persists both feature flags', async () => {
+    test('PUT permissions accepts a partial patch and only changes the keys sent', async () => {
         const db = taDb();
         const res = await request(app({ db, user: instructor })).put('/C1/ta-permissions/t1')
-            .send({ canAccessCourses: false, canAccessFlags: true });
+            .send({ materials: false, flags: true });
         expect(res.status).toBe(200);
-        expect(res.body.data).toMatchObject({ taId: 't1', canAccessCourses: false, canAccessFlags: true });
+        expect(res.body.data.permissions).toMatchObject({ materials: false, flags: true, questions: false, roster: false });
         expect((await db.collection('courses').findOne({ courseId: 'C1' })).taPermissions.t1)
-            .toMatchObject({ canAccessCourses: false, canAccessFlags: true });
+            .toMatchObject({ materials: false, flags: true });
+
+        // A second, single-key patch must not clobber the first change.
+        const res2 = await request(app({ db, user: instructor })).put('/C1/ta-permissions/t1').send({ roster: true });
+        expect(res2.body.data.permissions).toMatchObject({ materials: false, flags: true, roster: true });
     });
 
-    test('GET one permission allows a TA to view only their own defaults', async () => {
+    test('PUT permissions accepts a named role preset', async () => {
+        const db = taDb();
+        const res = await request(app({ db, user: instructor })).put('/C1/ta-permissions/t1').send({ role: 'grader' });
+        expect(res.status).toBe(200);
+        expect(res.body.data.permissions).toEqual({ materials: false, questions: false, flags: true, roster: true, transcripts: false, settings: false });
+        expect(res.body.data.roleLabel).toBe('grader');
+    });
+
+    test('GET one permission allows a TA to view only their own defaults (fail-closed)', async () => {
         const res = await request(app({ db: taDb(), user: ta })).get('/C1/ta-permissions/t1');
         expect(res.status).toBe(200);
-        expect(res.body.data.permissions).toEqual({ canAccessCourses: true, canAccessFlags: true });
+        expect(res.body.data.permissions).toEqual({ materials: false, questions: false, flags: false, roster: false, transcripts: false, settings: false });
+        expect(res.body.data.roleLabel).toBe('custom');
         expect((await request(app({ db: taDb(), user: ta })).get('/C1/ta-permissions/t2')).status).toBe(403);
     });
 
-    test('GET all permissions returns explicit and default values for every TA', async () => {
+    test('GET all permissions returns explicit and default values, with a roleLabel, for every TA', async () => {
         const db = taDb({
             tas: ['t1', 't2'],
-            taPermissions: { t1: { canAccessCourses: false, canAccessFlags: true } },
+            taPermissions: { t1: { materials: false, questions: false, flags: true, roster: true, transcripts: false, settings: false } },
         });
         const res = await request(app({ db, user: instructor })).get('/C1/ta-permissions');
         expect(res.status).toBe(200);
         expect(res.body.data.taPermissions).toEqual({
-            t1: { canAccessCourses: false, canAccessFlags: true },
-            t2: { canAccessCourses: true, canAccessFlags: true },
+            t1: { materials: false, questions: false, flags: true, roster: true, transcripts: false, settings: false, roleLabel: 'grader' },
+            t2: { materials: false, questions: false, flags: false, roster: false, transcripts: false, settings: false, roleLabel: 'custom' },
         });
     });
 });
@@ -494,12 +507,12 @@ describe('student enrollment management', () => {
         expect(res.body.data.students.find(s => s.userId === 's3')).toMatchObject({ displayName: 's3', enrolled: true });
     });
 
-    test('GET students blocks a TA whose flags permission is disabled', async () => {
+    test('GET students blocks a TA whose roster permission is disabled', async () => {
         const db = memoryDb({ courses: [{
-            courseId: 'C1', tas: ['t1'], taPermissions: { t1: { canAccessCourses: true, canAccessFlags: false } },
+            courseId: 'C1', tas: ['t1'], taPermissions: { t1: { materials: true, roster: false } },
         }] });
         const res = await request(app({ db, user: ta })).get('/C1/students');
         expect(res.status).toBe(403);
-        expect(res.body.message).toMatch(/permission to view student flags/);
+        expect(res.body.message).toMatch(/permission to view the student roster/);
     });
 });

@@ -117,8 +117,8 @@ function buildSettingsCourse({
         tas: [taId],
         taPermissions: {
             [taId]: {
-                canAccessCourses: true,
-                canAccessFlags: true,
+                materials: true, questions: true, flags: true, roster: true,
+                transcripts: true, settings: true,
                 updatedAt: now,
             },
         },

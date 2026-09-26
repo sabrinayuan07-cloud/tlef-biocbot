@@ -241,22 +241,50 @@ describe('Course.getTAPermissions / updateTAPermissions', () => {
         });
     });
 
-    test('getTAPermissions defaults to full access when none are stored', async () => {
+    const ALL_FALSE = { materials: false, questions: false, flags: false, roster: false, transcripts: false, settings: false };
+
+    test('getTAPermissions defaults to no access (fail-closed) when none are stored', async () => {
         const db = memoryDb({ courses: [{ courseId: 'C1', tas: ['t1'] }] });
         expect(await Course.getTAPermissions(db, 'C1', 't1')).toEqual({
             success: true,
-            permissions: { canAccessCourses: true, canAccessFlags: true },
+            permissions: ALL_FALSE,
         });
     });
 
-    test('updateTAPermissions persists, and getTAPermissions reads it back', async () => {
+    test('getTAPermissions lazily normalizes a still-legacy two-boolean record, preserving its effective access', async () => {
+        const db = memoryDb({
+            courses: [{ courseId: 'C1', tas: ['t1'], taPermissions: { t1: { canAccessCourses: true, canAccessFlags: false } } }],
+        });
+        expect(await Course.getTAPermissions(db, 'C1', 't1')).toEqual({
+            success: true,
+            // canAccessCourses covered materials/questions/settings, and -
+            // via the mentalHealthFlags 'courses' bug - transcripts too.
+            // canAccessFlags covered flags and (bundled in) roster.
+            permissions: { materials: true, questions: true, settings: true, transcripts: true, flags: false, roster: false },
+        });
+    });
+
+    test('getTAPermissions reads an already-new-shape record directly, ignoring extra stored keys like updatedAt', async () => {
+        const db = memoryDb({
+            courses: [{
+                courseId: 'C1', tas: ['t1'],
+                taPermissions: { t1: { materials: true, questions: false, flags: true, roster: true, transcripts: false, settings: false, updatedAt: new Date() } },
+            }],
+        });
+        expect(await Course.getTAPermissions(db, 'C1', 't1')).toEqual({
+            success: true,
+            permissions: { materials: true, questions: false, flags: true, roster: true, transcripts: false, settings: false },
+        });
+    });
+
+    test('updateTAPermissions persists a partial patch, and getTAPermissions reads it back merged with defaults', async () => {
         const db = memoryDb({ courses: [{ courseId: 'C1', tas: ['t1'] }] });
-        const upd = await Course.updateTAPermissions(db, 'C1', 't1', { canAccessCourses: false, canAccessFlags: true });
+        const upd = await Course.updateTAPermissions(db, 'C1', 't1', { flags: true });
         expect(upd.success).toBe(true);
 
         const read = await Course.getTAPermissions(db, 'C1', 't1');
         expect(read.success).toBe(true);
-        expect(read.permissions).toMatchObject({ canAccessCourses: false, canAccessFlags: true });
+        expect(read.permissions).toEqual({ ...ALL_FALSE, flags: true });
     });
 
     test('updateTAPermissions rejects for a missing course or unassigned TA', async () => {
@@ -269,21 +297,28 @@ describe('Course.getTAPermissions / updateTAPermissions', () => {
 });
 
 describe('Course.checkTAPermission', () => {
-    test('reflects the stored per-feature permission', async () => {
+    test('reflects the stored per-permission flag', async () => {
         const db = memoryDb({
-            courses: [{ courseId: 'C1', tas: ['t1'], taPermissions: { t1: { canAccessCourses: true, canAccessFlags: false } } }],
+            courses: [{ courseId: 'C1', tas: ['t1'], taPermissions: { t1: { materials: true, questions: false, flags: false, roster: false, transcripts: false, settings: false } } }],
         });
-        expect(await Course.checkTAPermission(db, 'C1', 't1', 'courses')).toBe(true);
+        expect(await Course.checkTAPermission(db, 'C1', 't1', 'materials')).toBe(true);
         expect(await Course.checkTAPermission(db, 'C1', 't1', 'flags')).toBe(false);
+    });
+
+    test('does not let a stray stored key (e.g. updatedAt) resolve as a granted permission', async () => {
+        const db = memoryDb({
+            courses: [{ courseId: 'C1', tas: ['t1'], taPermissions: { t1: { materials: true, updatedAt: new Date() } } }],
+        });
+        expect(await Course.checkTAPermission(db, 'C1', 't1', 'updatedAt')).toBe(false);
     });
 
     test('returns false for an unknown feature, an unassigned TA, or a deleted course', async () => {
         const db = memoryDb({ courses: [{ courseId: 'C1', tas: ['t1'] }] });
         expect(await Course.checkTAPermission(db, 'C1', 't1', 'banana')).toBe(false);
-        expect(await Course.checkTAPermission(db, 'C1', 't2', 'courses')).toBe(false);
+        expect(await Course.checkTAPermission(db, 'C1', 't2', 'materials')).toBe(false);
 
         const deleted = memoryDb({ courses: [{ courseId: 'C1', tas: ['t1'], status: 'deleted' }] });
-        expect(await Course.checkTAPermission(deleted, 'C1', 't1', 'courses')).toBe(false);
+        expect(await Course.checkTAPermission(deleted, 'C1', 't1', 'materials')).toBe(false);
     });
 });
 
