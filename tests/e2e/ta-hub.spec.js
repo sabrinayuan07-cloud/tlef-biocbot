@@ -170,8 +170,9 @@ test.describe('Instructor TA Hub UI', () => {
         await expect(card).toContainText(`Course: ${COURSE_NAME}`);
         await expect(card.locator(`#materials-permission-${taId}`)).toBeChecked();
         await expect(card.locator(`#flags-permission-${taId}`)).not.toBeChecked();
-        // 6 checkboxes, one per permission.
+        // 6 checkboxes (one per permission) plus the role-preset dropdown.
         await expect(card.locator('.permission-toggle input[type="checkbox"]')).toHaveCount(6);
+        await expect(card.locator('.role-preset-picker select')).toHaveValue('custom');
 
         const assignedCourse = page.locator('.course-ta-item', { hasText: new RegExp(`Course ID:\\s*${COURSE_ID}\\s*$`) });
         await expect(assignedCourse).toContainText(COURSE_NAME);
@@ -224,6 +225,8 @@ test.describe('Instructor TA Hub UI', () => {
         await expect(savedCourseCard).toContainText(`Course: ${OTHER_COURSE_NAME}`, { timeout: 15_000 });
         await expect(savedCourseCard.locator(`#materials-permission-${taId}`)).not.toBeChecked();
         await expect(savedCourseCard.locator(`#flags-permission-${taId}`)).toBeChecked();
+        // OTHER_COURSE_ID's flags+roster grant matches the "Grader" preset exactly.
+        await expect(savedCourseCard.locator('.role-preset-picker select')).toHaveValue('grader');
 
         await page.goto(`/instructor/ta-hub?courseId=${COURSE_ID}`);
         const urlCourseCard = page.locator('.ta-card', { hasText: taUser.displayName });
@@ -354,5 +357,45 @@ test.describe('Instructor TA Hub UI', () => {
             { timeout: 15_000 }
         );
         await expect(card.locator(`#materials-permission-${taId}`)).not.toBeChecked();
+    });
+
+    test('applying a role preset updates all six checkboxes in one action', async ({ page }) => {
+        const taId = await getUserIdByUsername(taUser.username);
+        await seedTAHubCourses([
+            {
+                courseId: COURSE_ID,
+                courseName: COURSE_NAME,
+                tas: [taId],
+                // No explicit permissions - starts fail-closed/all-denied.
+            },
+        ]);
+
+        await loginAsInstructor(page);
+        await page.goto('/instructor/ta-hub');
+
+        const card = page.locator('.ta-card', { hasText: taUser.displayName });
+        await expect(card).toBeVisible({ timeout: 15_000 });
+        await expect(card.locator('.role-preset-picker select')).toHaveValue('custom');
+
+        await card.locator('.role-preset-picker select').selectOption('contentTA');
+        await expect(page.locator('.notification.success')).toContainText(
+            `Applied "Content TA" role to TA: ${taUser.displayName}`,
+            { timeout: 15_000 }
+        );
+
+        await expect(card.locator(`#materials-permission-${taId}`)).toBeChecked();
+        await expect(card.locator(`#questions-permission-${taId}`)).toBeChecked();
+        await expect(card.locator(`#flags-permission-${taId}`)).not.toBeChecked();
+        await expect(card.locator(`#roster-permission-${taId}`)).not.toBeChecked();
+        await expect(card.locator(`#transcripts-permission-${taId}`)).not.toBeChecked();
+        await expect(card.locator(`#settings-permission-${taId}`)).not.toBeChecked();
+
+        // Manually toggling one checkbox afterward should drop the dropdown to "Custom".
+        await card.locator(`#flags-permission-${taId}`).check();
+        await expect(page.locator('.notification.success').last()).toContainText(
+            `Flagged Content access enabled for TA: ${taUser.displayName}`,
+            { timeout: 15_000 }
+        );
+        await expect(card.locator('.role-preset-picker select')).toHaveValue('custom');
     });
 });

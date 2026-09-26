@@ -7,6 +7,7 @@ let currentTAs = [];
 let instructorCourses = [];
 let taToRemove = null;
 let taPermissions = {}; // Store TA permissions for each course
+let rolePresets = {}; // { presetName: { materials, questions, ... } }, loaded once from the server
 
 const PERMISSION_LABELS = {
     materials: 'Course Materials',
@@ -17,24 +18,46 @@ const PERMISSION_LABELS = {
     settings: 'Course Settings'
 };
 
+// ROLE_PRESET_LABELS comes from common/scripts/auth.js (window.ROLE_PRESET_LABELS).
+
+/**
+ * The named role presets a TA can be assigned in one action. Fetched once
+ * so the dropdown never hardcodes its own copy of what a preset expands to
+ * - src/services/permissions.js is the single source of truth.
+ */
+async function loadRolePresets() {
+    try {
+        const response = await authenticatedFetch('/api/courses/permissions/presets');
+        if (response.ok) {
+            const result = await response.json();
+            if (result.success) {
+                rolePresets = result.data.presets || {};
+            }
+        }
+    } catch (error) {
+        console.error('Error loading role presets:', error);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async function() {
     // Wait for authentication to be ready
     await waitForAuth();
-    
+
     // Check if user is a TA and redirect them to TA courses page
     if (typeof isTA === 'function' && isTA()) {
         console.log('🔄 [TA_HUB] User is a TA, redirecting to TA courses page...');
         window.location.href = '/ta/courses';
         return;
     }
-    
+
     // Initialize TA Hub functionality
     initializeTAHub();
 
     // Load instructor courses
     await loadInstructorCourses();
 
-    // Load current TAs
+    // Load role presets and current TAs
+    await loadRolePresets();
     await loadCurrentTAs();
 });
 
@@ -297,6 +320,7 @@ function displayTAs() {
         // the server's default for a TA with no permissions record yet.
         const permissions = coursePermissions[ta.userId] || {};
         const displayLabel = ta.displayName || ta.username || ta.userId;
+        const roleLabel = permissions.roleLabel || 'custom';
 
         const checkboxes = window.TA_PERMISSION_KEYS.map(key => `
                         <label class="permission-toggle">
@@ -306,6 +330,10 @@ function displayTAs() {
                                    onchange="updateTAPermission('${ta.courseId}', '${ta.userId}', '${key}', this.checked)">
                             <span class="toggle-label">${PERMISSION_LABELS[key]}</span>
                         </label>`).join('');
+
+        const presetOptions = Object.keys(rolePresets).map(presetName =>
+            `<option value="${presetName}" ${roleLabel === presetName ? 'selected' : ''}>${ROLE_PRESET_LABELS[presetName] || presetName}</option>`
+        ).join('');
 
         return `
             <div class="ta-card" data-ta-id="${ta.userId}">
@@ -323,6 +351,13 @@ function displayTAs() {
                 <!-- Permission Controls -->
                 <div class="ta-permissions">
                     <h4>Permissions</h4>
+                    <label class="role-preset-picker">
+                        <span class="toggle-label">Role</span>
+                        <select onchange="applyRolePreset('${ta.courseId}', '${ta.userId}', this.value)">
+                            <option value="custom" ${roleLabel === 'custom' ? 'selected' : ''} disabled>${ROLE_PRESET_LABELS.custom}</option>
+                            ${presetOptions}
+                        </select>
+                    </label>
                     <div class="permission-controls">${checkboxes}
                     </div>
                 </div>
@@ -451,7 +486,8 @@ async function updateTAPermission(courseId, taId, permissionKey, value) {
         const result = await response.json();
 
         if (result.success) {
-            applyPermissionsToCache(courseId, taId, result.data.permissions);
+            applyPermissionsToCache(courseId, taId, result.data.permissions, result.data.roleLabel);
+            renderRolePickerForTA(taId, result.data.roleLabel);
 
             const permissionName = PERMISSION_LABELS[permissionKey] || permissionKey;
             const action = value ? 'enabled' : 'disabled';
@@ -474,11 +510,53 @@ async function updateTAPermission(courseId, taId, permissionKey, value) {
     }
 }
 
-function applyPermissionsToCache(courseId, taId, permissions) {
+/**
+ * Apply a named role preset (its full six-flag set) to a TA in one action.
+ */
+async function applyRolePreset(courseId, taId, presetName) {
+    try {
+        const response = await authenticatedFetch(`/api/courses/${courseId}/ta-permissions/${taId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ role: presetName })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+            applyPermissionsToCache(courseId, taId, result.data.permissions, result.data.roleLabel);
+            window.TA_PERMISSION_KEYS.forEach(key => {
+                const checkbox = document.getElementById(`${key}-permission-${taId}`);
+                if (checkbox) checkbox.checked = !!result.data.permissions[key];
+            });
+            const ta = currentTAs.find(t => t.userId === taId);
+            const displayLabel = ta ? (ta.displayName || ta.username || ta.userId) : taId;
+            showNotification(`Applied "${ROLE_PRESET_LABELS[presetName] || presetName}" role to TA: ${displayLabel}`, 'success');
+        } else {
+            throw new Error(result.message || 'Failed to apply role preset');
+        }
+    } catch (error) {
+        console.error('Error applying role preset:', error);
+        showNotification(`Error applying role: ${error.message}`, 'error');
+    }
+}
+
+function applyPermissionsToCache(courseId, taId, permissions, roleLabel) {
     if (!taPermissions[courseId]) {
         taPermissions[courseId] = {};
     }
-    taPermissions[courseId][taId] = permissions;
+    taPermissions[courseId][taId] = { ...permissions, roleLabel };
+}
+
+function renderRolePickerForTA(taId, roleLabel) {
+    const select = document.querySelector(`.ta-card[data-ta-id="${taId}"] .role-preset-picker select`);
+    if (select) select.value = roleLabel;
 }
 
 

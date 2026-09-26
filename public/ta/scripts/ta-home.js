@@ -138,7 +138,7 @@ async function loadTAPermissions() {
             if (response.ok) {
                 const result = await response.json();
                 if (result.success) {
-                    taPermissions[course.courseId] = result.data.permissions;
+                    taPermissions[course.courseId] = { ...result.data.permissions, roleLabel: result.data.roleLabel };
                 }
             }
         }
@@ -521,23 +521,9 @@ function displayTACourses() {
         return;
     }
 
-    const permissionLabels = {
-        materials: 'Course Materials',
-        questions: 'Question Bank',
-        flags: 'Flagged Content',
-        roster: 'Student Roster',
-        transcripts: 'Student Transcripts',
-        settings: 'Course Settings'
-    };
-
     coursesContainer.innerHTML = taCourses.map(course => {
-        const coursePermissions = taPermissions[course.courseId];
-        const grantedKeys = window.TA_PERMISSION_KEYS.filter(key =>
-            window.permissionIsGranted(coursePermissions, key)
-        );
-        const permissionPills = grantedKeys.length > 0
-            ? grantedKeys.map(key => `<span class="permission-pill allowed">${escapeHtml(permissionLabels[key])}</span>`).join('')
-            : `<span class="permission-pill denied">No permissions granted</span>`;
+        const roleKey = (taPermissions[course.courseId] && taPermissions[course.courseId].roleLabel) || 'custom';
+        const roleLabel = window.ROLE_PRESET_LABELS[roleKey] || roleKey;
         const isInactive = isCourseInactive(course);
         const isSelected = selectedTACourseId === course.courseId;
         const statusLabel = isInactive ? 'Inactive' : 'Active';
@@ -554,7 +540,7 @@ function displayTACourses() {
                 <p><strong>Units:</strong> ${escapeHtml(course.totalUnits || 0)}</p>
             </div>
             <div class="course-permissions">
-                ${permissionPills}
+                <span class="permission-pill role">Role: ${escapeHtml(roleLabel)}</span>
             </div>
             <button type="button" class="course-select-button">${isSelected ? 'Selected' : 'Select Course'}</button>
         </div>

@@ -85,9 +85,25 @@ window.getCurrentLLMTagClasses = getCurrentLLMTagClasses;
 
 /**
  * The six granular TA permissions, matching src/services/permissions.js's
- * PERMISSION_KEYS. Kept as a plain array here (not fetched) since it's static.
+ * PERMISSION_KEYS. Kept as a plain array here (not fetched) since it's
+ * static; role presets themselves are NOT duplicated here - fetch those
+ * from GET /api/courses/permissions/presets so there's one source of truth.
  */
 window.TA_PERMISSION_KEYS = ['materials', 'questions', 'flags', 'roster', 'transcripts', 'settings'];
+
+/**
+ * Display labels for the role a server-computed roleLabel names (see
+ * deriveRoleLabel in src/services/permissions.js). The server returns the
+ * raw preset key (e.g. 'fullTA'); every place that shows a role to a human
+ * - the TA hub's picker, a TA's own settings page, their course cards -
+ * reads through this shared map instead of displaying the key as-is.
+ */
+window.ROLE_PRESET_LABELS = {
+    grader: 'Grader',
+    contentTA: 'Content TA',
+    fullTA: 'Full TA',
+    custom: 'Custom'
+};
 
 /**
  * Does a fetched permissions object grant `key`? Single shared check so

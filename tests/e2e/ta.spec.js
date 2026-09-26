@@ -501,8 +501,7 @@ test.describe('TA authentication and course access', () => {
         // Course card is rendered in the courses container with assigned permissions
         const card = page.locator(`.course-card[data-course-id="${COURSE_ID}"]`);
         await expect(card).toBeVisible();
-        await expect(card).toContainText('Course Materials');
-        await expect(card).toContainText('Student Transcripts');
+        await expect(card).toContainText('Role: Full TA');
     });
 
     test('TA can upload a course document to an assigned course', async ({ page }) => {
@@ -928,9 +927,8 @@ test.describe('TA settings and inactive course display', () => {
         await expect(page.locator('#selected-course-status')).toHaveText('Inactive');
         const card = page.locator(`.course-card[data-course-id="${COURSE_ID}"]`);
         await expect(card).toContainText('Inactive');
-        // All six permissions are granted, so every permission pill should show.
-        await expect(card).toContainText('Course Materials');
-        await expect(card).toContainText('Student Transcripts');
+        // All six permissions granted matches the "Full TA" preset exactly.
+        await expect(card).toContainText('Role: Full TA');
         await expect(page.locator('#my-courses-link')).toBeVisible();
         await expect(page.locator('#student-support-link')).toBeVisible();
     });
@@ -952,6 +950,8 @@ test.describe('TA settings and inactive course display', () => {
 
         await expect(page.locator('#ta-id')).toHaveValue(taId, { timeout: 15_000 });
         await expect(page.locator('#ta-email')).toHaveValue(user.email);
+        await expect(page.locator('#permissions-status')).toContainText('Role');
+        await expect(page.locator('#permissions-status')).toContainText('Custom');
         await expect(page.locator('#permissions-status')).toContainText('Course Materials');
         await expect(page.locator('#permissions-status')).toContainText('Flagged Content');
         await expect(page.locator('#permissions-status')).toContainText('Allowed');
