@@ -140,7 +140,7 @@ async function loadTAPermissions() {
             if (response.ok) {
                 const result = await response.json();
                 if (result.success) {
-                    permissions[course.courseId] = { ...result.data.permissions, roleLabel: result.data.roleLabel };
+                    permissions[course.courseId] = result.data.permissions;
                 }
             }
         }
@@ -234,10 +234,6 @@ function updatePermissionsStatus() {
         settings: 'Course Settings'
     };
 
-    const roleKey = permissions && permissions.roleLabel ? permissions.roleLabel : 'custom';
-    const roleDisplay = window.ROLE_PRESET_LABELS[roleKey] || roleKey;
-    const roleNote = `<div class="permission-item"><span class="permission-name">Role</span><span class="permission-status role">${roleDisplay}</span></div>`;
-
     const rows = window.TA_PERMISSION_KEYS.map(key => {
         const allowed = hasPermissionForFeature(key);
         return `
@@ -249,7 +245,7 @@ function updatePermissionsStatus() {
         </div>`;
     }).join('');
 
-    container.innerHTML = roleNote + rows;
+    container.innerHTML = rows;
 }
 
 /**

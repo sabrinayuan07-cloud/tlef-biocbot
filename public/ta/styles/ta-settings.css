@@ -227,12 +227,6 @@
     color: #721c24;
 }
 
-.permission-status.role {
-    background: #e2e6ea;
-    color: #383d41;
-    text-transform: capitalize;
-}
-
 /* Support Section */
 .support-info {
     text-align: center;

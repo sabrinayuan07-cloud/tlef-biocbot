@@ -202,12 +202,6 @@
     color: #721c24;
 }
 
-.permission-pill.role {
-    background: #e2e6ea;
-    color: #383d41;
-    text-transform: capitalize;
-}
-
 .course-select-button {
     width: 100%;
     min-height: 40px;

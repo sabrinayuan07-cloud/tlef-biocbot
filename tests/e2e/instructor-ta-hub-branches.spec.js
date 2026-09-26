@@ -106,13 +106,13 @@ test.describe('Instructor TA Hub branch coverage', () => {
 
         await materialsPermission.click();
         await expect(materialsPermission).toBeChecked();
-        const materialsSuccess = `Course Materials access enabled for ${taId}`;
+        const materialsSuccess = `Course Materials access enabled for TA: ${taUser.displayName}`;
         await expect(page.locator('.notification.success').filter({ hasText: materialsSuccess }))
             .toBeVisible();
 
         await flagsPermission.click();
         await expect(flagsPermission).not.toBeChecked();
-        const flagsSuccess = `Flagged Content access disabled for ${taId}`;
+        const flagsSuccess = `Flagged Content access disabled for TA: ${taUser.displayName}`;
         await expect(page.locator('.notification.success').filter({ hasText: flagsSuccess }))
             .toBeVisible();
 

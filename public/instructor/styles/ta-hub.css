@@ -172,23 +172,6 @@
     user-select: none;
 }
 
-.role-preset-picker {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 12px;
-    padding: 8px;
-}
-
-.role-preset-picker select {
-    padding: 4px 8px;
-    border: 1px solid #ced4da;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    background: #fff;
-}
-
 /* Section Description */
 .section-description {
     margin-bottom: 20px;
@@ -358,10 +341,12 @@
     display: flex;
     gap: 12px;
     justify-content: flex-end;
+    border-top: none;
+    background: none;
 }
 
 .btn-danger {
-    background: #dc3545;
+    background: #b02a37;
     color: white;
     border: none;
     padding: 10px 20px;
@@ -373,7 +358,7 @@
 }
 
 .btn-danger:hover {
-    background: #c82333;
+    background: #8f2330;
 }
 
 /* Loading States */
