@@ -100,8 +100,10 @@ function getCoursePermission(courseId, feature) {
         return false;
     }
 
-    const key = feature === 'courses' ? 'materials' : feature;
-    return window.permissionIsGranted(taPermissions[courseId], key);
+    // 'courses' gates /instructor/documents, which the server allows for
+    // ANY of materials/questions/settings - see window.DOCUMENTS_PAGE_PERMISSIONS.
+    const keys = feature === 'courses' ? window.DOCUMENTS_PAGE_PERMISSIONS : [feature];
+    return keys.some(key => window.permissionIsGranted(taPermissions[courseId], key));
 }
 
 function hasPermissionForFeature(feature) {

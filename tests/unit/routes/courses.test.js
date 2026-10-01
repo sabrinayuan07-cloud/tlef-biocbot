@@ -262,6 +262,40 @@ describe('canonical course status updates', () => {
     });
 });
 
+describe('PUT /:courseId — a TA granted the settings permission', () => {
+    test('actually updates the course, not just passes the access check', async () => {
+        // hasAccess was already computed correctly for a settings-granted TA,
+        // but the update itself filtered by instructorId/instructors - which
+        // a TA is never in - so it silently matched zero documents and 404'd.
+        const db = memoryDb({ courses: [{
+            courseId: 'C1', instructorId: 'i1', tas: ['t1'],
+            taPermissions: { t1: { materials: false, questions: false, settings: true, transcripts: false, flags: false, roster: false } },
+            taPermissionsMigrated: true,
+            courseName: 'Old Name',
+        }] });
+
+        const res = await request(app({ db, user: ta }))
+            .put('/C1').send({ instructorId: 'i1', name: 'New Name' });
+        expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
+        expect((await db.collection('courses').findOne({ courseId: 'C1' })).courseName).toBe('New Name');
+    });
+
+    test('is denied without the settings permission', async () => {
+        const db = memoryDb({ courses: [{
+            courseId: 'C1', instructorId: 'i1', tas: ['t1'],
+            taPermissions: { t1: { materials: true, questions: true, settings: false, transcripts: false, flags: false, roster: false } },
+            taPermissionsMigrated: true,
+            courseName: 'Old Name',
+        }] });
+
+        const res = await request(app({ db, user: ta }))
+            .put('/C1').send({ instructorId: 'i1', name: 'New Name' });
+        expect(res.status).toBe(403);
+        expect((await db.collection('courses').findOne({ courseId: 'C1' })).courseName).toBe('Old Name');
+    });
+});
+
 describe('joining courses', () => {
     test('student join requires a code and rejects an invalid code', async () => {
         const db = memoryDb({ courses: [{ courseId: 'C1', courseCode: 'ABC123' }] });
@@ -441,18 +475,57 @@ describe('TA removal and permissions', () => {
         expect(res.body.data.roleLabel).toBe('grader');
     });
 
+    test('PUT permissions on a legacy-shaped record actually takes effect, not just the response', async () => {
+        // Legacy record granting full access via canAccessCourses/canAccessFlags.
+        // A partial $set of just the requested new-shape keys would leave the
+        // legacy keys in place, and isLegacyTAPermissions would keep reading
+        // the record as legacy on every future request - silently ignoring
+        // this (and every subsequent) toggle.
+        const db = taDb({ taPermissions: { t1: { canAccessCourses: true, canAccessFlags: true } } });
+        const res = await request(app({ db, user: instructor })).put('/C1/ta-permissions/t1')
+            .send({ materials: false });
+        expect(res.status).toBe(200);
+        expect(res.body.data.permissions).toEqual({
+            materials: false, questions: true, settings: true, transcripts: true, flags: true, roster: true,
+        });
+
+        const stored = (await db.collection('courses').findOne({ courseId: 'C1' })).taPermissions.t1;
+        expect(stored).not.toHaveProperty('canAccessCourses');
+        expect(stored).not.toHaveProperty('canAccessFlags');
+
+        // A second read must reflect the real, persisted change - not fall
+        // back into the legacy mapping that would resurrect materials:true.
+        const read = await request(app({ db, user: instructor })).get('/C1/ta-permissions/t1');
+        expect(read.body.data.permissions.materials).toBe(false);
+    });
+
+    test('a named role preset applied to a legacy-shaped record migrates it in the same request', async () => {
+        const db = taDb({ taPermissions: { t1: { canAccessCourses: true, canAccessFlags: true } } });
+        const res = await request(app({ db, user: instructor })).put('/C1/ta-permissions/t1').send({ role: 'grader' });
+        expect(res.status).toBe(200);
+        expect(res.body.data.permissions).toEqual({ materials: false, questions: false, flags: true, roster: true, transcripts: false, settings: false });
+        expect(res.body.data.roleLabel).toBe('grader');
+
+        const stored = (await db.collection('courses').findOne({ courseId: 'C1' })).taPermissions.t1;
+        expect(stored).not.toHaveProperty('canAccessCourses');
+        expect(stored).not.toHaveProperty('canAccessFlags');
+    });
+
     test('GET one permission allows a TA to view only their own defaults (fail-closed)', async () => {
-        const res = await request(app({ db: taDb(), user: ta })).get('/C1/ta-permissions/t1');
+        // Fail-closed-on-no-record only applies once a course has run the
+        // legacy-permissions migration - mark it migrated to exercise that path.
+        const res = await request(app({ db: taDb({ taPermissionsMigrated: true }), user: ta })).get('/C1/ta-permissions/t1');
         expect(res.status).toBe(200);
         expect(res.body.data.permissions).toEqual({ materials: false, questions: false, flags: false, roster: false, transcripts: false, settings: false });
         expect(res.body.data.roleLabel).toBe('custom');
-        expect((await request(app({ db: taDb(), user: ta })).get('/C1/ta-permissions/t2')).status).toBe(403);
+        expect((await request(app({ db: taDb({ taPermissionsMigrated: true }), user: ta })).get('/C1/ta-permissions/t2')).status).toBe(403);
     });
 
     test('GET all permissions returns explicit and default values, with a roleLabel, for every TA', async () => {
         const db = taDb({
             tas: ['t1', 't2'],
             taPermissions: { t1: { materials: false, questions: false, flags: true, roster: true, transcripts: false, settings: false } },
+            taPermissionsMigrated: true,
         });
         const res = await request(app({ db, user: instructor })).get('/C1/ta-permissions');
         expect(res.status).toBe(200);

@@ -1960,15 +1960,14 @@ router.put('/:courseId', async (req, res) => {
             updateData.lectures = lectures;
         }
         
-        // Use $or query to match course by instructorId or instructors array
+        // Authorization already happened above via hasAccess (instructor of
+        // record, or a TA with the 'settings' permission) - the update
+        // itself just needs to find the course. Filtering again by
+        // instructorId/instructors here was redundant for an instructor and
+        // silently matched zero documents for a settings-granted TA, who is
+        // never in either field, making the grant a no-op 404.
         const result = await collection.updateOne(
-            { 
-                courseId,
-                $or: [
-                    { instructorId: user.userId },
-                    { instructors: user.userId }
-                ]
-            },
+            { courseId },
             { $set: updateData }
         );
         
@@ -2130,6 +2129,11 @@ router.post('/:courseId/transfer', async (req, res) => {
             instructors: [user.userId],
             tas: transferTAs ? deepClone(sourceCourse.tas || []) : [],
             taPermissions: transferTAs ? deepClone(sourceCourse.taPermissions || {}) : {},
+            // Inherit the source course's migration status when its TAs come
+            // along too, so a still-unmigrated legacy TA record copied over
+            // doesn't flip to the wrong default in the new course; a course
+            // started with no TAs has nothing to migrate.
+            taPermissionsMigrated: transferTAs ? sourceCourse.taPermissionsMigrated === true : true,
             courseDescription: sourceCourse.courseDescription || '',
             assessmentCriteria: sourceCourse.assessmentCriteria || '',
             courseMaterials: Array.isArray(sourceCourse.courseMaterials) ? deepClone(sourceCourse.courseMaterials) : [],

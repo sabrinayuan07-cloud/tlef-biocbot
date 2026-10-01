@@ -19,8 +19,8 @@ function seededDb(extra = {}) {
                 instructors: ['i1'],
                 tas: ['ta1', 'ta2'],
                 taPermissions: {
-                    ta1: { canAccessCourses: true, canAccessFlags: true },
-                    ta2: { canAccessCourses: true, canAccessFlags: false }
+                    ta1: { materials: true, questions: true, settings: true, transcripts: true, flags: true, roster: true },
+                    ta2: { materials: true, questions: true, settings: true, transcripts: true, flags: false, roster: false }
                 },
                 studentEnrollment: {
                     s1: { enrolled: true },

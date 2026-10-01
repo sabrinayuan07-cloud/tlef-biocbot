@@ -143,6 +143,12 @@
     gap: 12px;
 }
 
+.permissions-load-error {
+    margin: 0;
+    color: #b02a37;
+    font-size: 0.85rem;
+}
+
 .permission-toggle {
     display: flex;
     align-items: center;

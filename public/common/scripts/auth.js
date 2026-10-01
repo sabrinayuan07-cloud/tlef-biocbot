@@ -92,6 +92,16 @@ window.getCurrentLLMTagClasses = getCurrentLLMTagClasses;
 window.TA_PERMISSION_KEYS = ['materials', 'questions', 'flags', 'roster', 'transcripts', 'settings'];
 
 /**
+ * Matches server.js's `authMiddleware.requireAnyPermission(['materials',
+ * 'questions', 'settings'])` gate on GET /instructor/documents: that page's
+ * sections span all three permissions independently, so a TA with only one
+ * of them still needs to reach it. Client-side nav gating must check the
+ * same set, or a questions-only (or settings-only) TA passes the server
+ * gate but never sees the link that would get them there.
+ */
+window.DOCUMENTS_PAGE_PERMISSIONS = ['materials', 'questions', 'settings'];
+
+/**
  * Display labels for the role a server-computed roleLabel names (see
  * deriveRoleLabel in src/services/permissions.js). The server returns the
  * raw preset key (e.g. 'fullTA'); every place that shows a role to a human

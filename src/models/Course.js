@@ -1295,6 +1295,10 @@ async function createCourseFromOnboarding(db, onboardingData) {
             instructorId,
             instructors: [instructorId], // Initialize with primary instructor
             tas: [], // Initialize empty TA array
+            // A course created after this feature shipped has no legacy TA
+            // records to backfill, so it never needs the old fail-open
+            // default for an absent record - start it already migrated.
+            taPermissionsMigrated: true,
             rosterSource: 'manual',
             courseDescription: courseDescription || '',
             assessmentCriteria: assessmentCriteria || '',
@@ -1659,23 +1663,39 @@ async function addInstructorToCourse(db, courseId, instructorId) {
  */
 async function addTAToCourse(db, courseId, taId) {
     const collection = getCoursesCollection(db);
-    
+
     const now = new Date();
-    
+
     // First, ensure the course exists
     const course = await collection.findOne({ courseId });
     if (!course) {
         return { success: false, error: 'Course not found' };
     }
-    
+
+    const setFields = { updatedAt: now };
+
+    // A TA joining for the first time gets an explicit fail-closed record
+    // instead of relying on "no record" - that default now depends on
+    // whether the course has run the legacy-permissions migration (see
+    // getTAPermissions), and a brand-new grant should never ride on that.
+    // Re-adding a TA who already has a record (removed and re-invited, or
+    // joining again via a stale invite) must not reset their permissions.
+    const hasExistingRecord = !!(course.taPermissions && course.taPermissions[taId]);
+    if (!hasExistingRecord) {
+        setFields[`taPermissions.${taId}`] = {
+            ...Object.fromEntries(TA_PERMISSION_KEYS.map(key => [key, false])),
+            updatedAt: now
+        };
+    }
+
     const result = await collection.updateOne(
         { courseId },
         {
             $addToSet: { tas: taId },
-            $set: { updatedAt: now }
+            $set: setFields
         }
     );
-    
+
     console.log(`Added TA ${taId} to course ${courseId}`);
     return { success: true, modifiedCount: result.modifiedCount };
 }
@@ -1841,6 +1861,14 @@ function migrateLegacyTAPermissions(legacy) {
  * validated and written, via a per-field $set - so callers can toggle one
  * permission without first reading and re-sending all six (avoids a
  * read-modify-write race between two toggles in flight).
+ *
+ * If the stored record is still legacy-shaped, a per-field $set of just the
+ * requested new-shape keys would leave canAccessCourses/canAccessFlags in
+ * place, and isLegacyTAPermissions would keep reading the record as legacy
+ * forever - silently ignoring every toggle. Instead, a legacy record is
+ * fully migrated here: its effective access becomes the new-shape baseline,
+ * the requested keys override it, and the two legacy keys are $unset in the
+ * same update.
  * @param {Object} db - MongoDB database instance
  * @param {string} courseId - Course identifier
  * @param {string} taId - TA identifier
@@ -1863,18 +1891,30 @@ async function updateTAPermissions(db, courseId, taId, permissions) {
         return { success: false, error: 'TA is not assigned to this course' };
     }
 
-    const setFields = { updatedAt: now, [`taPermissions.${taId}.updatedAt`]: now };
-    for (const key of TA_PERMISSION_KEYS) {
-        if (Object.prototype.hasOwnProperty.call(permissions, key)) {
-            setFields[`taPermissions.${taId}.${key}`] = permissions[key];
+    const stored = course.taPermissions && course.taPermissions[taId];
+    const update = { $set: { updatedAt: now, [`taPermissions.${taId}.updatedAt`]: now } };
+
+    if (isLegacyTAPermissions(stored)) {
+        const migrated = migrateLegacyTAPermissions(stored);
+        for (const key of TA_PERMISSION_KEYS) {
+            const value = Object.prototype.hasOwnProperty.call(permissions, key)
+                ? permissions[key]
+                : migrated[key];
+            update.$set[`taPermissions.${taId}.${key}`] = value;
+        }
+        update.$unset = {
+            [`taPermissions.${taId}.canAccessCourses`]: '',
+            [`taPermissions.${taId}.canAccessFlags`]: ''
+        };
+    } else {
+        for (const key of TA_PERMISSION_KEYS) {
+            if (Object.prototype.hasOwnProperty.call(permissions, key)) {
+                update.$set[`taPermissions.${taId}.${key}`] = permissions[key];
+            }
         }
     }
 
-    // Update TA permissions
-    const result = await collection.updateOne(
-        { courseId },
-        { $set: setFields }
-    );
+    const result = await collection.updateOne({ courseId }, update);
 
     if (result.modifiedCount > 0) {
         console.log(`Updated TA permissions for ${taId} in course ${courseId}`);
@@ -1887,12 +1927,20 @@ async function updateTAPermissions(db, courseId, taId, permissions) {
 /**
  * Get TA permissions for a specific course and TA.
  *
- * Always returns the current six-flag shape. A genuinely-absent record
- * (a TA who has never had permissions set) defaults to fail-closed - no
- * access - reversing the old fail-open default. A record still in the old
+ * Always returns the current six-flag shape. A record still in the old
  * two-boolean shape (not yet touched by the migration script) is normalized
  * on the fly via migrateLegacyTAPermissions, so reads are correct even
  * before/without the one-time backfill running.
+ *
+ * A genuinely-absent record is ambiguous: it means "fail-closed, newly
+ * added TA" for any course where addTAToCourse has always written an
+ * explicit record, but it means "pre-existing TA from before this feature
+ * shipped" for a course the one-time migration hasn't swept yet - and that
+ * case must stay fail-open (the old default) until the migration runs, or
+ * every TA added before this feature shipped is locked out on deploy.
+ * `course.taPermissionsMigrated` disambiguates: unset/false means the old
+ * fail-open default still applies to absent records; true (set once by the
+ * migration script, per course) means absent truly means fail-closed.
  * @param {Object} db - MongoDB database instance
  * @param {string} courseId - Course identifier
  * @param {string} taId - TA identifier
@@ -1914,8 +1962,13 @@ async function getTAPermissions(db, courseId, taId) {
     const stored = course.taPermissions && course.taPermissions[taId];
     let permissions;
     if (!stored) {
-        // No record at all: fail-closed default for TAs added after this shipped.
-        permissions = Object.fromEntries(TA_PERMISSION_KEYS.map(key => [key, false]));
+        permissions = course.taPermissionsMigrated
+            // Migration has swept this course: a still-absent record means
+            // fail-closed, not an unmigrated legacy TA.
+            ? Object.fromEntries(TA_PERMISSION_KEYS.map(key => [key, false]))
+            // Not migrated yet: preserve the old fail-open default so a
+            // pre-existing TA isn't locked out before the backfill runs.
+            : migrateLegacyTAPermissions({ canAccessCourses: true, canAccessFlags: true });
     } else if (isLegacyTAPermissions(stored)) {
         permissions = migrateLegacyTAPermissions(stored);
     } else {

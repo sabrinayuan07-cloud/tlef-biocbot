@@ -158,6 +158,54 @@ describe('model failure paths (500)', () => {
     });
 });
 
+describe('TA access gated on the transcripts permission', () => {
+    // Gated on 'transcripts', not 'flags'/'roster' - requireCourseStaff in
+    // mentalHealthFlags.js deliberately keeps raw flagged-conversation
+    // content separate from the student-support/roster permissions.
+    const taCourse = (permissions) => ({
+        courseId: 'C1', instructorId: 'i1', tas: ['t1'],
+        taPermissions: { t1: permissions }, taPermissionsMigrated: true,
+    });
+    const ta = { userId: 't1', role: 'ta' };
+
+    test('GET /course/:courseId: 200 for a TA with transcripts, 403 without it', async () => {
+        const allowed = mentalDb({
+            courses: [taCourse({ materials: false, questions: false, settings: false, transcripts: true, flags: false, roster: false })],
+            mentalHealthFlags: [flag()],
+        });
+        const resAllowed = await request(app({ db: allowed, user: ta })).get('/course/C1');
+        expect(resAllowed.status).toBe(200);
+        expect(resAllowed.body.flags[0].studentName).toBe('Anonymous Student');
+
+        const denied = mentalDb({
+            courses: [taCourse({ materials: false, questions: false, settings: false, transcripts: false, flags: true, roster: true })],
+            mentalHealthFlags: [flag()],
+        });
+        const resDenied = await request(app({ db: denied, user: ta })).get('/course/C1');
+        expect(resDenied.status).toBe(403);
+    });
+
+    test('PUT /:flagId/escalate and /:flagId/dismiss: a TA with flags/roster but not transcripts is still denied', async () => {
+        const db = mentalDb({
+            courses: [taCourse({ materials: false, questions: false, settings: false, transcripts: false, flags: true, roster: true })],
+            mentalHealthFlags: [flag()],
+        });
+        expect((await request(app({ db, user: ta })).put('/mhf_1/escalate')).status).toBe(403);
+        expect((await request(app({ db, user: ta })).put('/mhf_1/dismiss')).status).toBe(403);
+        expect((await db.collection('mentalHealthFlags').findOne({ flagId: 'mhf_1' })).status).toBe('pending');
+    });
+
+    test('PUT /:flagId/escalate: a TA with transcripts succeeds', async () => {
+        const db = mentalDb({
+            courses: [taCourse({ materials: false, questions: false, settings: false, transcripts: true, flags: false, roster: false })],
+            mentalHealthFlags: [flag()],
+        });
+        const res = await request(app({ db, user: ta })).put('/mhf_1/escalate');
+        expect(res.status).toBe(200);
+        expect((await db.collection('mentalHealthFlags').findOne({ flagId: 'mhf_1' })).status).toBe('escalated');
+    });
+});
+
 describe('db guards on the status transitions', () => {
     test('escalate/dismiss/resolve/disregard each return 503 without a db', async () => {
         const admin2 = { userId: 'a1', role: 'instructor', permissions: { systemAdmin: true } };

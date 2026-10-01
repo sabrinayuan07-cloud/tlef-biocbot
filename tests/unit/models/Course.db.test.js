@@ -243,11 +243,22 @@ describe('Course.getTAPermissions / updateTAPermissions', () => {
 
     const ALL_FALSE = { materials: false, questions: false, flags: false, roster: false, transcripts: false, settings: false };
 
-    test('getTAPermissions defaults to no access (fail-closed) when none are stored', async () => {
-        const db = memoryDb({ courses: [{ courseId: 'C1', tas: ['t1'] }] });
+    test('getTAPermissions defaults to no access (fail-closed) when none are stored on a migrated course', async () => {
+        const db = memoryDb({ courses: [{ courseId: 'C1', tas: ['t1'], taPermissionsMigrated: true }] });
         expect(await Course.getTAPermissions(db, 'C1', 't1')).toEqual({
             success: true,
             permissions: ALL_FALSE,
+        });
+    });
+
+    test('getTAPermissions defaults to the old fail-open access when none are stored and the course has not run the migration', async () => {
+        // A course that predates the six-flag feature has no taPermissionsMigrated
+        // marker: an absent record there means a pre-existing TA whose record
+        // was never backfilled, not a newly-added TA meant to start with none.
+        const db = memoryDb({ courses: [{ courseId: 'C1', tas: ['t1'] }] });
+        expect(await Course.getTAPermissions(db, 'C1', 't1')).toEqual({
+            success: true,
+            permissions: { materials: true, questions: true, settings: true, transcripts: true, flags: true, roster: true },
         });
     });
 

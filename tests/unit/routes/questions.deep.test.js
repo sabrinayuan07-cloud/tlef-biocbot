@@ -82,7 +82,9 @@ describe('access helpers — system admin and TA branches', () => {
     });
 
     test('a TA with no permissions record is blocked from mutating (fail-closed default)', async () => {
-        const res = await request(app({ db: courseDb(), user: ta })).post('/').send({
+        // Fail-closed-on-no-record only applies once a course has run the
+        // legacy-permissions migration - mark it migrated to exercise that path.
+        const res = await request(app({ db: courseDb({ taPermissionsMigrated: true }), user: ta })).post('/').send({
             courseId: 'C1', lectureName: 'Unit 1', instructorId: 'i1',
             questionType: 'short-answer', question: 'Blocked?', correctAnswer: 'yes',
         });

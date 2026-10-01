@@ -254,13 +254,14 @@ function updatePermissionsStatus() {
 
 /**
  * Check if TA has permission for the selected course context.
- * 'courses' is accepted as an alias for 'materials' for callers still using
- * the old nav-link naming (e.g. setupTANavigationHandlers below).
+ * 'courses' is the nav-link name for /instructor/documents, which the
+ * server gates on ANY of materials/questions/settings - see
+ * window.DOCUMENTS_PAGE_PERMISSIONS - not just 'materials'.
  */
 function hasPermissionForFeature(feature) {
     const permissions = getSelectedTAPermissions();
-    const key = feature === 'courses' ? 'materials' : feature;
-    return window.permissionIsGranted(permissions, key);
+    const keys = feature === 'courses' ? window.DOCUMENTS_PAGE_PERMISSIONS : [feature];
+    return keys.some(key => window.permissionIsGranted(permissions, key));
 }
 
 /**

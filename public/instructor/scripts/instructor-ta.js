@@ -183,9 +183,10 @@ async function loadTAPermissions() {
 
 /**
  * Check if TA has permission for a specific feature (nav-link naming:
- * 'courses' -> the 'materials' permission, 'flags' -> the 'flags'
- * permission) in any of their courses, or just the currently-selected one
- * when one is picked.
+ * 'courses' -> the /instructor/documents page, gated server-side on ANY of
+ * materials/questions/settings - see window.DOCUMENTS_PAGE_PERMISSIONS;
+ * 'flags' -> the 'flags' permission) in any of their courses, or just the
+ * currently-selected one when one is picked.
  */
 function hasPermissionForFeature(feature) {
     // If no permissions loaded, deny access
@@ -193,7 +194,7 @@ function hasPermissionForFeature(feature) {
         return false;
     }
 
-    const permissionKey = feature === 'courses' ? 'materials' : feature;
+    const permissionKeys = feature === 'courses' ? window.DOCUMENTS_PAGE_PERMISSIONS : [feature];
 
     const selectedCourseId = getSelectedCourseIdForTA();
     const courseIds = selectedCourseId && window.taPermissions[selectedCourseId]
@@ -201,7 +202,9 @@ function hasPermissionForFeature(feature) {
         : Object.keys(window.taPermissions);
 
     return courseIds.some(courseId =>
-        window.permissionIsGranted(window.taPermissions[courseId], permissionKey)
+        permissionKeys.some(permissionKey =>
+            window.permissionIsGranted(window.taPermissions[courseId], permissionKey)
+        )
     );
 }
 
