@@ -5,103 +5,119 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BiocBot - AI Study Assistant</title>
     
-    <!-- Favicon - UBC Logo -->
-    <link rel="icon" type="image/jpeg" href="assets/images/UBC.jpg">
-    <link rel="icon" type="image/x-icon" href="assets/images/favicon.ico">
-    <link rel="icon" type="image/png" sizes="32x32" href="assets/images/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="assets/images/favicon-16x16.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="assets/images/apple-touch-icon.png">
-    <link rel="manifest" href="assets/images/site.webmanifest">
-    
-    <link rel="stylesheet" href="styles/style.css">
-    <link rel="stylesheet" href="styles/login.css">
+    <!-- Favicon - BiocBot mascot -->
+    <link rel="icon" type="image/x-icon" href="/assets/images/favicon.ico">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/images/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/assets/images/favicon-16x16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/images/apple-touch-icon.png">
+    <link rel="manifest" href="/assets/images/site.webmanifest">
+
+    <link rel="stylesheet" href="/styles/tokens.css">
+    <link rel="stylesheet" href="/styles/login.css">
 </head>
 <body>
-    <div class="login-container">
-        <div class="login-card">
-            <div class="logo">
-                <h1>BiocBot</h1>
-                <p>AI-powered Study Assistant</p>
-            </div>
-            
-            <!-- Login Form -->
-            <div id="login-form" class="login-form auth-methods-pending">
-                <h2>Sign In</h2>
-                <form id="auth-form">
-                    <div class="form-group">
-                        <label for="username">Username or Email</label>
-                        <input type="text" id="username" name="username" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="password">Password</label>
-                        <input type="password" id="password" name="password" required>
-                    </div>
-                    <button type="submit" class="btn-primary" id="login-btn">Sign In</button>
-                </form>
-                
-                <!-- Divider for alternative login methods -->
-                <div class="login-divider" id="login-divider" style="display: none;">
-                    <span>or</span>
+    <div class="login-page">
+        <header class="login-header">
+            <a href="/" class="login-brand">
+                <img src="/assets/images/biocbot-mascot.png" alt="" aria-hidden="true" class="login-brand-mascot">
+                <span class="login-brand-word">BiocBot</span>
+            </a>
+        </header>
+
+        <div class="login-container">
+            <div class="login-card">
+                <div class="logo">
+                    <p>AI-powered Study Assistant</p>
                 </div>
-                
-                <!-- CWL/SAML Login Button -->
-                <button type="button" class="btn-cwl" id="cwl-login-btn" style="display: none;">
-                    <span class="cwl-icon">🔐</span>
-                    Sign in with CWL
-                </button>
-                
-                <div class="form-footer">
-                    <p>Don't have an account? <a href="#" id="show-register">Create one</a></p>
+
+                <!-- Login Form -->
+                <div id="login-form" class="login-form auth-methods-pending">
+                    <h2>Sign In</h2>
+                    <form id="auth-form">
+                        <div class="form-group">
+                            <label for="username">Username or Email</label>
+                            <input type="text" id="username" name="username" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="password">Password</label>
+                            <input type="password" id="password" name="password" required>
+                        </div>
+                        <button type="submit" class="btn-primary" id="login-btn">Sign In</button>
+                    </form>
+
+                    <!-- Divider for alternative login methods -->
+                    <div class="login-divider" id="login-divider" style="display: none;">
+                        <span>or</span>
+                    </div>
+
+                    <!-- CWL/SAML Login Button -->
+                    <button type="button" class="btn-cwl" id="cwl-login-btn" style="display: none;">
+                        <svg width="15" height="15" aria-hidden="true"><use href="#bb-icon-lock"></use></svg>
+                        Sign in with CWL
+                    </button>
+
+                    <div class="form-footer">
+                        <p>Don't have an account? <a href="#" id="show-register">Create one</a></p>
+                    </div>
                 </div>
-            </div>
-            
-            <!-- Registration Form -->
-            <div id="register-form" class="login-form" style="display: none;">
-                <h2>Create Account</h2>
-                <form id="register-form-element">
-                    <div class="form-group">
-                        <label for="reg-username">Username</label>
-                        <input type="text" id="reg-username" name="username" required>
+
+                <!-- Registration Form -->
+                <div id="register-form" class="login-form" style="display: none;">
+                    <h2>Create Account</h2>
+                    <form id="register-form-element">
+                        <div class="form-group">
+                            <label for="reg-username">Username</label>
+                            <input type="text" id="reg-username" name="username" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-email">Email (Not optional)</label>
+                            <input type="email" id="reg-email" name="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-password">Password</label>
+                            <input type="password" id="reg-password" name="password" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-role">Role</label>
+                            <select id="reg-role" name="role" required>
+                                <option value="">Select your role...</option>
+                                <option value="instructor">Instructor</option>
+                                <option value="student">Student</option>
+                                <option value="ta">Teaching Assistant</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="reg-display-name">Display Name (optional)</label>
+                            <input type="text" id="reg-display-name" name="displayName">
+                        </div>
+                        <button type="submit" class="btn-primary" id="register-btn">Create Account</button>
+                    </form>
+
+                    <div class="form-footer">
+                        <p>Already have an account? <a href="#" id="show-login">Sign in</a></p>
                     </div>
-                    <div class="form-group">
-                        <label for="reg-email">Email (Not optional)</label>
-                        <input type="email" id="reg-email" name="email" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="reg-password">Password</label>
-                        <input type="password" id="reg-password" name="password" required>
-                    </div>
-                    <div class="form-group">
-                        <label for="reg-role">Role</label>
-                        <select id="reg-role" name="role" required>
-                            <option value="">Select your role...</option>
-                            <option value="instructor">Instructor</option>
-                            <option value="student">Student</option>
-                            <option value="ta">Teaching Assistant</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="reg-display-name">Display Name (optional)</label>
-                        <input type="text" id="reg-display-name" name="displayName">
-                    </div>
-                    <button type="submit" class="btn-primary" id="register-btn">Create Account</button>
-                </form>
-                
-                <div class="form-footer">
-                    <p>Already have an account? <a href="#" id="show-login">Sign in</a></p>
                 </div>
-            </div>
-            
-            <!-- Error/Success Messages -->
-            <div id="message-container" class="message-container" style="display: none;">
-                <div id="message" class="message" role="alert"></div>
-            </div>
-            
-            <div class="login-footer">
-                <p>University of British Columbia</p>
+
+                <!-- Error/Success Messages -->
+                <div id="message-container" class="message-container" style="display: none;">
+                    <div id="message" class="message" role="alert"></div>
+                </div>
+
+                <div class="login-footer">
+                    <p>University of British Columbia</p>
+                </div>
             </div>
         </div>
     </div>
+
+    <!-- Shared icon glyph for the CWL button -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+        <symbol id="bb-icon-lock" viewBox="0 0 24 24">
+            <rect x="4" y="11" width="16" height="10" rx="1" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            <path d="M8 11V7a4 4 0 0 1 8 0v4" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </symbol>
+    </svg>
+
     <script src="common/scripts/login.js"></script>
 </body>
 </html>
