@@ -57,6 +57,7 @@ function isValidCourseStatus(value) {
  *     {
  *       name: String,           // e.g., "Unit 1", "Week 1"
  *       displayName: String,    // Custom title e.g., "Biology" (optional)
+ *       showUnitNumber: Boolean, // Show "<N>. " prefix before displayName (optional, missing/undefined means true)
  *       isPublished: Boolean,   // Publish status
  *       createdAt: Date,        // When the lecture was created
  *       updatedAt: Date,        // Last update timestamp
@@ -1384,9 +1385,10 @@ async function deleteUnit(db, courseId, unitName) {
  * @param {string} unitName - Internal name of the unit (e.g., "Unit 1")
  * @param {string} displayName - Custom display name (e.g., "Biology") or null to clear
  * @param {string} instructorId - ID of the instructor making the change
+ * @param {boolean} [showUnitNumber=true] - Whether to prefix the display name with "<N>. ". Ignored when displayName is cleared.
  * @returns {Promise<Object>} Update result
  */
-async function updateUnitDisplayName(db, courseId, unitName, displayName, instructorId) {
+async function updateUnitDisplayName(db, courseId, unitName, displayName, instructorId, showUnitNumber = true) {
     const collection = getCoursesCollection(db);
     
     const now = new Date();
@@ -1411,19 +1413,23 @@ async function updateUnitDisplayName(db, courseId, unitName, displayName, instru
         updatedAt: now,
         lastUpdatedById: instructorId
     };
-    
-    // If displayName is empty or null, remove the field; otherwise set it
+    const unsetFields = {};
+
+    // If displayName is empty or null, remove the field (and showUnitNumber with
+    // it, so the unit returns to a clean state); otherwise set both.
     if (displayName && displayName.trim()) {
         updateFields['lectures.$.displayName'] = displayName.trim();
+        updateFields['lectures.$.showUnitNumber'] = showUnitNumber !== false;
+    } else {
+        unsetFields['lectures.$.displayName'] = '';
+        unsetFields['lectures.$.showUnitNumber'] = '';
     }
-    
+
     const updateOp = {
         $set: updateFields
     };
-    
-    // If displayName is empty, also unset the field
-    if (!displayName || !displayName.trim()) {
-        updateOp.$unset = { 'lectures.$.displayName': '' };
+    if (Object.keys(unsetFields).length > 0) {
+        updateOp.$unset = unsetFields;
     }
     
     const result = await collection.updateOne(
@@ -1440,11 +1446,13 @@ async function updateUnitDisplayName(db, courseId, unitName, displayName, instru
     
     console.log(`Updated display name for ${unitName} to "${displayName || '(cleared)'}" in course ${courseId}`);
     
-    return { 
-        success: true, 
+    const clearedName = !(displayName && displayName.trim());
+    return {
+        success: true,
         modifiedCount: result.modifiedCount,
         unitName,
-        displayName: displayName && displayName.trim() ? displayName.trim() : null
+        displayName: clearedName ? null : displayName.trim(),
+        showUnitNumber: clearedName ? true : showUnitNumber !== false
     };
 }
 

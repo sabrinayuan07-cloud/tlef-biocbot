@@ -672,4 +672,29 @@ describe('PUT /:courseId/units/:unitName/rename', () => {
             .put('/C1/units/Ghost/rename').send({ displayName: 'X', instructorId: 'i1' });
         expect(res.status).toBe(404);
     });
+
+    test('200 persists and echoes showUnitNumber: false', async () => {
+        const db = memoryDb({ courses: [{ courseId: 'C1', instructorId: 'i1', lectures: [{ name: 'Unit 1' }] }] });
+        const res = await request(app({ db, user: instructor }))
+            .put('/C1/units/Unit 1/rename').send({ displayName: 'Biology', instructorId: 'i1', showUnitNumber: false });
+        expect(res.status).toBe(200);
+        expect(res.body.data).toMatchObject({ unitName: 'Unit 1', displayName: 'Biology', showUnitNumber: false });
+        const saved = await db.collection('courses').findOne({ courseId: 'C1' });
+        expect(saved.lectures[0]).toMatchObject({ displayName: 'Biology', showUnitNumber: false });
+    });
+
+    test('200 defaults showUnitNumber to true when omitted', async () => {
+        const db = memoryDb({ courses: [{ courseId: 'C1', instructorId: 'i1', lectures: [{ name: 'Unit 1' }] }] });
+        const res = await request(app({ db, user: instructor }))
+            .put('/C1/units/Unit 1/rename').send({ displayName: 'Biology', instructorId: 'i1' });
+        expect(res.status).toBe(200);
+        expect(res.body.data).toMatchObject({ unitName: 'Unit 1', displayName: 'Biology', showUnitNumber: true });
+    });
+
+    test('400 when showUnitNumber is not a boolean', async () => {
+        const db = memoryDb({ courses: [{ courseId: 'C1', instructorId: 'i1', lectures: [{ name: 'Unit 1' }] }] });
+        const res = await request(app({ db, user: instructor }))
+            .put('/C1/units/Unit 1/rename').send({ displayName: 'Biology', instructorId: 'i1', showUnitNumber: 'yes' });
+        expect(res.status).toBe(400);
+    });
 });

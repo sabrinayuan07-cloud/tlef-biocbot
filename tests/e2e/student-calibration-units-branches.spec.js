@@ -297,6 +297,28 @@ test('selects the most recently updated unit and strips embedded option prefixes
     await expect(page.locator('#chat-messages')).not.toContainText('A,Alpha prefixed');
 });
 
+test('unit dropdown label omits the number prefix when showUnitNumber is false', async ({ page }) => {
+    await openStudentWithMocks(page, {
+        course: courseDoc({
+            lectures: [unit('Unit 1', { displayName: 'Biology', showUnitNumber: false })],
+        }),
+    });
+
+    await expect(page.locator('#unit-select')).toHaveValue('Unit 1', { timeout: 10_000 });
+    await expect(page.locator('#unit-select option[value="Unit 1"]')).toHaveText('Biology');
+});
+
+test('unit dropdown label keeps the number prefix when showUnitNumber is true (default)', async ({ page }) => {
+    await openStudentWithMocks(page, {
+        course: courseDoc({
+            lectures: [unit('Unit 1', { displayName: 'Biology' })],
+        }),
+    });
+
+    await expect(page.locator('#unit-select')).toHaveValue('Unit 1', { timeout: 10_000 });
+    await expect(page.locator('#unit-select option[value="Unit 1"]')).toHaveText('1. Biology');
+});
+
 test('uses unit number ordering when updated timestamps are unavailable', async ({ page }) => {
     await openStudentWithMocks(page, {
         course: courseDoc({

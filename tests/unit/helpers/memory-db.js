@@ -25,8 +25,9 @@ function clone(value) {
     return out;
 }
 
-function getPath(obj, path) {
+function getPath(obj, rawPath, positionalIndexes) {
     if (obj == null) return undefined;
+    const path = resolvePositional(rawPath, positionalIndexes);
     if (path.indexOf('.') === -1) return obj[path];
     return path.split('.').reduce((acc, key) => (acc == null ? undefined : acc[key]), obj);
 }
@@ -49,7 +50,24 @@ function getQueryPath(obj, path) {
     return walk(obj, path.split('.'));
 }
 
-function setPath(obj, path, value) {
+// Resolve Mongo's positional "$" operator (e.g. 'lectures.$.displayName') to
+// the concrete array index that matched the update's query, so setPath/unsetPath
+// can treat it as an ordinary numeric path segment ('lectures.0.displayName').
+// positionalIndexes maps arrayField -> matched index, from findPositionalIndexes().
+function resolvePositional(path, positionalIndexes = {}) {
+    if (path.indexOf('$') === -1) return path;
+    const keys = path.split('.');
+    for (let i = 0; i < keys.length; i++) {
+        if (keys[i] !== '$') continue;
+        const arrayField = keys[i - 1];
+        const idx = positionalIndexes[arrayField];
+        keys[i] = idx !== undefined ? String(idx) : '0';
+    }
+    return keys.join('.');
+}
+
+function setPath(obj, rawPath, value, positionalIndexes) {
+    const path = resolvePositional(rawPath, positionalIndexes);
     if (path.indexOf('.') === -1) {
         obj[path] = value;
         return;
@@ -64,7 +82,8 @@ function setPath(obj, path, value) {
     cursor[last] = value;
 }
 
-function unsetPath(obj, path) {
+function unsetPath(obj, rawPath, positionalIndexes) {
+    const path = resolvePositional(rawPath, positionalIndexes);
     if (path.indexOf('.') === -1) { delete obj[path]; return; }
     const keys = path.split('.');
     const last = keys.pop();
@@ -74,6 +93,24 @@ function unsetPath(obj, path) {
         cursor = cursor[key];
     }
     delete cursor[last];
+}
+
+// For each dotted query field that traverses an array (e.g. 'lectures.name'),
+// find the index of the first array element that matches the query's condition
+// for that field. That's what Mongo's positional "$" operator refers to in the
+// corresponding update.
+function findPositionalIndexes(doc, query = {}) {
+    const indexes = {};
+    for (const [key, cond] of Object.entries(query)) {
+        if (key.startsWith('$') || key.indexOf('.') === -1) continue;
+        const [arrayField, ...restParts] = key.split('.');
+        const arr = doc[arrayField];
+        if (!Array.isArray(arr)) continue;
+        const rest = restParts.join('.');
+        const idx = arr.findIndex((item) => matchesField(rest ? getPath(item, rest) : item, cond));
+        if (idx !== -1) indexes[arrayField] = idx;
+    }
+    return indexes;
 }
 
 function matchesOperators(docValue, cond) {
@@ -142,40 +179,40 @@ function pullMatches(item, cond) {
     return item === cond;
 }
 
-function applyUpdate(doc, update, { isInsert = false } = {}) {
+function applyUpdate(doc, update, { isInsert = false, positionalIndexes } = {}) {
     let modified = false;
     const sets = { ...(update.$set || {}), ...(isInsert ? update.$setOnInsert || {} : {}) };
     for (const [key, value] of Object.entries(sets)) {
-        setPath(doc, key, value);
+        setPath(doc, key, value, positionalIndexes);
         modified = true;
     }
     for (const [key, value] of Object.entries(update.$inc || {})) {
-        const current = getPath(doc, key);
-        setPath(doc, key, (typeof current === 'number' ? current : 0) + value);
+        const current = getPath(doc, key, positionalIndexes);
+        setPath(doc, key, (typeof current === 'number' ? current : 0) + value, positionalIndexes);
         modified = true;
     }
     for (const key of Object.keys(update.$unset || {})) {
-        unsetPath(doc, key);
+        unsetPath(doc, key, positionalIndexes);
         modified = true;
     }
     for (const [key, value] of Object.entries(update.$addToSet || {})) {
-        let arr = getPath(doc, key);
-        if (!Array.isArray(arr)) { arr = []; setPath(doc, key, arr); }
+        let arr = getPath(doc, key, positionalIndexes);
+        if (!Array.isArray(arr)) { arr = []; setPath(doc, key, arr, positionalIndexes); }
         const values = value && value.$each ? value.$each : [value];
         for (const v of values) {
             if (!arr.includes(v)) { arr.push(v); modified = true; }
         }
     }
     for (const [key, cond] of Object.entries(update.$pull || {})) {
-        const arr = getPath(doc, key);
+        const arr = getPath(doc, key, positionalIndexes);
         if (Array.isArray(arr)) {
             const kept = arr.filter((item) => !pullMatches(item, cond));
-            if (kept.length !== arr.length) { setPath(doc, key, kept); modified = true; }
+            if (kept.length !== arr.length) { setPath(doc, key, kept, positionalIndexes); modified = true; }
         }
     }
     for (const [key, value] of Object.entries(update.$push || {})) {
-        let arr = getPath(doc, key);
-        if (!Array.isArray(arr)) { arr = []; setPath(doc, key, arr); }
+        let arr = getPath(doc, key, positionalIndexes);
+        if (!Array.isArray(arr)) { arr = []; setPath(doc, key, arr, positionalIndexes); }
         const values = value && value.$each ? value.$each : [value];
         arr.push(...values);
         modified = true;
@@ -428,7 +465,8 @@ class MemoryCollection {
     async updateOne(query, update, options = {}) {
         const target = this.docs.find((doc) => matchesQuery(doc, query || {}));
         if (target) {
-            const modified = applyUpdate(target, update);
+            const positionalIndexes = findPositionalIndexes(target, query || {});
+            const modified = applyUpdate(target, update, { positionalIndexes });
             return { matchedCount: 1, modifiedCount: modified ? 1 : 0, upsertedCount: 0 };
         }
         if (options.upsert) {
@@ -446,7 +484,8 @@ class MemoryCollection {
         const wantsAfter = options.returnDocument === 'after' || options.returnOriginal === false;
         if (index !== -1) {
             const before = clone(this.docs[index]);
-            applyUpdate(this.docs[index], update);
+            const positionalIndexes = findPositionalIndexes(this.docs[index], query || {});
+            applyUpdate(this.docs[index], update, { positionalIndexes });
             const value = wantsAfter ? clone(this.docs[index]) : before;
             if (options.includeResultMetadata) {
                 return { value, lastErrorObject: { updatedExisting: true }, ok: 1 };
@@ -481,7 +520,8 @@ class MemoryCollection {
         const targets = this.docs.filter((doc) => matchesQuery(doc, query || {}));
         let modifiedCount = 0;
         for (const target of targets) {
-            if (applyUpdate(target, update)) modifiedCount += 1;
+            const positionalIndexes = findPositionalIndexes(target, query || {});
+            if (applyUpdate(target, update, { positionalIndexes })) modifiedCount += 1;
         }
         return { matchedCount: targets.length, modifiedCount };
     }

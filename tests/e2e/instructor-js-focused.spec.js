@@ -662,6 +662,16 @@ test.describe('instructor.js focused browser coverage', () => {
         await expect.poll(() => captured.renamedUnits.length).toBe(1);
         await expect(page.locator('.folder-name').first()).toHaveText('1. Energy Flow');
         await expect(page.locator('#published-units-summary')).toContainText('Currently, 2 of the 2 Units are Published.');
+
+        // Unchecking "Show unit number" drops the "<N>. " prefix from the label.
+        await page.locator('.unit-rename-btn').first().click();
+        await expect(page.locator('.unit-show-number-input').first()).toBeChecked();
+        await page.locator('.unit-show-number-input').first().uncheck();
+        await page.locator('.unit-save-btn').first().click();
+
+        await expect.poll(() => captured.renamedUnits.length).toBe(2);
+        expect(captured.renamedUnits[1]).toMatchObject({ displayName: 'Energy Flow', showUnitNumber: false });
+        await expect(page.locator('.folder-name').first()).toHaveText('Energy Flow');
     });
 
     test('drives AI generation, struggle-topic generation, regeneration, objective edit, and auto-link flow', async ({ page }) => {

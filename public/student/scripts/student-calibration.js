@@ -318,11 +318,14 @@ function showUnitSelectionDropdown(publishedUnits) {
             const option = document.createElement('option');
             option.value = unit.name; // Keep internal name as value
             
-            // Format display: "1. Biology" if displayName exists, otherwise just "Unit 1"
+            // Format display: "1. Biology" if displayName exists and the number
+            // prefix is on, "Biology" if it's off, otherwise just "Unit 1"
             const unitNum = unit.name.match(/\d+/)?.[0] || '';
-            const displayText = unit.displayName 
-                ? `${unitNum}. ${unit.displayName}` 
-                : unit.name;
+            const displayText = !unit.displayName
+                ? unit.name
+                : unit.showUnitNumber === false
+                    ? unit.displayName
+                    : `${unitNum}. ${unit.displayName}`;
             option.textContent = displayText;
             
             updatedUnitSelect.appendChild(option);
