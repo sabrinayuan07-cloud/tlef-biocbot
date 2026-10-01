@@ -96,6 +96,11 @@ function buildCourseDoc({
         courseStructure: { weeks: 1, lecturesPerWeek: 1, totalUnits: 1 },
         isOnboardingComplete: true,
         status,
+        // Freshly-created test course, not legacy data predating the
+        // six-flag permission model - mark migrated so an absent TA
+        // permissions record reads as fail-closed, matching a brand-new
+        // TA's real default (see Course.js's getTAPermissions).
+        taPermissionsMigrated: true,
         lectures: [
             {
                 name: 'Unit 1',
