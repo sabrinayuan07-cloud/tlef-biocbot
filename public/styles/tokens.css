@@ -1,0 +1,91 @@
+/*
+ * Shared design tokens (--bb-* = "BiocBot"), used app-wide.
+ * Originated on the marketing homepage (homepage.css) and extracted here so
+ * the rest of the app (instructor/student/ta pages, via style.css) can adopt
+ * them incrementally without duplicating a second token set.
+ *
+ * Importing this file does not change how any existing page looks - it only
+ * makes the --bb-* custom properties available. Pages keep using their
+ * current tokens (e.g. --primary-color) until they're deliberately migrated
+ * to the --bb-* equivalents.
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;700&family=Barlow+Condensed:wght@400;500;600&display=swap');
+
+:root {
+  /* Colors */
+  --bb-ground: #f2f2f3;
+  --bb-ground-alt: #eaebec;
+  --bb-white: #ffffff;
+  --bb-ink: #1d1f20;
+  --bb-ink-78: rgba(29, 31, 32, .78);
+  --bb-ink-75: rgba(29, 31, 32, .75);
+  --bb-ink-72: rgba(29, 31, 32, .72);
+  --bb-ink-70: rgba(29, 31, 32, .70);
+  --bb-ink-68: rgba(29, 31, 32, .68);
+  --bb-ink-65: rgba(29, 31, 32, .65);
+  --bb-ink-20: rgba(29, 31, 32, .20);
+  --bb-ink-18: rgba(29, 31, 32, .18);
+  --bb-ink-16: rgba(29, 31, 32, .16);
+  --bb-ink-14: rgba(29, 31, 32, .14);
+
+  --bb-steel: #2c455d;
+  --bb-steel-dark: #1b2c3c;
+  --bb-steel-mid: #263b50;
+  --bb-steel-hover-light: #cdd7e0;
+  --bb-steel-lift: #34516c;
+
+  --bb-paper-86: rgba(242, 242, 243, .86);
+  --bb-paper-84: rgba(242, 242, 243, .84);
+  --bb-paper-80: rgba(242, 242, 243, .80);
+  --bb-paper-75: rgba(242, 242, 243, .75);
+  --bb-paper-72: rgba(242, 242, 243, .72);
+  --bb-paper-70: rgba(242, 242, 243, .70);
+  --bb-paper-60: rgba(242, 242, 243, .60);
+  --bb-paper-55: rgba(242, 242, 243, .55);
+  --bb-paper-45: rgba(242, 242, 243, .45);
+  --bb-paper-32: rgba(242, 242, 243, .32);
+  --bb-paper-30: rgba(242, 242, 243, .30);
+  --bb-paper-22: rgba(242, 242, 243, .22);
+  --bb-paper-18: rgba(242, 242, 243, .18);
+  --bb-paper-08: rgba(242, 242, 243, .08);
+
+  /* Type */
+  --bb-font-heading: "Barlow Condensed", system-ui, sans-serif;
+  --bb-font-body: "Barlow", system-ui, sans-serif;
+
+  --bb-text-h1: clamp(42px, 6vw, 76px);
+  --bb-text-h2: clamp(30px, 3.8vw, 52px);
+  --bb-text-h2-sub: clamp(24px, 2.8vw, 38px);
+  --bb-text-h3-group: clamp(20px, 2.2vw, 26px);
+  --bb-text-h3-mode: clamp(24px, 2.4vw, 30px);
+  --bb-text-h3-flip: 24px;
+  --bb-text-h3-step: 21px;
+  --bb-text-statement: clamp(22px, 2.6vw, 34px);
+  --bb-text-hero-body: clamp(16px, 1.4vw, 19px);
+  --bb-text-lede: 17px;
+  --bb-text-lede-tight: 16.5px;
+  --bb-text-card-body: 15.5px;
+  --bb-text-stat: clamp(38px, 5vw, 56px);
+  --bb-text-kicker: 11.5px;
+  --bb-text-card-kicker: 13px;
+  --bb-text-nav: 16px;
+  --bb-text-brand: 24px;
+
+  /* Spacing */
+  --bb-max-width: 1280px;
+  --bb-pad-x: clamp(20px, 4vw, 64px);
+  --bb-pad-y-section: clamp(48px, 7vw, 86px);
+  --bb-pad-y-hero: clamp(44px, 7vw, 92px);
+  --bb-pad-y-footer-top: clamp(34px, 4vw, 52px);
+  --bb-gap-dense: 14px;
+  --bb-gap-loose: 24px;
+
+  /* Radii + borders (the homepage's identity is square corners everywhere;
+     other pages are not required to adopt this) */
+  --bb-radius: 0;
+  --bb-border-width: 1px;
+
+  /* Motion */
+  --bb-ease-reveal: cubic-bezier(.22, .61, .36, 1);
+}
