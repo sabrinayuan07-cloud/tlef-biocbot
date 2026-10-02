@@ -87,6 +87,7 @@
 }
 
 /* ─── Base ─────────────────────────────────────────────────────────────── */
+html:has(#bb-page), body:has(#bb-page) { margin: 0; padding: 0; width: 100%; }
 #bb-page { background: var(--bb-ground); color: var(--bb-ink); font-family: var(--bb-font-body); }
 #bb-page * { box-sizing: border-box; }
 #bb-page img { max-width: 100%; display: block; }
@@ -153,12 +154,13 @@ html:has(#bb-page) { scroll-behavior: smooth; }
   position: sticky; top: 0; background: rgba(242, 242, 243, .94); backdrop-filter: blur(6px); z-index: 9;
 }
 .bb-brand { display: inline-flex; align-items: center; gap: clamp(14px, 2.5vw, 30px); margin-right: auto; text-decoration: none; color: inherit; }
-.bb-brand-mascot { width: 32px; height: 25px; flex: none; object-fit: contain; display: block; }
+.bb-brand-mascot { width: 42px; height: 33px; flex: none; object-fit: contain; display: block; }
 .bb-brand-word {
   font-family: var(--bb-font-heading); font-weight: 600; font-size: var(--bb-text-brand);
   letter-spacing: 0.14em; text-transform: uppercase;
 }
 .bb-nav { display: flex; gap: clamp(12px, 2vw, 26px); align-items: center; }
+.bb-header .bb-btn--primary-on-ground { margin-left: clamp(16px, 2.5vw, 28px); margin-right: clamp(-16px, -1.5vw, -6px); }
 .bb-nav a {
   font-family: var(--bb-font-heading); font-size: var(--bb-text-nav); letter-spacing: 0.09em;
   text-transform: uppercase; text-decoration: none; color: var(--bb-ink-65); display: inline-block;
