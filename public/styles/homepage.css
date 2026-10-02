@@ -87,7 +87,7 @@
 }
 
 /* ─── Base ─────────────────────────────────────────────────────────────── */
-html:has(#bb-page), body:has(#bb-page) { margin: 0; padding: 0; width: 100%; }
+html:has(#bb-page), body:has(#bb-page) { margin: 0; padding: 0; width: 100%; background: var(--bb-ground); }
 #bb-page { background: var(--bb-ground); color: var(--bb-ink); font-family: var(--bb-font-body); }
 #bb-page * { box-sizing: border-box; }
 #bb-page img { max-width: 100%; display: block; }
