@@ -344,9 +344,9 @@ test.describe('instructor.js deep branch coverage', () => {
         expect(result.expanded).toBe(true);
         expect(result.actions).toBeGreaterThan(0);
         expect(result.addMaterialActions).toEqual([
-            '➕ Add Lecture Notes',
-            '➕ Add Practice Questions/Tutorial',
-            '➕ Add Additional Material',
+            'Add Lecture Notes',
+            'Add Practice Questions/Tutorial',
+            'Add Additional Material',
         ]);
         await expect(page.locator('.notification').filter({ hasText: /Missing mandatory materials|Please upload course materials|Error loading/i }).first()).toBeVisible();
     });
