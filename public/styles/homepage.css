@@ -15,6 +15,7 @@
   --bb-ground-alt: #eaebec;
   --bb-white: #ffffff;
   --bb-ink: #1d1f20;
+  --bb-ink-80: rgba(29, 31, 32, .80);
   --bb-ink-78: rgba(29, 31, 32, .78);
   --bb-ink-75: rgba(29, 31, 32, .75);
   --bb-ink-72: rgba(29, 31, 32, .72);
@@ -32,6 +33,8 @@
   --bb-steel-hover-light: #cdd7e0;
   --bb-steel-lift: #34516c;
 
+  --bb-paper-90: rgba(242, 242, 243, .90);
+  --bb-paper-88: rgba(242, 242, 243, .88);
   --bb-paper-86: rgba(242, 242, 243, .86);
   --bb-paper-84: rgba(242, 242, 243, .84);
   --bb-paper-80: rgba(242, 242, 243, .80);
@@ -51,7 +54,7 @@
   --bb-font-heading: "Barlow Condensed", system-ui, sans-serif;
   --bb-font-body: "Barlow", system-ui, sans-serif;
 
-  --bb-text-h1: clamp(46px, 6.6vw, 88px);
+  --bb-text-h1: clamp(44px, 5.4vw, 80px);
   --bb-text-h2: clamp(30px, 3.8vw, 52px);
   --bb-text-h2-sub: clamp(24px, 2.8vw, 38px);
   --bb-text-h3-group: clamp(20px, 2.2vw, 26px);
@@ -295,7 +298,7 @@ html:has(#bb-page) { scroll-behavior: smooth; }
 .bb-flip-face--steel .bb-flip-num { color: var(--bb-paper-70); }
 .bb-flip-face--steel .bb-flip-tap { color: var(--bb-paper-60); }
 .bb-flip-face--back.bb-flip-face--steel { background: var(--bb-steel-dark); }
-.bb-flip-face--back.bb-flip-face--steel p { color: var(--bb-paper-88, rgba(242,242,243,.88)); }
+.bb-flip-face--back.bb-flip-face--steel p { color: var(--bb-paper-88); }
 
 /* ─── Overview ─────────────────────────────────────────────────────────── */
 .bb-overview { padding: var(--bb-pad-y-section) 0; border-top: var(--bb-border-width) solid var(--bb-ink-14); }
@@ -314,14 +317,14 @@ html:has(#bb-page) { scroll-behavior: smooth; }
 .bb-callout--steel .bb-callout-kicker { color: var(--bb-paper-75); }
 .bb-callout--outline .bb-callout-kicker { color: var(--bb-steel); }
 .bb-callout p { margin: 0; font-size: 16px; line-height: 1.65; }
-.bb-callout--steel p { color: var(--bb-paper-90, rgba(242,242,243,.9)); }
-.bb-callout--outline p { color: var(--bb-ink-80, rgba(29,31,32,.8)); }
+.bb-callout--steel p { color: var(--bb-paper-90); }
+.bb-callout--outline p { color: var(--bb-ink-80); }
 
 /* ─── Research ─────────────────────────────────────────────────────────── */
 .bb-research { padding: var(--bb-pad-y-section) 0; }
 .bb-research-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: clamp(28px, 5vw, 60px); align-items: start; }
 .bb-research h2 { margin: 0 0 18px; font-size: var(--bb-text-h2); line-height: 1; text-transform: uppercase; }
-.bb-research p { margin: 0 0 16px; font-size: var(--bb-text-lede); line-height: 1.65; color: var(--bb-ink-80, rgba(29,31,32,.8)); }
+.bb-research p { margin: 0 0 16px; font-size: var(--bb-text-lede); line-height: 1.65; color: var(--bb-ink-80); }
 .bb-research .bb-btn { margin-bottom: 18px; }
 .bb-citation { font-size: 14.5px; line-height: 1.6; color: var(--bb-ink-68); max-width: 46ch; margin: 0; }
 
@@ -351,6 +354,7 @@ html:has(#bb-page) { scroll-behavior: smooth; }
   padding: clamp(20px, 5vw, 64px) clamp(76px, 9vw, 116px); background: rgba(29, 31, 32, .92);
 }
 .bb-lightbox[hidden] { display: none; }
+#bb-page .bb-lightbox :focus-visible { outline-color: var(--bb-ground); }
 .bb-lightbox-figure { margin: 0; display: flex; flex-direction: column; align-items: center; max-width: 100%; max-height: 100%; }
 .bb-lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; border: var(--bb-border-width) solid var(--bb-paper-30); }
 .bb-lightbox-title {
@@ -376,6 +380,15 @@ html:has(#bb-page) { scroll-behavior: smooth; }
 .bb-lightbox-arrow:hover { background: rgba(29, 31, 32, .92); border-color: var(--bb-ground); }
 .bb-lightbox-prev { left: clamp(14px, 3vw, 36px); }
 .bb-lightbox-next { right: clamp(14px, 3vw, 36px); }
+
+@media (max-width: 640px) {
+  .bb-lightbox { padding: 60px 50px 16px; }
+  .bb-lightbox-title { top: 10px; font-size: 12.5px; padding: 7px 14px; }
+  .bb-lightbox-close { top: 10px; right: 10px; width: 36px; height: 36px; }
+  .bb-lightbox-arrow { width: 36px; height: 36px; }
+  .bb-lightbox-prev { left: 8px; }
+  .bb-lightbox-next { right: 8px; }
+}
 
 /* ─── Team ─────────────────────────────────────────────────────────────── */
 .bb-team { padding: var(--bb-pad-y-section) 0; }
