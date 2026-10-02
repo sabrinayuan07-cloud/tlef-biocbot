@@ -51,7 +51,7 @@
   --bb-font-heading: "Barlow Condensed", system-ui, sans-serif;
   --bb-font-body: "Barlow", system-ui, sans-serif;
 
-  --bb-text-h1: clamp(42px, 6vw, 76px);
+  --bb-text-h1: clamp(46px, 6.6vw, 88px);
   --bb-text-h2: clamp(30px, 3.8vw, 52px);
   --bb-text-h2-sub: clamp(24px, 2.8vw, 38px);
   --bb-text-h3-group: clamp(20px, 2.2vw, 26px);
@@ -70,7 +70,7 @@
   --bb-text-brand: 24px;
 
   /* Spacing */
-  --bb-max-width: 1280px;
+  --bb-max-width: 1440px;
   --bb-pad-x: clamp(20px, 4vw, 64px);
   --bb-pad-y-section: clamp(48px, 7vw, 86px);
   --bb-pad-y-hero: clamp(44px, 7vw, 92px);
@@ -154,7 +154,7 @@ html:has(#bb-page) { scroll-behavior: smooth; }
   position: sticky; top: 0; background: rgba(242, 242, 243, .94); backdrop-filter: blur(6px); z-index: 9;
 }
 .bb-brand { display: inline-flex; align-items: center; gap: clamp(14px, 2.5vw, 30px); margin-right: auto; text-decoration: none; color: inherit; }
-.bb-brand-mascot { width: 42px; height: 33px; flex: none; object-fit: contain; display: block; }
+.bb-brand-mascot { width: 42px; height: 33px; flex: none; object-fit: contain; display: block; margin-top: -4px; }
 .bb-brand-word {
   font-family: var(--bb-font-heading); font-weight: 600; font-size: var(--bb-text-brand);
   letter-spacing: 0.14em; text-transform: uppercase;
