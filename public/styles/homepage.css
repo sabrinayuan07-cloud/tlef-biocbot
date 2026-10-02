@@ -348,31 +348,31 @@ html:has(#bb-page) { scroll-behavior: smooth; }
 /* ─── Lightbox ─────────────────────────────────────────────────────────── */
 .bb-lightbox {
   position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
-  padding: clamp(20px, 5vw, 64px); background: rgba(29, 31, 32, .92);
+  padding: clamp(20px, 5vw, 64px) clamp(76px, 9vw, 116px); background: rgba(29, 31, 32, .92);
 }
 .bb-lightbox[hidden] { display: none; }
-.bb-lightbox-figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 14px; max-width: 100%; max-height: 100%; }
+.bb-lightbox-figure { margin: 0; display: flex; flex-direction: column; align-items: center; gap: 18px; max-width: 100%; max-height: 100%; }
 .bb-lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; border: var(--bb-border-width) solid var(--bb-paper-30); }
 .bb-lightbox-title {
-  font-family: var(--bb-font-heading); font-size: 13.5px; letter-spacing: .1em; text-transform: uppercase;
+  font-family: var(--bb-font-heading); font-weight: 600; font-size: 17px; letter-spacing: .1em; text-transform: uppercase;
   color: var(--bb-ground); text-align: center;
 }
 .bb-lightbox-close {
   position: absolute; top: clamp(14px, 3vw, 28px); right: clamp(14px, 3vw, 28px);
   display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px;
-  color: var(--bb-ground); background: transparent; border: var(--bb-border-width) solid var(--bb-paper-30);
+  color: var(--bb-ground); background: rgba(29, 31, 32, .7); border: var(--bb-border-width) solid var(--bb-paper-45);
   cursor: pointer; transition: background-color .2s ease, border-color .2s ease;
 }
-.bb-lightbox-close:hover { background: rgba(242, 242, 243, .12); border-color: var(--bb-ground); }
+.bb-lightbox-close:hover { background: rgba(29, 31, 32, .92); border-color: var(--bb-ground); }
 .bb-lightbox-arrow {
   position: absolute; top: 50%; transform: translateY(-50%); z-index: 1;
   display: inline-flex; align-items: center; justify-content: center; width: 48px; height: 48px;
-  color: var(--bb-ground); background: transparent; border: var(--bb-border-width) solid var(--bb-paper-30);
+  color: var(--bb-ground); background: rgba(29, 31, 32, .7); border: var(--bb-border-width) solid var(--bb-paper-45);
   cursor: pointer; transition: background-color .2s ease, border-color .2s ease;
 }
-.bb-lightbox-arrow:hover { background: rgba(242, 242, 243, .12); border-color: var(--bb-ground); }
-.bb-lightbox-prev { left: clamp(10px, 3vw, 28px); }
-.bb-lightbox-next { right: clamp(10px, 3vw, 28px); }
+.bb-lightbox-arrow:hover { background: rgba(29, 31, 32, .92); border-color: var(--bb-ground); }
+.bb-lightbox-prev { left: clamp(14px, 3vw, 36px); }
+.bb-lightbox-next { right: clamp(14px, 3vw, 36px); }
 
 /* ─── Team ─────────────────────────────────────────────────────────────── */
 .bb-team { padding: var(--bb-pad-y-section) 0; }
