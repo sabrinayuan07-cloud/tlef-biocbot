@@ -59,6 +59,15 @@ body { margin: 0; }
     text-align: center;
 }
 
+.logo h1 {
+    font-family: var(--bb-font-heading);
+    color: var(--bb-steel);
+    font-size: var(--bb-text-h3-mode);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin: 0 0 8px;
+}
+
 .logo p {
     color: var(--bb-ink-70);
     font-size: var(--bb-text-card-body);
