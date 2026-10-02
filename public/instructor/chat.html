@@ -65,7 +65,7 @@
                     <span class="course-label">Scope:</span>
                     <span class="course-name" id="super-course-scope">Opted-in biochemistry courses</span>
                 </div>
-                <button type="button" class="super-course-new-chat-btn" id="new-super-course-chat">New Chat</button>
+                <button type="button" class="super-course-new-chat-btn instructor-new-chat-btn" id="new-super-course-chat">+ New</button>
             </header>
 
             <div class="chat-container instructor-super-chat">
@@ -101,20 +101,33 @@
                 <div class="chat-input-container">
                     <form id="instructor-chat-form" autocomplete="off">
                         <input type="text" id="instructor-chat-input" placeholder="Ask about biochemistry course material..." autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="true" name="instructor-chat-message-input">
-                        <button type="submit" id="send-button">Send</button>
+                        <div class="answer-level-selector" id="answer-level-selector">
+                            <button type="button" id="answer-level-trigger" class="answer-level-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="answer-level-menu">
+                                <span class="answer-level-trigger-label">Answer depth:</span>
+                                <span class="answer-level-trigger-value" id="answer-level-value">Standard</span>
+                                <svg class="answer-level-caret" width="10" height="6" viewBox="0 0 10 6" aria-hidden="true"><path fill="currentColor" d="M0 0l5 6 5-6z"></path></svg>
+                            </button>
+                            <ul class="answer-level-menu" id="answer-level-menu" role="listbox" aria-label="Answer depth" hidden>
+                                <li class="answer-level-option" role="option" tabindex="-1" data-value="overview">
+                                    <span class="answer-level-option-label">Overview</span>
+                                    <svg class="answer-level-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                </li>
+                                <li class="answer-level-option" role="option" tabindex="-1" data-value="standard" aria-selected="true">
+                                    <span class="answer-level-option-label">Standard</span>
+                                    <svg class="answer-level-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                </li>
+                                <li class="answer-level-option" role="option" tabindex="-1" data-value="deepDive">
+                                    <span class="answer-level-option-label">Deep dive</span>
+                                    <svg class="answer-level-check" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                </li>
+                            </ul>
+                        </div>
+                        <button type="submit" id="send-button" aria-label="Send message">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 7-7 7 7"></path><path d="M12 22V5"></path></svg>
+                        </button>
                     </form>
-                    <div class="chat-footer">
-                        <div class="chat-disclaimer">
-                            BiocBot can make mistakes. Verify important information against source materials before reusing it.
-                        </div>
-                        <div class="answer-level-selector">
-                            <label for="answer-level">Answer depth</label>
-                            <select id="answer-level" name="answer-level">
-                                <option value="overview">Overview</option>
-                                <option value="standard" selected>Standard</option>
-                                <option value="deepDive">Deep dive</option>
-                            </select>
-                        </div>
+                    <div class="chat-disclaimer instructor-chat-disclaimer">
+                        BiocBot can make mistakes. Verify important information against source materials before reusing it.
                     </div>
                 </div>
             </div>
