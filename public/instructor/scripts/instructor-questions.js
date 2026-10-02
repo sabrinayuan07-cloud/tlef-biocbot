@@ -549,7 +549,7 @@ function resetQuestionForm() {
     if (aiButton) {
         aiButton.style.display = 'none';
         aiButton.disabled = false;
-        aiButton.innerHTML = '<span class="ai-icon">🤖</span> Generate with AI'; // Reset button text
+        aiButton.innerHTML = `<span class="ai-icon">${Icons.bot}</span> Generate with AI`; // Reset button text
         console.log(`🔍 [RESET_FORM] AI button hidden and reset`);
     } else {
         console.warn(`🔍 [RESET_FORM] AI button not found during reset`);
@@ -603,7 +603,7 @@ function updateQuestionForm() {
         // Reset button text if it exists
         const aiButton = document.getElementById('ai-generate-btn');
         if (aiButton) {
-            aiButton.innerHTML = '<span class="ai-icon">🤖</span> Generate with AI';
+            aiButton.innerHTML = `<span class="ai-icon">${Icons.bot}</span> Generate with AI`;
         }
         
         // Clear all form fields when switching question types
@@ -951,7 +951,7 @@ function updateQuestionsDisplay(week) {
                     <span class="question-type-badge ${questionType}">${getQuestionTypeLabel(questionType)}</span>
                     <span class="question-number">Question ${index + 1}</span>
                     <div class="question-action-buttons">
-                        <button class="edit-question-btn" onclick="openQuestionLearningObjectiveModal('${week}', '${question.questionId || question.id}')" title="Edit learning objective">✎</button>
+                        <button class="edit-question-btn" onclick="openQuestionLearningObjectiveModal('${week}', '${question.questionId || question.id}')" title="Edit learning objective">${Icons.pencil}</button>
                         <button class="delete-question-btn" onclick="deleteQuestion('${week}', '${question.questionId || question.id}')" title="Delete question">×</button>
                     </div>
                 </div>
@@ -1353,12 +1353,12 @@ function showQuestionReviewModal(questions, lectureName, courseId, wasChunked) {
         const missingAnswer = !q.hasAnswer;
         const borderColor = missingAnswer ? '#f59e0b' : '#e5e7eb';
         const warningHTML = missingAnswer ? `
-            <div style="
+            <div class="missing-answer-warning" style="
                 background: #fef3c7; border: 1px solid #f59e0b; border-radius: 4px;
                 padding: 6px 10px; margin-top: 8px; font-size: 12px; color: #92400e;
                 display: flex; align-items: center; gap: 6px;
             ">
-                <span style="font-size: 16px;">&#9888;</span>
+                ${Icons.warning}
                 <span>No correct answer found — cannot be saved. Please provide an answer to include this question.</span>
             </div>
         ` : '';

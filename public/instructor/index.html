@@ -496,11 +496,11 @@
                     <!-- Method Selection -->
                     <div id="upload-method-selection" class="method-selection" style="display: flex; gap: 20px; justify-content: center; margin: 30px 0;">
                         <button class="method-btn" onclick="showFileUpload()" style="display: flex; flex-direction: column; align-items: center; padding: 20px; border: 2px dashed #ccc; border-radius: 8px; background: none; cursor: pointer; width: 150px; transition: all 0.2s;">
-                            <span class="method-icon" style="font-size: 24px; margin-bottom: 10px;" aria-hidden="true">📁</span>
+                            <span class="method-icon" style="margin-bottom: 10px;" aria-hidden="true"><svg class="icon-inline" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg></span>
                             <span>Upload a file</span>
                         </button>
                         <button class="method-btn" onclick="showTextInput()" style="display: flex; flex-direction: column; align-items: center; padding: 20px; border: 2px dashed #ccc; border-radius: 8px; background: none; cursor: pointer; width: 150px; transition: all 0.2s;">
-                            <span class="method-icon" style="font-size: 24px; margin-bottom: 10px;" aria-hidden="true">📝</span>
+                            <span class="method-icon" style="margin-bottom: 10px;" aria-hidden="true"><svg class="icon-inline" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg></span>
                             <span>Paste content directly</span>
                         </button>
                     </div>
@@ -512,7 +512,7 @@
                         </button>
                         <div class="file-upload-container">
                             <button class="upload-file-btn" onclick="triggerFileInput()">
-                                <span class="upload-icon">📁</span>
+                                <span class="upload-icon"><svg class="icon-inline" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg></span>
                                 <span>Upload Document</span>
                             </button>
                             <input type="file" id="file-input" accept=".pdf,.docx,.txt,.ppt,.pptx" style="display: none;">
@@ -568,7 +568,7 @@
             </div>
             
             <div class="modal-body">
-                <div class="warning-icon" style="text-align: center; font-size: 3rem; margin-bottom: 1rem;" aria-hidden="true">⚠️</div>
+                <div class="warning-icon" style="text-align: center; margin-bottom: 1rem;" aria-hidden="true"><svg class="icon-inline" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></div>
                 <p>Are you sure you want to delete <strong id="delete-unit-name-display">this unit</strong>?</p>
                 
                 <div class="warning-box" style="background-color: #fff3cd; border: 1px solid #ffeeba; color: #856404; padding: 15px; border-radius: 5px; margin-top: 15px;">
@@ -612,7 +612,7 @@
                     </div>
                     
                     <button class="btn-secondary" onclick="addNewQuestion()">
-                        <span class="btn-icon">➕</span>
+                        <span class="btn-icon"><svg class="icon-inline" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14"/><path d="M12 5v14"/></svg></span>
                         Add New Question
                     </button>
                 </div>
@@ -637,6 +637,7 @@
     </div>
     
 
+    <script src="../common/scripts/icons.js"></script>
     <script src="../common/scripts/modal-a11y.js"></script>
     <script src="../common/scripts/auth.js"></script>
     <script src="../common/scripts/notifications.js"></script>

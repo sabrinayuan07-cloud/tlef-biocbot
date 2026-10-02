@@ -173,7 +173,7 @@ async function addNewUnit() {
         showNotification('Failed to add new unit: ' + error.message, 'error');
         if (addUnitBtn) {
             addUnitBtn.disabled = false;
-            addUnitBtn.innerHTML = '<span class="btn-icon">➕</span> Add New Unit';
+            addUnitBtn.innerHTML = `<span class="btn-icon">${Icons.plus}</span> Add New Unit`;
         }
         if (container) delete container.dataset.addingUnit;
     }

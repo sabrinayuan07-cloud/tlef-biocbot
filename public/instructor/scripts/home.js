@@ -460,7 +460,8 @@ function renderStruggleTopics(topicMap) {
         const remaining = sortedStudents.length - displayLimit;
 
         const studentHtmlList = displayedStudents.map(s => {
-            const indicator = s.isActive ? '🔴' : '⚪️';
+            const dotColor = s.isActive ? '#dc3545' : '#9ca3af';
+            const indicator = `<svg width="8" height="8" viewBox="0 0 8 8" aria-hidden="true" focusable="false" style="color: ${dotColor}; vertical-align: middle;"><circle cx="4" cy="4" r="4" fill="currentColor"/></svg>`;
             const title = s.isActive ? 'Active (Directive Mode)' : 'Inactive (Monitoring)';
             // safe check for escapeHTML in case it's not hoisted or defined yet (it is defined below in the file)
             // But to be safe, we can use a local helper or rely on the one in scope. 
@@ -498,7 +499,9 @@ function renderStruggleTopics(topicMap) {
     });
     
     html += '</div>';
-    html += '<div style="margin-top: 10px; font-size: 0.85em; color: #666; text-align: right;">🔴 Active (Directive Mode) &nbsp; ⚪️ Inactive (Monitoring)</div>';
+    html += '<div style="margin-top: 10px; font-size: 0.85em; color: #666; text-align: right;">' +
+        '<svg width="8" height="8" viewBox="0 0 8 8" aria-hidden="true" focusable="false" style="color: #dc3545; vertical-align: middle;"><circle cx="4" cy="4" r="4" fill="currentColor"/></svg> Active (Directive Mode) &nbsp; ' +
+        '<svg width="8" height="8" viewBox="0 0 8 8" aria-hidden="true" focusable="false" style="color: #9ca3af; vertical-align: middle;"><circle cx="4" cy="4" r="4" fill="currentColor"/></svg> Inactive (Monitoring)</div>';
     
     container.innerHTML = html;
 }
@@ -1856,7 +1859,7 @@ async function appendSuperCourseOption(selectElement) {
     // All-buckets aggregate (legacy/global view).
     const allOption = document.createElement('option');
     allOption.value = SUPER_COURSE_FILTER_ID;
-    allOption.textContent = '🌐 Super Chat (all buckets)';
+    allOption.textContent = 'Super Chat (all buckets)';
     optgroup.appendChild(allOption);
 
     // One entry per bucket.
@@ -1867,7 +1870,7 @@ async function appendSuperCourseOption(selectElement) {
             result.superchats.forEach(bucket => {
                 const option = document.createElement('option');
                 option.value = `${SUPER_COURSE_BUCKET_PREFIX}${bucket.superchatId}`;
-                option.textContent = `🌐 ${bucket.name}`;
+                option.textContent = bucket.name;
                 optgroup.appendChild(option);
             });
         }
@@ -2273,7 +2276,7 @@ async function setSelectedCourse(courseId, courseName, courseData = null) {
 async function enterSuperCourseStruggleView() {
     const courseNameDisplay = document.getElementById('course-name-display');
     if (courseNameDisplay) {
-        courseNameDisplay.textContent = '🌐 Super Chat (all courses)';
+        courseNameDisplay.textContent = 'Super Chat (all courses)';
     }
 
     const courseSelectionContainer = document.getElementById('course-selection-container');
