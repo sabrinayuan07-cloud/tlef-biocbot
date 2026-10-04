@@ -1,7 +1,7 @@
 .students-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
-    gap: 24px;
+    gap: var(--bb-gap-loose);
     align-items: stretch;
 }
 
@@ -9,7 +9,7 @@
     background: #fff;
     border: 1px solid #e5e7eb;
     border-radius: 10px;
-    padding: 24px;
+    padding: var(--bb-gap-loose);
     display: flex;
     flex-direction: column;
     min-height: 160px;
@@ -81,7 +81,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 14px;
+    gap: var(--bb-gap-dense);
     flex-wrap: wrap;
     margin: 12px 0 14px;
     padding: 10px 14px;
@@ -266,7 +266,7 @@
 }
 
 .survey-stat {
-    padding: 14px 16px;
+    padding: var(--bb-gap-dense) 16px;
     border: 1px solid #e5e7eb;
     border-radius: 8px;
     background: #fff;
@@ -286,7 +286,7 @@
 }
 
 .survey-responses-status {
-    padding: 14px 16px;
+    padding: var(--bb-gap-dense) 16px;
     border: 1px solid #e5e7eb;
     border-radius: 8px;
     background: #fff;
@@ -456,7 +456,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 24px;
+    gap: var(--bb-gap-loose);
 }
 
 .student-hub-page-header h1,
@@ -475,7 +475,7 @@
     z-index: 1200;
     display: grid;
     place-items: center;
-    padding: 24px;
+    padding: var(--bb-gap-loose);
     background: rgba(15, 23, 42, 0.62);
     backdrop-filter: blur(3px);
 }
@@ -500,8 +500,8 @@
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 24px;
-    padding: 24px 28px 20px;
+    gap: var(--bb-gap-loose);
+    padding: var(--bb-gap-loose) 28px 20px;
     border-bottom: 1px solid #e5e7eb;
 }
 
@@ -544,7 +544,7 @@
 }
 
 .pseudonym-modal-body {
-    padding: 24px 28px;
+    padding: var(--bb-gap-loose) 28px;
     overflow-y: auto;
 }
 
@@ -653,7 +653,7 @@
 .pseudonym-modal-footer {
     display: flex;
     justify-content: flex-end;
-    padding: 14px 28px;
+    padding: var(--bb-gap-dense) 28px;
     border-top: 1px solid #e5e7eb;
     background: #f8fafc;
 }

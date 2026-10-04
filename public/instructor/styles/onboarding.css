@@ -88,13 +88,13 @@
 .intro-section {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 1.5rem;
+  gap: var(--bb-gap-loose);
   margin-bottom: 3rem;
 }
 
 .feature-card {
   background: #f8f9fa;
-  padding: 1.5rem;
+  padding: var(--bb-gap-loose);
   border-radius: 8px;
   text-align: center;
   border: 1px solid #e9ecef;
@@ -132,7 +132,7 @@
 .workflow-steps {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: var(--bb-gap-loose);
 }
 
 .workflow-step {
@@ -416,7 +416,7 @@
 
 .substep-header {
   text-align: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--bb-gap-loose);
 }
 
 .substep-header h2 {
@@ -433,12 +433,12 @@
 }
 
 .substep-content {
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--bb-gap-loose);
 }
 
 /* Learning Objectives Sub-step */
 .objectives-input-section {
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--bb-gap-loose);
 }
 
 .input-group {
@@ -541,7 +541,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.5rem;
+  padding: var(--bb-gap-loose);
   background: white;
   border: 2px solid #e0e0e0;
   border-radius: 8px;
@@ -625,12 +625,12 @@
 .questions-section {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: var(--bb-gap-loose);
 }
 
 .generate-section {
   text-align: center;
-  padding: 1.5rem;
+  padding: var(--bb-gap-loose);
   background: #f8f9fa;
   border-radius: 8px;
   border: 2px dashed #e0e0e0;
@@ -718,7 +718,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--bb-gap-loose);
   padding: 0.75rem;
   background: #e9ecef;
   border-radius: 6px;
@@ -739,7 +739,7 @@
 
 .questions-list {
   min-height: 100px;
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--bb-gap-loose);
 }
 
 .no-questions-message {
@@ -999,7 +999,7 @@
 }
 
 .question-form .form-section {
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--bb-gap-loose);
 }
 
 .question-form label {
@@ -1119,8 +1119,8 @@ fieldset.radio-group-fieldset {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
+  margin-top: var(--bb-gap-loose);
+  padding-top: var(--bb-gap-loose);
   border-top: 1px solid #e0e0e0;
 }
 
@@ -1214,7 +1214,7 @@ fieldset.radio-group-fieldset {
   }
 
   .step-content {
-    padding: 1.5rem;
+    padding: var(--bb-gap-loose);
   }
 
   .material-item {
@@ -1267,7 +1267,7 @@ fieldset.radio-group-fieldset {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem 2rem;
+  padding: var(--bb-gap-loose) 2rem;
   border-bottom: 1px solid #e0e0e0;
 }
 
@@ -1299,7 +1299,7 @@ fieldset.radio-group-fieldset {
 }
 
 .modal-footer {
-  padding: 1.5rem 2rem;
+  padding: var(--bb-gap-loose) 2rem;
   border-top: 1px solid #e0e0e0;
 }
 
@@ -1313,7 +1313,7 @@ fieldset.radio-group-fieldset {
 .upload-section {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: var(--bb-gap-loose);
 }
 
 .file-upload-container {
@@ -1511,7 +1511,7 @@ fieldset.radio-group-fieldset {
   background: rgba(255, 255, 255, 0.1);
   border: 2px solid rgba(255, 255, 255, 0.3);
   border-radius: 8px;
-  padding: 1.5rem;
+  padding: var(--bb-gap-loose);
   margin-bottom: 2rem;
 }
 
@@ -1567,7 +1567,7 @@ fieldset.radio-group-fieldset {
   background: #f8f9fa;
   border: 2px solid #e9ecef;
   border-radius: 8px;
-  padding: 1.5rem;
+  padding: var(--bb-gap-loose);
   margin: 1rem 0;
 }
 
@@ -1617,7 +1617,7 @@ fieldset.radio-group-fieldset {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    column-gap: 24px;
+    column-gap: var(--bb-gap-loose);
     row-gap: 8px;
     margin: 0 0 4px;
     padding: 8px 12px;

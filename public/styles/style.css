@@ -884,6 +884,17 @@ summary:focus-visible {
     font-family: inherit;
 }
 
+/* Page-level horizontal inset, matching the homepage's --bb-pad-x container
+   margin. Vertical padding stays the fixed 20px the base .main-content rule
+   already used (--bb-pad-x's own 20px floor lines up with it at narrow
+   widths); only left/right grow on wider screens. */
+.instructor-app .main-content {
+    padding-top: 20px;
+    padding-right: var(--bb-pad-x);
+    padding-bottom: 20px;
+    padding-left: var(--bb-pad-x);
+}
+
 /* Page title row: each page had picked its own padding/margin/background
    for this wrapper (home.css added a 30px/40px inset + white card, chat.css
    its own background+padding, downloads/notes/flagged each a different
