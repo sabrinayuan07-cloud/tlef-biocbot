@@ -57,7 +57,7 @@
     "passport": "^0.7.0",
     "passport-local": "^1.0.0",
     "passport-saml": "^3.2.4",
-    "passport-ubcshib": "0.1.4",
+    "passport-ubcshib": "0.1.7-rc.2",
     "ubc-genai-toolkit-chunking": "^0.1.0",
     "ubc-genai-toolkit-core": "^0.1.0",
     "ubc-genai-toolkit-document-parsing": "^0.3.1",
