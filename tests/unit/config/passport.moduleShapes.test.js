@@ -23,7 +23,7 @@ function loadPassportWith(ubcshibFactory) {
             deserializeUser: jest.fn(),
         }));
         jest.doMock('passport-local', () => ({ Strategy: class { constructor(o, v) { this.o = o; this.v = v; } } }));
-        jest.doMock('passport-saml', () => ({ Strategy: class { constructor(o, v) { this.o = o; this.v = v; } } }));
+        jest.doMock('@node-saml/passport-saml', () => ({ Strategy: class { constructor(o, v) { this.o = o; this.v = v; } } }));
         jest.doMock('fs', () => ({ readFileSync: jest.fn(() => 'CERT') }));
         jest.doMock('../../../src/models/User', () => ({}));
         jest.doMock('passport-ubcshib', ubcshibFactory);

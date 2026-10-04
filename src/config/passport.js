@@ -7,7 +7,7 @@ const fs = require('fs');
 const path = require('path');
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
-const SamlStrategy = require('passport-saml').Strategy;
+const SamlStrategy = require('@node-saml/passport-saml').Strategy;
 const User = require('../models/User');
 
 // Try to import passport-ubcshib (may not be available in all environments)
@@ -113,12 +113,13 @@ function initializePassport(db) {
                     entryPoint: samlEntryPoint,
                     issuer: samlIssuer,
                     callbackUrl: samlCallbackUrl,
-                    cert: cert,
+                    idpCert: cert, // @node-saml renamed passport-saml's `cert` to `idpCert`
                     privateKey: samlPrivateKey || null,
                     signatureAlgorithm: process.env.SAML_SIGNATURE_ALGORITHM || 'sha256',
                     digestAlgorithm: process.env.SAML_DIGEST_ALGORITHM || 'sha256',
                     acceptedClockSkewMs: parseInt(process.env.SAML_CLOCK_SKEW_MS) || 0,
-                    validateInResponseTo: process.env.SAML_VALIDATE_IN_RESPONSE_TO === 'true',
+                    // @node-saml takes 'always' | 'ifPresent' | 'never' instead of a boolean
+                    validateInResponseTo: process.env.SAML_VALIDATE_IN_RESPONSE_TO === 'true' ? 'always' : 'never',
                     disableRequestAcsUrl: process.env.SAML_DISABLE_REQUEST_ACS_URL === 'true'
                 },
                 async (profile, done) => {
@@ -154,7 +155,11 @@ function initializePassport(db) {
                         console.error('Error in SAML strategy:', error);
                         return done(error);
                     }
-                }
+                },
+                // Logout verify: @node-saml calls this for an IdP-initiated
+                // LogoutRequest and throws without it. This strategy has no SLO
+                // route of its own, so there is no user to match.
+                (profile, done) => done(null, null)
             ));
             console.log('✅ SAML strategy configured');
         } catch (error) {
