@@ -74,7 +74,6 @@
 }
 
 .welcome-header h1 {
-  font-family: var(--bb-font-heading);
   font-size: var(--bb-text-h2);
   color: #333;
   margin-bottom: 0.5rem;
@@ -108,7 +107,6 @@
 }
 
 .feature-card h3 {
-  font-family: var(--bb-font-heading);
   color: #333;
   margin-bottom: 0.5rem;
   font-size: var(--bb-text-lede);
@@ -126,7 +124,6 @@
 }
 
 .how-it-works h2 {
-  font-family: var(--bb-font-heading);
   text-align: center;
   color: #333;
   margin-bottom: 2rem;
@@ -158,7 +155,6 @@
 }
 
 .step-details h3 {
-  font-family: var(--bb-font-heading);
   color: #333;
   margin-bottom: 0.5rem;
   font-size: var(--bb-text-lede);
@@ -197,7 +193,6 @@
 }
 
 .form-section h2 {
-  font-family: var(--bb-font-heading);
   color: #333;
   margin-bottom: 1rem;
   font-size: var(--bb-text-h3-group);
@@ -399,7 +394,6 @@
 }
 
 .progress-text h2 {
-  font-family: var(--bb-font-heading);
   margin: 0 0 0.25rem 0;
   font-size: var(--bb-text-card-body);
   color: #333;
@@ -426,7 +420,6 @@
 }
 
 .substep-header h2 {
-  font-family: var(--bb-font-heading);
   color: #333;
   margin-bottom: 0.5rem;
   font-size: var(--bb-text-h3-flip);
@@ -568,7 +561,6 @@
 }
 
 .material-info h3 {
-  font-family: var(--bb-font-heading);
   margin: 0 0 0.5rem 0;
   color: #333;
   font-size: var(--bb-text-lede);
@@ -576,13 +568,11 @@
 
 #step-3 .unit-objectives-section > h3,
 #step-3 .unit-materials-section > h3 {
-  font-family: var(--bb-font-heading);
   font-size: var(--bb-text-nav);
   margin-block: 1.33em;
 }
 
 #step-3 .material-info h4 {
-  font-family: var(--bb-font-heading);
   font-size: var(--bb-text-card-kicker);
   margin-block: 1.67em;
 }
@@ -1282,7 +1272,6 @@ fieldset.radio-group-fieldset {
 }
 
 .modal-header h2 {
-  font-family: var(--bb-font-heading);
   margin: 0;
   color: #333;
 }
@@ -1507,7 +1496,6 @@ fieldset.radio-group-fieldset {
 }
 
 .onboarding-complete .welcome-header h1 {
-  font-family: var(--bb-font-heading);
   color: white;
   font-size: var(--bb-text-stat);
   margin-bottom: 1rem;
@@ -1584,7 +1572,6 @@ fieldset.radio-group-fieldset {
 }
 
 .join-course-info h3 {
-  font-family: var(--bb-font-heading);
   color: #495057;
   margin-bottom: 0.5rem;
   font-size: var(--bb-text-h3-group);
@@ -1605,7 +1592,6 @@ fieldset.radio-group-fieldset {
 }
 
 .course-info h4 {
-  font-family: var(--bb-font-heading);
   color: #495057;
   margin-bottom: 0.5rem;
   font-size: var(--bb-text-lede);

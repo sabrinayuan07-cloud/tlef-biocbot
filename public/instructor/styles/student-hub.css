@@ -322,7 +322,6 @@
 }
 
 .survey-response-main h3 {
-    font-family: var(--bb-font-heading);
     margin: 0;
     color: #111827;
     font-size: var(--bb-text-lede-tight);
@@ -507,7 +506,6 @@
 }
 
 .pseudonym-modal-header h2 {
-    font-family: var(--bb-font-heading);
     margin: 3px 0 5px;
     color: #111827;
     font-size: var(--bb-text-h3-flip);

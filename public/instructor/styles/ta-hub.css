@@ -13,7 +13,6 @@
 }
 
 .dashboard-section h2 {
-    font-family: var(--bb-font-heading);
     margin: 0 0 20px 0;
     color: #333;
     font-size: var(--bb-text-h3-flip);
@@ -130,7 +129,6 @@
 }
 
 .ta-permissions h4 {
-    font-family: var(--bb-font-heading);
     margin: 0 0 12px 0;
     color: #333;
     font-size: var(--bb-text-card-body);
@@ -240,7 +238,6 @@
 }
 
 .course-ta-info h4 {
-    font-family: var(--bb-font-heading);
     margin: 0 0 8px 0;
     color: #333;
     font-size: var(--bb-text-nav);
@@ -265,7 +262,6 @@
 }
 
 .no-tas-message h3 {
-    font-family: var(--bb-font-heading);
     margin: 0 0 12px 0;
     color: #333;
 }
@@ -308,7 +304,6 @@
 }
 
 .modal-header h2 {
-    font-family: var(--bb-font-heading);
     margin: 0;
     color: #333;
     font-size: var(--bb-text-h3-group);

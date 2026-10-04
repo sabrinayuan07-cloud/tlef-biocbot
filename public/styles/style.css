@@ -884,19 +884,47 @@ summary:focus-visible {
     font-family: inherit;
 }
 
-.instructor-app header h1 {
-    font-family: var(--bb-font-heading);
-    font-size: var(--bb-text-h2-sub);
+/* Page title row: each page had picked its own padding/margin/background
+   for this wrapper (home.css added a 30px/40px inset + white card, chat.css
+   its own background+padding, downloads/notes/flagged each a different
+   margin-bottom), so the title landed at a different x/y position on every
+   page. Pin it to one box so the title is always in the same spot when
+   switching tabs. (Onboarding's .welcome-header is deliberately excluded:
+   it's a centered wizard card, not a left-aligned page banner, so matching
+   position there isn't meaningful.) */
+.instructor-app .main-content header,
+.instructor-app .content-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin: 0 0 20px;
+    padding: 0 0 20px;
+    background: none;
+    border-bottom: 1px solid var(--border-color);
 }
 
-.instructor-app .user-name {
-    font-family: var(--bb-font-heading);
+/* Page titles: homepage's own h1/h2/h3 inherit the body font too (Barlow
+   Condensed on the homepage is reserved for small uppercase kickers/nav/
+   buttons, not headline copy), so these just pick up the size token.
+   .content-header covers Student Hub/TA Hub, which use a div instead of a
+   semantic <header> for their title block; .welcome-header covers the
+   Onboarding title. Color/weight are set here too and win over each page's
+   own *-header h1 rule (chat.css, downloads.css, flagged.css, home.css,
+   onboarding.css, ...) on specificity, since those pages had each picked a
+   different color/weight independently. */
+.instructor-app .main-content header h1,
+.instructor-app .content-header h1,
+.instructor-app .welcome-header h1 {
+    font-size: var(--bb-text-h2-sub);
+    color: var(--text-color);
+    font-weight: 600;
 }
 
 .instructor-app .user-role,
 .instructor-app .sidebar .user-action,
 .instructor-app .main-nav .student-preview-option {
-    font-family: var(--bb-font-heading);
     font-size: var(--bb-text-kicker);
 }
 
@@ -921,7 +949,9 @@ summary:focus-visible {
 }
 
 @media (max-width: 768px) {
-    .instructor-app header h1 {
+    .instructor-app .main-content header h1,
+    .instructor-app .content-header h1,
+    .instructor-app .welcome-header h1 {
         font-size: var(--bb-text-h3-group);
     }
 
