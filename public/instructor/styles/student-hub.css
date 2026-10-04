@@ -48,7 +48,7 @@
 
 .btn-small {
     padding: 6px 10px;
-    font-size: 0.9rem;
+    font-size: var(--bb-text-card-body);
 }
 
 .btn-secondary {
@@ -112,7 +112,7 @@
 
 .lms-grades-status {
     color: #5f666d;
-    font-size: 0.85rem;
+    font-size: var(--bb-text-card-kicker);
 }
 
 .lms-unmatched-panel {
@@ -122,7 +122,7 @@
     border-radius: 8px;
     background: #fffaf2;
     color: #5b4a2e;
-    font-size: 0.88rem;
+    font-size: var(--bb-text-card-kicker);
 }
 
 .lms-unmatched-panel[hidden] {
@@ -180,7 +180,7 @@
     border-radius: 999px;
     background: #eaf1fb;
     color: #284d7a;
-    font-size: 0.85rem;
+    font-size: var(--bb-text-card-kicker);
     font-weight: 700;
 }
 
@@ -199,7 +199,7 @@
     border: 1px solid #e2e8f0;
     border-radius: 6px;
     background: #fff;
-    font-size: 0.8rem;
+    font-size: var(--bb-text-card-kicker);
 }
 
 .lms-grade-chip-name {
@@ -219,7 +219,7 @@
 .lms-grade-empty {
     margin: 8px 0 0;
     color: #667085;
-    font-size: 0.78rem;
+    font-size: var(--bb-text-card-kicker);
 }
 
 .student-lms-grades[data-state="unmatched"] .lms-grade-empty {
@@ -276,12 +276,12 @@
     display: block;
     margin-bottom: 4px;
     color: #5f666d;
-    font-size: 0.85rem;
+    font-size: var(--bb-text-card-kicker);
 }
 
 .survey-stat strong {
     color: #111827;
-    font-size: 1.35rem;
+    font-size: var(--bb-text-h3-step);
     line-height: 1.2;
 }
 
@@ -322,16 +322,17 @@
 }
 
 .survey-response-main h3 {
+    font-family: var(--bb-font-heading);
     margin: 0;
     color: #111827;
-    font-size: 1.05rem;
+    font-size: var(--bb-text-lede-tight);
     line-height: 1.3;
 }
 
 .survey-response-meta {
     margin: 4px 0 0;
     color: #5f666d;
-    font-size: 0.9rem;
+    font-size: var(--bb-text-card-body);
     overflow-wrap: anywhere;
 }
 
@@ -345,7 +346,7 @@
 
 .survey-response-rating strong {
     color: #111827;
-    font-size: 1.2rem;
+    font-size: var(--bb-text-h3-group);
     line-height: 1.1;
 }
 
@@ -358,7 +359,7 @@
     border-radius: 999px;
     background: #eef2f7;
     color: #344054;
-    font-size: 0.78rem;
+    font-size: var(--bb-text-card-kicker);
     font-weight: 700;
 }
 
@@ -390,7 +391,7 @@
 
 .survey-response-details dt {
     color: #5f666d;
-    font-size: 0.78rem;
+    font-size: var(--bb-text-card-kicker);
     font-weight: 700;
     text-transform: uppercase;
 }
@@ -398,7 +399,7 @@
 .survey-response-details dd {
     margin: 2px 0 0;
     color: #111827;
-    font-size: 0.92rem;
+    font-size: var(--bb-text-card-body);
     overflow-wrap: anywhere;
 }
 
@@ -408,7 +409,7 @@
     border-left: 3px solid var(--primary-color);
     background: #f8fafc;
     color: #374151;
-    font-size: 0.95rem;
+    font-size: var(--bb-text-card-body);
     line-height: 1.45;
     overflow-wrap: anywhere;
 }
@@ -506,9 +507,10 @@
 }
 
 .pseudonym-modal-header h2 {
+    font-family: var(--bb-font-heading);
     margin: 3px 0 5px;
     color: #111827;
-    font-size: 1.5rem;
+    font-size: var(--bb-text-h3-flip);
 }
 
 .pseudonym-modal-header p {
@@ -518,7 +520,7 @@
 
 .pseudonym-modal-eyebrow {
     color: #6d28d9;
-    font-size: 0.73rem;
+    font-size: var(--bb-text-kicker);
     font-weight: 800;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -533,7 +535,7 @@
     background: #f1f5f9;
     color: #475569;
     cursor: pointer;
-    font-size: 1.55rem;
+    font-size: var(--bb-text-h3-flip);
     line-height: 1;
 }
 
@@ -558,7 +560,7 @@
     display: grid;
     gap: 7px;
     color: #334155;
-    font-size: 0.84rem;
+    font-size: var(--bb-text-card-kicker);
     font-weight: 750;
 }
 
@@ -580,7 +582,7 @@
     min-height: 40px;
     padding: 9px 14px;
     border-radius: 6px;
-    font-size: 0.9rem;
+    font-size: var(--bb-text-card-body);
 }
 
 .pseudonym-file-label {
@@ -640,7 +642,7 @@
     z-index: 1;
     background: #f8fafc;
     color: #334155;
-    font-size: 0.8rem;
+    font-size: var(--bb-text-card-kicker);
     text-transform: uppercase;
 }
 
@@ -715,5 +717,5 @@ body.pseudonym-modal-open {
     flex-basis: 100%;
     margin-top: 6px;
     color: #5f666d;
-    font-size: 0.82rem;
+    font-size: var(--bb-text-card-kicker);
 }

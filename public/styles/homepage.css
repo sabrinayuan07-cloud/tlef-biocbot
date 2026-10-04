@@ -7,7 +7,7 @@
  * the two palettes is a deliberate follow-up, not a side effect of this page.
  */
 
-@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;700&family=Barlow+Condensed:wght@400;500;600&display=swap');
+@import url('tokens.css');
 
 :root {
   /* Colors */
@@ -47,27 +47,7 @@
   --bb-paper-18: rgba(242, 242, 243, .18);
   --bb-paper-08: rgba(242, 242, 243, .08);
 
-  /* Type */
-  --bb-font-heading: "Barlow Condensed", system-ui, sans-serif;
-  --bb-font-body: "Barlow", system-ui, sans-serif;
-
-  --bb-text-h1: clamp(42px, 6vw, 76px);
-  --bb-text-h2: clamp(30px, 3.8vw, 52px);
-  --bb-text-h2-sub: clamp(24px, 2.8vw, 38px);
-  --bb-text-h3-group: clamp(20px, 2.2vw, 26px);
-  --bb-text-h3-mode: clamp(24px, 2.4vw, 30px);
-  --bb-text-h3-flip: 24px;
-  --bb-text-h3-step: 21px;
-  --bb-text-statement: clamp(22px, 2.6vw, 34px);
-  --bb-text-hero-body: clamp(16px, 1.4vw, 19px);
-  --bb-text-lede: 17px;
-  --bb-text-lede-tight: 16.5px;
-  --bb-text-card-body: 15.5px;
-  --bb-text-stat: clamp(38px, 5vw, 56px);
-  --bb-text-kicker: 11.5px;
-  --bb-text-card-kicker: 13px;
-  --bb-text-nav: 16px;
-  --bb-text-brand: 24px;
+  /* Type: fonts and --bb-text-* scale now live in tokens.css */
 
   /* Spacing */
   --bb-max-width: 1280px;

@@ -13,9 +13,10 @@
 }
 
 .dashboard-section h2 {
+    font-family: var(--bb-font-heading);
     margin: 0 0 20px 0;
     color: #333;
-    font-size: 1.5rem;
+    font-size: var(--bb-text-h3-flip);
     font-weight: 600;
 }
 
@@ -50,7 +51,7 @@
     padding: 12px;
     border: 1px solid #ddd;
     border-radius: 4px;
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
     transition: border-color 0.2s;
 }
 
@@ -94,7 +95,7 @@
 }
 
 .ta-name {
-    font-size: 1.1rem;
+    font-size: var(--bb-text-lede);
     font-weight: 600;
     color: #333;
     margin: 0;
@@ -105,7 +106,7 @@
     color: #1976d2;
     padding: 4px 8px;
     border-radius: 4px;
-    font-size: 0.8rem;
+    font-size: var(--bb-text-card-kicker);
     font-weight: 500;
 }
 
@@ -116,7 +117,7 @@
 .ta-info p {
     margin: 4px 0;
     color: #666;
-    font-size: 0.9rem;
+    font-size: var(--bb-text-card-body);
 }
 
 /* TA Permissions */
@@ -129,9 +130,10 @@
 }
 
 .ta-permissions h4 {
+    font-family: var(--bb-font-heading);
     margin: 0 0 12px 0;
     color: #333;
-    font-size: 0.9rem;
+    font-size: var(--bb-text-card-body);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
@@ -166,7 +168,7 @@
 }
 
 .toggle-label {
-    font-size: 0.9rem;
+    font-size: var(--bb-text-card-body);
     color: #555;
     font-weight: 500;
     user-select: none;
@@ -184,7 +186,7 @@
 .section-description p {
     margin: 0;
     color: #1565c0;
-    font-size: 0.9rem;
+    font-size: var(--bb-text-card-body);
     line-height: 1.4;
 }
 
@@ -195,7 +197,7 @@
 
 .btn-small {
     padding: 6px 12px;
-    font-size: 0.8rem;
+    font-size: var(--bb-text-card-kicker);
     border-radius: 4px;
     border: none;
     cursor: pointer;
@@ -238,15 +240,16 @@
 }
 
 .course-ta-info h4 {
+    font-family: var(--bb-font-heading);
     margin: 0 0 8px 0;
     color: #333;
-    font-size: 1rem;
+    font-size: var(--bb-text-nav);
 }
 
 .course-ta-info p {
     margin: 0;
     color: #666;
-    font-size: 0.9rem;
+    font-size: var(--bb-text-card-body);
 }
 
 .course-ta-actions {
@@ -262,6 +265,7 @@
 }
 
 .no-tas-message h3 {
+    font-family: var(--bb-font-heading);
     margin: 0 0 12px 0;
     color: #333;
 }
@@ -304,15 +308,16 @@
 }
 
 .modal-header h2 {
+    font-family: var(--bb-font-heading);
     margin: 0;
     color: #333;
-    font-size: 1.25rem;
+    font-size: var(--bb-text-h3-group);
 }
 
 .modal-close {
     background: none;
     border: none;
-    font-size: 24px;
+    font-size: var(--bb-text-h3-flip);
     cursor: pointer;
     color: #999;
     padding: 0;
@@ -350,7 +355,7 @@
     padding: 10px 20px;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
     font-weight: 500;
     transition: background-color 0.2s;
 }

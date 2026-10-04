@@ -1,4 +1,6 @@
 /* Base Styles */
+@import url('tokens.css');
+
 :root {
     --primary-color: #4a6fa5;
     --secondary-color: #6b8cae;
@@ -863,4 +865,68 @@ summary:focus-visible {
     outline: 3px solid #0055b7 !important;
     outline-offset: 2px;
     border-radius: 2px;
+}
+
+/* Instructor app typography: scoped under .instructor-app (set on <body> in
+   public/instructor/*.html) so it adopts the homepage's Barlow/--bb-text-*
+   scale without touching the base rules above, which student pages still
+   use as-is. */
+.instructor-app {
+    font-family: var(--bb-font-body);
+}
+
+/* Browsers don't inherit font-family onto form controls by default, so
+   without this they'd fall back to the OS UI font and clash with Barlow. */
+.instructor-app button,
+.instructor-app input,
+.instructor-app select,
+.instructor-app textarea {
+    font-family: inherit;
+}
+
+.instructor-app header h1 {
+    font-family: var(--bb-font-heading);
+    font-size: var(--bb-text-h2-sub);
+}
+
+.instructor-app .user-name {
+    font-family: var(--bb-font-heading);
+}
+
+.instructor-app .user-role,
+.instructor-app .sidebar .user-action,
+.instructor-app .main-nav .student-preview-option {
+    font-family: var(--bb-font-heading);
+    font-size: var(--bb-text-kicker);
+}
+
+.instructor-app button,
+.instructor-app .button,
+.instructor-app .btn-ai,
+.instructor-app input,
+.instructor-app select,
+.instructor-app textarea,
+.instructor-app .new-session-button,
+.instructor-app .account-menu-email,
+.instructor-app .account-menu-item,
+.instructor-app .switch-role a,
+.instructor-app .field-feedback {
+    font-size: var(--bb-text-card-body);
+}
+
+.instructor-app .ai-icon,
+.instructor-app .new-session-icon,
+.instructor-app .notification-close {
+    font-size: var(--bb-text-nav);
+}
+
+@media (max-width: 768px) {
+    .instructor-app header h1 {
+        font-size: var(--bb-text-h3-group);
+    }
+
+    .instructor-app .new-session-button,
+    .instructor-app .mobile-header-toggle {
+        font-size: var(--bb-text-card-kicker);
+    }
 }
