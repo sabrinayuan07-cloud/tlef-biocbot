@@ -298,7 +298,7 @@ function showEmptyCourseState() {
         container.innerHTML = `
             <div class="empty-course-state">
                 <div class="empty-message">
-                    <h3>No Course Found</h3>
+                    <h2>No Course Found</h2>
                     <p>You haven't set up a course yet. Please complete the onboarding process first.</p>
                     <a href="/instructor/onboarding" class="btn-primary">Go to Onboarding</a>
                 </div>

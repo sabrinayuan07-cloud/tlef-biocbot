@@ -2227,7 +2227,7 @@ fieldset.radio-group-fieldset {
     margin: 2rem 0;
 }
 
-.empty-course-state .empty-message h3 {
+.empty-course-state .empty-message h2 {
     color: #333;
     font-size: 1.8rem;
     margin-bottom: 1rem;
