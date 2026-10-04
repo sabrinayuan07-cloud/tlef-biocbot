@@ -83,10 +83,13 @@ function planTAMigration(stored) {
         const next = migrateLegacyTAPermissions(stored);
         const changedFields = TA_PERMISSION_KEYS.filter(key => stored[key] !== next[key]);
         // Never skip a legacy record, even if the computed new-shape values
-        // happen to already match: the legacy keys themselves still need to
-        // be $unset, or isLegacyTAPermissions keeps reading it as legacy and
-        // every future PUT silently no-ops (see updateTAPermissions).
-        return { next, changedFields, skippedReason: null, source: 'legacy-shape', needsUnsetLegacyKeys: true };
+        // happen to already match: the record still needs rewriting, or
+        // isLegacyTAPermissions keeps reading it as legacy and every future
+        // PUT silently no-ops (see updateTAPermissions). The full-record
+        // $set below already replaces canAccessCourses/canAccessFlags along
+        // with everything else - no separate $unset needed (and $unset-ing
+        // a child path of a path already in $set is a Mongo conflict error).
+        return { next, changedFields, skippedReason: null, source: 'legacy-shape' };
     }
 
     // Already new-shape. Fill in any missing key as false (matches what
@@ -171,10 +174,6 @@ async function runMigration(db, options) {
             if (!plan.skippedReason) {
                 setFields[`taPermissions.${taId}`] = { ...plan.next, updatedAt: new Date() };
                 changedTAs.push(taId);
-                if (plan.needsUnsetLegacyKeys) {
-                    unsetFields[`taPermissions.${taId}.canAccessCourses`] = '';
-                    unsetFields[`taPermissions.${taId}.canAccessFlags`] = '';
-                }
             }
         }
 

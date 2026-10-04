@@ -288,14 +288,49 @@ describe('Course.getTAPermissions / updateTAPermissions', () => {
         });
     });
 
-    test('updateTAPermissions persists a partial patch, and getTAPermissions reads it back merged with defaults', async () => {
-        const db = memoryDb({ courses: [{ courseId: 'C1', tas: ['t1'] }] });
+    test('updateTAPermissions persists a partial patch, and getTAPermissions reads it back merged with fail-closed defaults, on a migrated course', async () => {
+        const db = memoryDb({ courses: [{ courseId: 'C1', tas: ['t1'], taPermissionsMigrated: true }] });
         const upd = await Course.updateTAPermissions(db, 'C1', 't1', { flags: true });
         expect(upd.success).toBe(true);
 
         const read = await Course.getTAPermissions(db, 'C1', 't1');
         expect(read.success).toBe(true);
         expect(read.permissions).toEqual({ ...ALL_FALSE, flags: true });
+    });
+
+    test('updateTAPermissions on a no-record TA before the course is migrated seeds the fail-open baseline, not fail-closed', async () => {
+        // Same reasoning as the no-record read above: before --apply has run,
+        // this TA's actual access is the old fail-open default. A partial
+        // patch must merge onto that baseline, not onto all-false.
+        const db = memoryDb({ courses: [{ courseId: 'C1', tas: ['t1'] }] });
+        const upd = await Course.updateTAPermissions(db, 'C1', 't1', { flags: false });
+        expect(upd.success).toBe(true);
+
+        const read = await Course.getTAPermissions(db, 'C1', 't1');
+        expect(read.success).toBe(true);
+        expect(read.permissions).toEqual({ materials: true, questions: true, settings: true, transcripts: true, flags: false, roster: true });
+    });
+
+    test('two concurrent PUTs on a legacy record do not clobber each other', async () => {
+        // Both start from the same legacy-shaped record and migrate it in
+        // the same call. Without a guard on the update filter, whichever
+        // write lands second overwrites the first's revoke with its own
+        // (stale) read of the baseline - this reproduced in 19/20 runs
+        // against a real MongoDB before the filter guard + retry was added.
+        const db = memoryDb({
+            courses: [{ courseId: 'C1', tas: ['t1'], taPermissions: { t1: { canAccessCourses: true, canAccessFlags: true } } }],
+        });
+        const [r1, r2] = await Promise.all([
+            Course.updateTAPermissions(db, 'C1', 't1', { transcripts: false }),
+            Course.updateTAPermissions(db, 'C1', 't1', { roster: false }),
+        ]);
+        expect(r1.success).toBe(true);
+        expect(r2.success).toBe(true);
+
+        const read = await Course.getTAPermissions(db, 'C1', 't1');
+        expect(read.permissions).toEqual({
+            materials: true, questions: true, settings: true, transcripts: false, flags: true, roster: false,
+        });
     });
 
     test('updateTAPermissions rejects for a missing course or unassigned TA', async () => {
@@ -734,5 +769,31 @@ describe('Course.addTAToCourse', () => {
         await Course.addTAToCourse(db, 'C1', 't1');
         await Course.addTAToCourse(db, 'C1', 't1');
         expect((await db.collection('courses').findOne({ courseId: 'C1' })).tas).toEqual(['t1']);
+    });
+
+    test('re-adding a TA who is already in tas.tas (stale invite, no record, unmigrated course) does not lock them out', async () => {
+        // The TA is already assigned and has no record yet - this course
+        // simply hasn't been swept by the migration script. A second call
+        // into addTAToCourse (e.g. a stale join link) must leave that alone
+        // rather than reading "no record" as "first time" and writing an
+        // all-false record over their actual fail-open access.
+        const db = memoryDb({ courses: [{ courseId: 'C1', tas: ['t1'] }] });
+        await Course.addTAToCourse(db, 'C1', 't1');
+        const course = await db.collection('courses').findOne({ courseId: 'C1' });
+        expect(course.taPermissions).toBeUndefined();
+    });
+
+    test('re-adding a TA after removal gets a fresh fail-closed record, not their old permissions back', async () => {
+        const db = memoryDb({
+            courses: [{
+                courseId: 'C1', tas: [],
+                taPermissions: { t1: { materials: true, questions: true, settings: true, transcripts: true, flags: true, roster: true } },
+            }],
+        });
+        await Course.addTAToCourse(db, 'C1', 't1');
+        const course = await db.collection('courses').findOne({ courseId: 'C1' });
+        expect(course.taPermissions.t1).toMatchObject({
+            materials: false, questions: false, settings: false, transcripts: false, flags: false, roster: false,
+        });
     });
 });

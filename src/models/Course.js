@@ -1678,10 +1678,16 @@ async function addTAToCourse(db, courseId, taId) {
     // instead of relying on "no record" - that default now depends on
     // whether the course has run the legacy-permissions migration (see
     // getTAPermissions), and a brand-new grant should never ride on that.
-    // Re-adding a TA who already has a record (removed and re-invited, or
-    // joining again via a stale invite) must not reset their permissions.
-    const hasExistingRecord = !!(course.taPermissions && course.taPermissions[taId]);
-    if (!hasExistingRecord) {
+    //
+    // "First time" means "not currently in course.tas", not "has no
+    // permissions record": a pre-existing TA on an unmigrated course has no
+    // record yet by design (the migration hasn't swept them), and a
+    // re-invite/stale-join-link call into this function must not wipe that
+    // out to all-false. Conversely, a removed-then-re-added TA (see
+    // removeTAFromCourse, which clears the record) must get a fresh
+    // fail-closed record, not resurrect whatever was left over.
+    const wasAlreadyTA = Array.isArray(course.tas) && course.tas.includes(taId);
+    if (!wasAlreadyTA) {
         setFields[`taPermissions.${taId}`] = {
             ...Object.fromEntries(TA_PERMISSION_KEYS.map(key => [key, false])),
             updatedAt: now
@@ -1860,15 +1866,18 @@ function migrateLegacyTAPermissions(legacy) {
  * Accepts a partial permissions object - only the keys present are
  * validated and written, via a per-field $set - so callers can toggle one
  * permission without first reading and re-sending all six (avoids a
- * read-modify-write race between two toggles in flight).
+ * read-modify-write race between two toggles in flight, for an already
+ * new-shape record).
  *
- * If the stored record is still legacy-shaped, a per-field $set of just the
- * requested new-shape keys would leave canAccessCourses/canAccessFlags in
- * place, and isLegacyTAPermissions would keep reading the record as legacy
- * forever - silently ignoring every toggle. Instead, a legacy record is
- * fully migrated here: its effective access becomes the new-shape baseline,
- * the requested keys override it, and the two legacy keys are $unset in the
- * same update.
+ * Two cases - a legacy-shaped record, and no record at all on a course the
+ * one-time migration hasn't swept yet - read the current record before
+ * deciding what the "other" (not-requested) keys should become, which
+ * reintroduces that race: two concurrent PUTs both read the same baseline,
+ * so the second write can put back a permission the first one just revoked.
+ * Both paths therefore guard the update filter on the exact shape we read
+ * and retry against a fresh read if that guard fails to match (meaning a
+ * concurrent write already changed the record out from under us), instead
+ * of blindly overwriting it.
  * @param {Object} db - MongoDB database instance
  * @param {string} courseId - Course identifier
  * @param {string} taId - TA identifier
@@ -1877,51 +1886,89 @@ function migrateLegacyTAPermissions(legacy) {
  */
 async function updateTAPermissions(db, courseId, taId, permissions) {
     const collection = getCoursesCollection(db);
+    const MAX_ATTEMPTS = 5;
 
-    const now = new Date();
-
-    // First, ensure the course exists
-    const course = await collection.findOne({ courseId });
-    if (!course) {
-        return { success: false, error: 'Course not found' };
-    }
-
-    // Check if TA is assigned to this course
-    if (!course.tas || !course.tas.includes(taId)) {
-        return { success: false, error: 'TA is not assigned to this course' };
-    }
-
-    const stored = course.taPermissions && course.taPermissions[taId];
-    const update = { $set: { updatedAt: now, [`taPermissions.${taId}.updatedAt`]: now } };
-
-    if (isLegacyTAPermissions(stored)) {
-        const migrated = migrateLegacyTAPermissions(stored);
-        for (const key of TA_PERMISSION_KEYS) {
-            const value = Object.prototype.hasOwnProperty.call(permissions, key)
-                ? permissions[key]
-                : migrated[key];
-            update.$set[`taPermissions.${taId}.${key}`] = value;
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+        const course = await collection.findOne({ courseId });
+        if (!course) {
+            return { success: false, error: 'Course not found' };
         }
-        update.$unset = {
-            [`taPermissions.${taId}.canAccessCourses`]: '',
-            [`taPermissions.${taId}.canAccessFlags`]: ''
-        };
-    } else {
-        for (const key of TA_PERMISSION_KEYS) {
-            if (Object.prototype.hasOwnProperty.call(permissions, key)) {
-                update.$set[`taPermissions.${taId}.${key}`] = permissions[key];
+
+        // Check if TA is assigned to this course
+        if (!course.tas || !course.tas.includes(taId)) {
+            return { success: false, error: 'TA is not assigned to this course' };
+        }
+
+        const stored = course.taPermissions && course.taPermissions[taId];
+        const now = new Date();
+        const filter = { courseId };
+        const update = { $set: { updatedAt: now, [`taPermissions.${taId}.updatedAt`]: now } };
+
+        if (isLegacyTAPermissions(stored)) {
+            // Guard: both legacy keys must still read exactly as we saw
+            // them (present-with-this-value, or absent). If either has
+            // changed - another toggle finished migrating this record, or
+            // the migration script swept it - this plan is stale.
+            filter[`taPermissions.${taId}.canAccessCourses`] = Object.prototype.hasOwnProperty.call(stored, 'canAccessCourses')
+                ? stored.canAccessCourses
+                : { $exists: false };
+            filter[`taPermissions.${taId}.canAccessFlags`] = Object.prototype.hasOwnProperty.call(stored, 'canAccessFlags')
+                ? stored.canAccessFlags
+                : { $exists: false };
+
+            const migrated = migrateLegacyTAPermissions(stored);
+            for (const key of TA_PERMISSION_KEYS) {
+                const value = Object.prototype.hasOwnProperty.call(permissions, key)
+                    ? permissions[key]
+                    : migrated[key];
+                update.$set[`taPermissions.${taId}.${key}`] = value;
+            }
+            update.$unset = {
+                [`taPermissions.${taId}.canAccessCourses`]: '',
+                [`taPermissions.${taId}.canAccessFlags`]: ''
+            };
+        } else if (!stored) {
+            // No record at all. Before the one-time migration has swept
+            // this course, "no record" means the old fail-open default
+            // (same as a legacy record), not fail-closed - so a partial PUT
+            // here must seed the *full* baseline plus the requested
+            // overrides. A per-field $set of only the requested keys would
+            // otherwise read back as "every other permission is false" on
+            // the next getTAPermissions call, once a record exists.
+            filter[`taPermissions.${taId}`] = { $exists: false };
+            const baseline = course.taPermissionsMigrated
+                ? Object.fromEntries(TA_PERMISSION_KEYS.map(key => [key, false]))
+                : migrateLegacyTAPermissions({ canAccessCourses: true, canAccessFlags: true });
+            for (const key of TA_PERMISSION_KEYS) {
+                update.$set[`taPermissions.${taId}.${key}`] = Object.prototype.hasOwnProperty.call(permissions, key)
+                    ? permissions[key]
+                    : baseline[key];
+            }
+        } else {
+            for (const key of TA_PERMISSION_KEYS) {
+                if (Object.prototype.hasOwnProperty.call(permissions, key)) {
+                    update.$set[`taPermissions.${taId}.${key}`] = permissions[key];
+                }
             }
         }
-    }
 
-    const result = await collection.updateOne({ courseId }, update);
+        const result = await collection.updateOne(filter, update);
 
-    if (result.modifiedCount > 0) {
-        console.log(`Updated TA permissions for ${taId} in course ${courseId}`);
-        return { success: true, modifiedCount: result.modifiedCount };
-    } else {
+        if (result.matchedCount === 0) {
+            // Guard filter didn't match current state - a concurrent write
+            // beat us to it. Re-read and retry rather than silently losing
+            // this update.
+            continue;
+        }
+
+        if (result.modifiedCount > 0) {
+            console.log(`Updated TA permissions for ${taId} in course ${courseId}`);
+            return { success: true, modifiedCount: result.modifiedCount };
+        }
         return { success: false, error: 'Failed to update TA permissions' };
     }
+
+    return { success: false, error: 'Failed to update TA permissions (concurrent modification, retries exhausted)' };
 }
 
 /**

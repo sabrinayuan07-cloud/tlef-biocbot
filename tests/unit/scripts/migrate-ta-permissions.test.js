@@ -38,7 +38,6 @@ describe('planTAMigration', () => {
         const stored = { canAccessCourses: true, canAccessFlags: true, ...ALL_TRUE };
         const plan = planTAMigration(stored);
         expect(plan.skippedReason).toBeNull();
-        expect(plan.needsUnsetLegacyKeys).toBe(true);
         expect(plan.next).toEqual(ALL_TRUE);
     });
 
@@ -46,7 +45,6 @@ describe('planTAMigration', () => {
         const stored = { canAccessCourses: false, canAccessFlags: true, materials: true };
         const plan = planTAMigration(stored);
         expect(plan.next).toEqual({ materials: false, questions: false, settings: false, transcripts: false, flags: true, roster: true });
-        expect(plan.needsUnsetLegacyKeys).toBe(true);
     });
 
     test('already new-shape and fully consistent: skipped', () => {

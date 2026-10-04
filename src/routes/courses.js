@@ -1627,10 +1627,13 @@ router.post('/:courseId/extract-topics', async (req, res) => {
             return res.status(404).json({ success: false, message: 'Course not found' });
         }
 
-        if (!hasInstructorOrTAAccess(course, user.userId)) {
+        // Content curation, like approved-topics/unit management - gated on
+        // 'materials', not just general course access, so a TA with every
+        // permission off can't run the LLM over course documents.
+        if (!(await hasCourseManagementAccess(db, course, user))) {
             return res.status(403).json({
                 success: false,
-                message: 'Only instructors/TAs with course access can extract topics'
+                message: 'Only instructors/TAs with materials access can extract topics'
             });
         }
 
@@ -1893,15 +1896,14 @@ router.put('/:courseId', async (req, res) => {
             return res.status(401).json({ success: false, message: 'Authentication required' });
         }
 
-        // Instructors update their own courses; a TA with the 'settings'
-        // permission can also update course name/status/structure (but see
-        // /:courseId/llm-key, which stays instructor/admin-only regardless
-        // of this permission - API keys are credentials, not settings).
+        // Instructor-only: this route writes status (including soft-delete),
+        // prompts, and lectures straight from the request body with no
+        // field allowlist, so granting it to any TA with 'settings' (which
+        // legacy canAccessCourses and the fail-open default both imply)
+        // would let that TA delete the course or overwrite its prompts/units.
         let hasAccess = false;
         if (user.role === 'instructor' && instructorId === user.userId) {
             hasAccess = await CourseModel.userHasCourseAccess(db, courseId, user.userId, 'instructor');
-        } else if (user.role === 'ta') {
-            hasAccess = await CourseModel.checkTAPermission(db, courseId, user.userId, 'settings');
         }
         if (!hasAccess) {
             return res.status(403).json({
@@ -1961,11 +1963,8 @@ router.put('/:courseId', async (req, res) => {
         }
         
         // Authorization already happened above via hasAccess (instructor of
-        // record, or a TA with the 'settings' permission) - the update
-        // itself just needs to find the course. Filtering again by
-        // instructorId/instructors here was redundant for an instructor and
-        // silently matched zero documents for a settings-granted TA, who is
-        // never in either field, making the grant a no-op 404.
+        // record) - the update itself just needs to find the course.
+        // Filtering again by instructorId/instructors here would be redundant.
         const result = await collection.updateOne(
             { courseId },
             { $set: updateData }

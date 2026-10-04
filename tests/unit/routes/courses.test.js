@@ -262,37 +262,62 @@ describe('canonical course status updates', () => {
     });
 });
 
-describe('PUT /:courseId — a TA granted the settings permission', () => {
-    test('actually updates the course, not just passes the access check', async () => {
-        // hasAccess was already computed correctly for a settings-granted TA,
-        // but the update itself filtered by instructorId/instructors - which
-        // a TA is never in - so it silently matched zero documents and 404'd.
-        const db = memoryDb({ courses: [{
-            courseId: 'C1', instructorId: 'i1', tas: ['t1'],
-            taPermissions: { t1: { materials: false, questions: false, settings: true, transcripts: false, flags: false, roster: false } },
+describe('PUT /:courseId — instructor-only, even for a fully-permissioned TA', () => {
+    // This route writes status (including soft-delete), prompts, and lectures
+    // straight from the request body with no field allowlist. Granting it to
+    // any TA with 'settings' - which legacy canAccessCourses and the
+    // fail-open default both imply for nearly every existing TA - would let
+    // that TA soft-delete the course or overwrite its prompts/units.
+    function fullTA(courseId, extra = {}) {
+        return {
+            courseId, instructorId: 'i1', tas: ['t1'],
+            taPermissions: { t1: { materials: true, questions: true, settings: true, transcripts: true, flags: true, roster: true } },
             taPermissionsMigrated: true,
-            courseName: 'Old Name',
-        }] });
+            courseName: 'Old Name', status: 'active',
+            prompts: { base: 'original base prompt' },
+            lectures: [{ name: 'Week 1' }],
+            ...extra,
+        };
+    }
 
-        const res = await request(app({ db, user: ta }))
-            .put('/C1').send({ instructorId: 'i1', name: 'New Name' });
-        expect(res.status).toBe(200);
-        expect(res.body.success).toBe(true);
-        expect((await db.collection('courses').findOne({ courseId: 'C1' })).courseName).toBe('New Name');
-    });
-
-    test('is denied without the settings permission', async () => {
-        const db = memoryDb({ courses: [{
-            courseId: 'C1', instructorId: 'i1', tas: ['t1'],
-            taPermissions: { t1: { materials: true, questions: true, settings: false, transcripts: false, flags: false, roster: false } },
-            taPermissionsMigrated: true,
-            courseName: 'Old Name',
-        }] });
-
+    test('cannot rename the course despite the settings permission', async () => {
+        const db = memoryDb({ courses: [fullTA('C1')] });
         const res = await request(app({ db, user: ta }))
             .put('/C1').send({ instructorId: 'i1', name: 'New Name' });
         expect(res.status).toBe(403);
         expect((await db.collection('courses').findOne({ courseId: 'C1' })).courseName).toBe('Old Name');
+    });
+
+    test('cannot soft-delete the course via status', async () => {
+        const db = memoryDb({ courses: [fullTA('C1')] });
+        const res = await request(app({ db, user: ta }))
+            .put('/C1').send({ instructorId: 'i1', status: 'deleted' });
+        expect(res.status).toBe(403);
+        expect((await db.collection('courses').findOne({ courseId: 'C1' })).status).toBe('active');
+    });
+
+    test('cannot overwrite prompts', async () => {
+        const db = memoryDb({ courses: [fullTA('C1')] });
+        const res = await request(app({ db, user: ta }))
+            .put('/C1').send({ instructorId: 'i1', prompts: { base: 'attacker prompt' } });
+        expect(res.status).toBe(403);
+        expect((await db.collection('courses').findOne({ courseId: 'C1' })).prompts.base).toBe('original base prompt');
+    });
+
+    test('cannot wipe lectures/units', async () => {
+        const db = memoryDb({ courses: [fullTA('C1')] });
+        const res = await request(app({ db, user: ta }))
+            .put('/C1').send({ instructorId: 'i1', lectures: [] });
+        expect(res.status).toBe(403);
+        expect((await db.collection('courses').findOne({ courseId: 'C1' })).lectures).toEqual([{ name: 'Week 1' }]);
+    });
+
+    test('an arbitrary instructorId query param does not grant a TA access', async () => {
+        const db = memoryDb({ courses: [fullTA('C1')] });
+        const res = await request(app({ db, user: ta }))
+            .put('/C1?instructorId=anything').send({ status: 'deleted' });
+        expect(res.status).toBe(403);
+        expect((await db.collection('courses').findOne({ courseId: 'C1' })).status).toBe('active');
     });
 });
 
@@ -453,18 +478,33 @@ describe('TA removal and permissions', () => {
             .send({ materials: true, flags: false })).status).toBe(403);
     });
 
-    test('PUT permissions accepts a partial patch and only changes the keys sent', async () => {
-        const db = taDb();
+    test('PUT permissions accepts a partial patch and only changes the keys sent, on an already-migrated record', async () => {
+        const db = taDb({
+            taPermissions: { t1: { materials: true, questions: true, settings: true, transcripts: true, flags: true, roster: true } },
+            taPermissionsMigrated: true,
+        });
         const res = await request(app({ db, user: instructor })).put('/C1/ta-permissions/t1')
             .send({ materials: false, flags: true });
         expect(res.status).toBe(200);
-        expect(res.body.data.permissions).toMatchObject({ materials: false, flags: true, questions: false, roster: false });
+        expect(res.body.data.permissions).toMatchObject({ materials: false, flags: true, questions: true, roster: true });
         expect((await db.collection('courses').findOne({ courseId: 'C1' })).taPermissions.t1)
             .toMatchObject({ materials: false, flags: true });
 
         // A second, single-key patch must not clobber the first change.
-        const res2 = await request(app({ db, user: instructor })).put('/C1/ta-permissions/t1').send({ roster: true });
-        expect(res2.body.data.permissions).toMatchObject({ materials: false, flags: true, roster: true });
+        const res2 = await request(app({ db, user: instructor })).put('/C1/ta-permissions/t1').send({ roster: false });
+        expect(res2.body.data.permissions).toMatchObject({ materials: false, flags: true, roster: false, questions: true });
+    });
+
+    test('PUT permissions on a no-record TA before the course is migrated seeds the fail-open baseline, not false', async () => {
+        // Before --apply has run, "no record" means the pre-existing TA's
+        // actual access is the old fail-open default, same as a legacy
+        // record - a partial PUT must not read back as "everything else is
+        // off" (see getTAPermissions' own fail-open fallback for this case).
+        const db = taDb();
+        const res = await request(app({ db, user: instructor })).put('/C1/ta-permissions/t1')
+            .send({ materials: false, flags: true });
+        expect(res.status).toBe(200);
+        expect(res.body.data.permissions).toMatchObject({ materials: false, flags: true, questions: true, roster: true, transcripts: true, settings: true });
     });
 
     test('PUT permissions accepts a named role preset', async () => {
