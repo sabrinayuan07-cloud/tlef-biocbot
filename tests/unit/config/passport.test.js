@@ -20,7 +20,7 @@ const mockPassport = {
 
 jest.mock('passport', () => mockPassport);
 jest.mock('passport-local', () => ({ Strategy: mockStrategyClass }));
-jest.mock('passport-saml', () => ({ Strategy: mockStrategyClass }));
+jest.mock('@node-saml/passport-saml', () => ({ Strategy: mockStrategyClass }));
 jest.mock('passport-ubcshib', () => ({
     Strategy: mockStrategyClass,
     ensureAuthenticated: jest.fn(),
@@ -84,7 +84,7 @@ describe('Passport configuration', () => {
         expect(result).toBe(mockPassport);
         expect(Object.keys(captured.strategies)).toEqual(['local', 'saml', 'ubcshib']);
         expect(captured.strategies.local.options).toMatchObject({ usernameField: 'username', passwordField: 'password' });
-        expect(captured.strategies.saml.options).toMatchObject({ entryPoint: 'https://idp.test/login', cert: 'MOCK CERTIFICATE', signatureAlgorithm: 'sha256' });
+        expect(captured.strategies.saml.options).toMatchObject({ entryPoint: 'https://idp.test/login', idpCert: 'MOCK CERTIFICATE', signatureAlgorithm: 'sha256' });
         expect(captured.strategies.ubcshib.options).toMatchObject({ issuer: 'biocbot-test', cert: 'MOCK CERTIFICATE', enableSLO: true });
         expect(mockPassport.ubcShibHelpers).toBeDefined();
     });
@@ -109,7 +109,7 @@ describe('Passport configuration', () => {
             signatureAlgorithm: 'sha512',
             digestAlgorithm: 'sha512',
             acceptedClockSkewMs: 4500,
-            validateInResponseTo: true,
+            validateInResponseTo: 'always',
             disableRequestAcsUrl: true,
         });
         expect(captured.strategies.ubcshib.options).toMatchObject({
@@ -136,7 +136,7 @@ describe('Passport configuration', () => {
             signatureAlgorithm: 'sha256',
             digestAlgorithm: 'sha256',
             acceptedClockSkewMs: 0,
-            validateInResponseTo: false,
+            validateInResponseTo: 'never',
             disableRequestAcsUrl: false,
         });
         expect(captured.strategies.ubcshib.options).toMatchObject({
