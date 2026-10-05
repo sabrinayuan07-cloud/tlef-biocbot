@@ -11,6 +11,7 @@ const DocumentModel = require('../models/Document');
 const QdrantService = require('../services/qdrantService');
 const gridfs = require('../services/gridfs');
 const { hasSystemAdminAccess } = require('../services/authorization');
+const { PERMISSION_KEYS, ROLE_PRESETS, deriveRoleLabel } = require('../services/permissions');
 const previewSession = require('../services/previewSession');
 const { createId } = require('../services/id');
 const {
@@ -94,6 +95,8 @@ function hasInstructorAccess(course, userId) {
         (Array.isArray(course.instructors) && course.instructors.includes(userId));
 }
 
+// Gates approved-topics and unit management (delete/rename) - content
+// curation, hence the 'materials' permission rather than 'settings'.
 async function hasCourseManagementAccess(db, course, user) {
     if (!course || !user) {
         return false;
@@ -104,7 +107,7 @@ async function hasCourseManagementAccess(db, course, user) {
     }
 
     if (user.role === 'ta' && Array.isArray(course.tas) && course.tas.includes(user.userId)) {
-        return CourseModel.checkTAPermission(db, course.courseId, user.userId, 'courses');
+        return CourseModel.checkTAPermission(db, course.courseId, user.userId, 'materials');
     }
 
     return false;
@@ -1624,10 +1627,13 @@ router.post('/:courseId/extract-topics', async (req, res) => {
             return res.status(404).json({ success: false, message: 'Course not found' });
         }
 
-        if (!hasInstructorOrTAAccess(course, user.userId)) {
+        // Content curation, like approved-topics/unit management - gated on
+        // 'materials', not just general course access, so a TA with every
+        // permission off can't run the LLM over course documents.
+        if (!(await hasCourseManagementAccess(db, course, user))) {
             return res.status(403).json({
                 success: false,
-                message: 'Only instructors/TAs with course access can extract topics'
+                message: 'Only instructors/TAs with materials access can extract topics'
             });
         }
 
@@ -1890,22 +1896,22 @@ router.put('/:courseId', async (req, res) => {
             return res.status(401).json({ success: false, message: 'Authentication required' });
         }
 
-        if (user.role !== 'instructor' || instructorId !== user.userId) {
-            return res.status(403).json({
-                success: false,
-                message: 'You do not have permission to update this course'
-            });
+        // Instructor-only: this route writes status (including soft-delete),
+        // prompts, and lectures straight from the request body with no
+        // field allowlist, so granting it to any TA with 'settings' (which
+        // legacy canAccessCourses and the fail-open default both imply)
+        // would let that TA delete the course or overwrite its prompts/units.
+        let hasAccess = false;
+        if (user.role === 'instructor' && instructorId === user.userId) {
+            hasAccess = await CourseModel.userHasCourseAccess(db, courseId, user.userId, 'instructor');
         }
-        
-        // Check if instructor has access to the course
-        const hasAccess = await CourseModel.userHasCourseAccess(db, courseId, user.userId, 'instructor');
         if (!hasAccess) {
             return res.status(403).json({
                 success: false,
                 message: 'You do not have permission to update this course'
             });
         }
-        
+
         // Update course in database
         const collection = db.collection('courses');
         const updateData = {
@@ -1956,15 +1962,11 @@ router.put('/:courseId', async (req, res) => {
             updateData.lectures = lectures;
         }
         
-        // Use $or query to match course by instructorId or instructors array
+        // Authorization already happened above via hasAccess (instructor of
+        // record) - the update itself just needs to find the course.
+        // Filtering again by instructorId/instructors here would be redundant.
         const result = await collection.updateOne(
-            { 
-                courseId,
-                $or: [
-                    { instructorId: user.userId },
-                    { instructors: user.userId }
-                ]
-            },
+            { courseId },
             { $set: updateData }
         );
         
@@ -2126,6 +2128,11 @@ router.post('/:courseId/transfer', async (req, res) => {
             instructors: [user.userId],
             tas: transferTAs ? deepClone(sourceCourse.tas || []) : [],
             taPermissions: transferTAs ? deepClone(sourceCourse.taPermissions || {}) : {},
+            // Inherit the source course's migration status when its TAs come
+            // along too, so a still-unmigrated legacy TA record copied over
+            // doesn't flip to the wrong default in the new course; a course
+            // started with no TAs has nothing to migrate.
+            taPermissionsMigrated: transferTAs ? sourceCourse.taPermissionsMigrated === true : true,
             courseDescription: sourceCourse.courseDescription || '',
             assessmentCriteria: sourceCourse.assessmentCriteria || '',
             courseMaterials: Array.isArray(sourceCourse.courseMaterials) ? deepClone(sourceCourse.courseMaterials) : [],
@@ -3387,13 +3394,20 @@ router.get('/ta/:taId', async (req, res) => {
 
 /**
  * PUT /api/courses/:courseId/ta-permissions/:taId
- * Update TA permissions for a specific course
+ * Update TA permissions for a specific course.
+ *
+ * Accepts a partial body - only keys from PERMISSION_KEYS present in
+ * req.body are validated and written, so the client can toggle one
+ * permission (or apply a role preset's full set) without a read-modify-write
+ * round trip. `role` is an optional convenience: when present and it names a
+ * known preset, its full flag set is applied (individual keys in the same
+ * body, if any, are layered on top and win).
  */
 router.put('/:courseId/ta-permissions/:taId', async (req, res) => {
     try {
         const { courseId, taId } = req.params;
-        const { canAccessCourses, canAccessFlags } = req.body;
-        
+        const { role } = req.body;
+
         // Get authenticated user information
         const user = req.user;
         if (!user) {
@@ -3402,7 +3416,7 @@ router.put('/:courseId/ta-permissions/:taId', async (req, res) => {
                 message: 'Authentication required'
             });
         }
-        
+
         // Only instructors can manage TA permissions
         if (user.role !== 'instructor') {
             return res.status(403).json({
@@ -3410,15 +3424,38 @@ router.put('/:courseId/ta-permissions/:taId', async (req, res) => {
                 message: 'Only instructors can manage TA permissions'
             });
         }
-        
-        // Validate required fields
-        if (typeof canAccessCourses !== 'boolean' || typeof canAccessFlags !== 'boolean') {
+
+        const permissions = {};
+        if (role !== undefined) {
+            if (!Object.prototype.hasOwnProperty.call(ROLE_PRESETS, role)) {
+                return res.status(400).json({
+                    success: false,
+                    message: `Unknown role preset '${role}'`
+                });
+            }
+            Object.assign(permissions, ROLE_PRESETS[role]);
+        }
+        for (const key of PERMISSION_KEYS) {
+            if (Object.prototype.hasOwnProperty.call(req.body, key)) {
+                permissions[key] = req.body[key];
+            }
+        }
+
+        if (Object.keys(permissions).length === 0) {
             return res.status(400).json({
                 success: false,
-                message: 'canAccessCourses and canAccessFlags must be boolean values'
+                message: `Provide at least one of: ${PERMISSION_KEYS.join(', ')}, or a 'role' preset`
             });
         }
-        
+
+        const invalidKey = Object.keys(permissions).find(key => typeof permissions[key] !== 'boolean');
+        if (invalidKey) {
+            return res.status(400).json({
+                success: false,
+                message: `'${invalidKey}' must be a boolean value`
+            });
+        }
+
         // Get database instance from app.locals
         const db = req.app.locals.db;
         if (!db) {
@@ -3427,7 +3464,7 @@ router.put('/:courseId/ta-permissions/:taId', async (req, res) => {
                 message: 'Database connection not available'
             });
         }
-        
+
         // Check if instructor has access to this course
         const hasAccess = await CourseModel.userHasCourseAccess(db, courseId, user.userId, 'instructor');
         if (!hasAccess) {
@@ -3436,34 +3473,33 @@ router.put('/:courseId/ta-permissions/:taId', async (req, res) => {
                 message: 'Access denied. You can only manage permissions for your own courses.'
             });
         }
-        
+
         // Update TA permissions
-        const result = await CourseModel.updateTAPermissions(db, courseId, taId, {
-            canAccessCourses,
-            canAccessFlags
-        });
-        
+        const result = await CourseModel.updateTAPermissions(db, courseId, taId, permissions);
+
         if (!result.success) {
             return res.status(400).json({
                 success: false,
                 message: result.error || 'Failed to update TA permissions'
             });
         }
-        
+
+        const updated = await CourseModel.getTAPermissions(db, courseId, taId);
+
         console.log(`Updated TA permissions for ${taId} in course ${courseId}`);
-        
+
         res.json({
             success: true,
             message: 'TA permissions updated successfully',
             data: {
                 courseId,
                 taId,
-                canAccessCourses,
-                canAccessFlags,
+                permissions: updated.permissions,
+                roleLabel: deriveRoleLabel(updated.permissions),
                 modifiedCount: result.modifiedCount
             }
         });
-        
+
     } catch (error) {
         console.error('Error updating TA permissions:', error);
         res.status(500).json({
@@ -3534,10 +3570,11 @@ router.get('/:courseId/ta-permissions/:taId', async (req, res) => {
             data: {
                 courseId,
                 taId,
-                permissions: result.permissions
+                permissions: result.permissions,
+                roleLabel: deriveRoleLabel(result.permissions)
             }
         });
-        
+
     } catch (error) {
         console.error('Error getting TA permissions:', error);
         res.status(500).json({
@@ -3605,7 +3642,10 @@ router.get('/:courseId/ta-permissions', async (req, res) => {
             for (const taId of course.tas) {
                 const result = await CourseModel.getTAPermissions(db, courseId, taId);
                 if (result.success) {
-                    taPermissions[taId] = result.permissions;
+                    taPermissions[taId] = {
+                        ...result.permissions,
+                        roleLabel: deriveRoleLabel(result.permissions)
+                    };
                 }
             }
         }
@@ -3625,6 +3665,24 @@ router.get('/:courseId/ta-permissions', async (req, res) => {
             message: 'Internal server error while getting TA permissions'
         });
     }
+});
+
+/**
+ * GET /api/courses/permissions/presets
+ * The named role presets ("Grader", "Content TA", "Full TA") a TA can be
+ * assigned in one action, so the TA hub UI's dropdown doesn't hardcode its
+ * own copy of the flag sets - the frontend never needs to know what a
+ * preset expands to beyond what the server returns here.
+ */
+router.get('/permissions/presets', async (req, res) => {
+    const user = req.user;
+    if (!user) {
+        return res.status(401).json({ success: false, message: 'Authentication required' });
+    }
+    if (user.role !== 'instructor') {
+        return res.status(403).json({ success: false, message: 'Only instructors can view role presets' });
+    }
+    res.json({ success: true, data: { permissionKeys: PERMISSION_KEYS, presets: ROLE_PRESETS } });
 });
 
 /**
@@ -3659,9 +3717,9 @@ router.get('/:courseId/students', async (req, res) => {
         }
 
         if (user.role === 'ta') {
-            const canAccessFlags = await CourseModel.checkTAPermission(db, courseId, user.userId, 'flags');
-            if (!canAccessFlags) {
-                return res.status(403).json({ success: false, message: 'Access denied. You do not have permission to view student flags for this course.' });
+            const canAccessRoster = await CourseModel.checkTAPermission(db, courseId, user.userId, 'roster');
+            if (!canAccessRoster) {
+                return res.status(403).json({ success: false, message: 'Access denied. You do not have permission to view the student roster for this course.' });
             }
         }
 
@@ -3899,22 +3957,24 @@ router.post('/:courseId/units', async (req, res) => {
             return res.status(401).json({ success: false, message: 'Authentication required' });
         }
 
-        if (user.role !== 'instructor' || instructorId !== user.userId) {
+        if (user.role === 'instructor' && instructorId !== user.userId) {
             return res.status(403).json({
                 success: false,
                 message: 'You do not have permission to modify this course'
             });
         }
-        
-        // Check if instructor has access
-        const hasAccess = await CourseModel.userHasCourseAccess(db, courseId, user.userId, 'instructor');
+
+        // Consistent with unit rename/delete (both gated on 'materials' via
+        // hasCourseManagementAccess) - a TA who can manage units can add one.
+        const { hasPermission } = require('../services/permissions');
+        const hasAccess = await hasPermission(db, user, courseId, 'materials');
         if (!hasAccess) {
             return res.status(403).json({
                 success: false,
                 message: 'You do not have permission to modify this course'
             });
         }
-        
+
         // Get current course to determine next unit number
         const collection = db.collection('courses');
         const course = await collection.findOne({ courseId });

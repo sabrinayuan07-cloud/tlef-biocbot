@@ -436,31 +436,26 @@ async function checkTAPermissionsAndNavigate(feature, targetPage) {
         const selectedCourseId = localStorage.getItem('selectedCourseId');
         const selectedCourse = courses.find(course => course.courseId === selectedCourseId) || courses[0];
 
-        // Check permissions for the currently selected course
+        // Check permission for the currently selected course. A failed
+        // fetch denies access (fail-closed) rather than defaulting to
+        // allowed - this previously defaulted to `true` on any non-OK
+        // response, silently granting access whenever the permissions
+        // fetch itself failed.
+        // 'courses' gates /instructor/documents, which the server allows
+        // for ANY of materials/questions/settings - see
+        // window.DOCUMENTS_PAGE_PERMISSIONS.
+        const permissionKeys = feature === 'courses' ? window.DOCUMENTS_PAGE_PERMISSIONS : [feature];
         let hasPermission = false;
-        for (const course of courses) {
-            if (course.courseId !== selectedCourse.courseId) {
-                continue;
-            }
-
-            const permResponse = await authenticatedFetch(`/api/courses/${course.courseId}/ta-permissions/${taId}`);
-            
-            if (permResponse.ok) {
-                const permResult = await permResponse.json();
-                if (permResult.success) {
-                    const permissions = permResult.data.permissions;
-                    if ((feature === 'courses' && permissions.canAccessCourses) || 
-                        (feature === 'flags' && permissions.canAccessFlags)) {
-                        hasPermission = true;
-                        break;
-                    }
-                }
-            } else {
-                // Default permissions if not set
-                hasPermission = true;
+        const permResponse = await authenticatedFetch(`/api/courses/${selectedCourse.courseId}/ta-permissions/${taId}`);
+        if (permResponse.ok) {
+            const permResult = await permResponse.json();
+            if (permResult.success) {
+                hasPermission = permissionKeys.some(permissionKey =>
+                    window.permissionIsGranted(permResult.data.permissions, permissionKey)
+                );
             }
         }
-        
+
         if (!hasPermission) {
             const featureName = feature === 'courses' ? 'My Courses' : 'Student Support';
             showNotification(`You do not have permission to access ${featureName}. Contact your instructor.`, 'error');
@@ -1610,28 +1605,21 @@ async function loadTAPermissions() {
 }
 
 /**
- * Check if TA has permission for a specific feature in any course
+ * Check if TA has permission for a specific feature (nav-link naming:
+ * 'courses' -> /instructor/documents, gated server-side on ANY of
+ * materials/questions/settings - see window.DOCUMENTS_PAGE_PERMISSIONS) in
+ * any course - if any course allows access, grant it.
  */
 function hasPermissionForFeature(feature) {
     // If no permissions loaded, deny access
     if (!window.taPermissions || Object.keys(window.taPermissions).length === 0) {
         return false;
     }
-    
-    // Check permissions for all courses - if any course allows access, grant it
-    for (const courseId in window.taPermissions) {
-        const permissions = window.taPermissions[courseId];
-        if (permissions) {
-            if (feature === 'courses' && permissions.canAccessCourses) {
-                return true;
-            }
-            if (feature === 'flags' && permissions.canAccessFlags) {
-                return true;
-            }
-        }
-    }
-    
-    return false;
+
+    const permissionKeys = feature === 'courses' ? window.DOCUMENTS_PAGE_PERMISSIONS : [feature];
+    return Object.values(window.taPermissions).some(permissions =>
+        permissionKeys.some(permissionKey => window.permissionIsGranted(permissions, permissionKey))
+    );
 }
 
 /**
@@ -1715,9 +1703,25 @@ function initMHEventListeners() {
  * Load mental health flags from API
  */
 async function loadMentalHealthFlags() {
+    const section = document.getElementById('mental-health-section');
     const loading = document.getElementById('mh-loading');
     const empty = document.getElementById('mh-empty');
     const list = document.getElementById('mh-flags-list');
+
+    // Gated server-side on 'transcripts' (requireCourseStaff in
+    // mentalHealthFlags.js), not 'flags'/'roster' - a grader TA without it
+    // would otherwise hit a 403 here that gets swallowed below, leaving the
+    // section visible with a "0" badge that reads as "no flags" instead of
+    // "you can't see this".
+    if (typeof isTA === 'function' && isTA()) {
+        const courseId = await getCurrentCourseId();
+        const permissions = courseId && window.taPermissions ? window.taPermissions[courseId] : null;
+        if (!window.permissionIsGranted(permissions, 'transcripts')) {
+            if (section) section.style.display = 'none';
+            return;
+        }
+    }
+    if (section) section.style.display = '';
 
     if (loading) loading.style.display = 'block';
     if (empty) empty.style.display = 'none';

@@ -3,21 +3,10 @@ const router = express.Router();
 
 // Import the Course model
 const CourseModel = require('../models/Course');
-const { hasSystemAdminAccess } = require('../services/authorization');
+const { hasPermission } = require('../services/permissions');
 
 // Middleware for JSON parsing
 router.use(express.json());
-
-async function canManageCourse(db, courseId, user) {
-    if (hasSystemAdminAccess(user)) return true;
-    if (user.role === 'instructor') {
-        return CourseModel.userHasCourseAccess(db, courseId, user.userId, 'instructor');
-    }
-    if (user.role === 'ta') {
-        return CourseModel.checkTAPermission(db, courseId, user.userId, 'courses');
-    }
-    return false;
-}
 
 /**
  * POST /api/learning-objectives
@@ -57,7 +46,7 @@ router.post('/', async (req, res) => {
             return res.status(404).json({ success: false, message: 'Course not found' });
         }
 
-        if (!await canManageCourse(db, courseId, user)) {
+        if (!await hasPermission(db, user, courseId, 'materials')) {
             return res.status(403).json({ success: false, message: 'No access to modify this course' });
         }
         

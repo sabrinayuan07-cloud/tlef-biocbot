@@ -7,25 +7,68 @@ let currentTAs = [];
 let instructorCourses = [];
 let taToRemove = null;
 let taPermissions = {}; // Store TA permissions for each course
+let rolePresets = {}; // { presetName: { materials, questions, ... } }, loaded once from the server
+let taPermissionsLoadFailed = new Set(); // courseIds whose permissions fetch failed this load
+
+/**
+ * Per-TA request counter so a fast toggle followed by another doesn't let
+ * the first PUT's (slower) response land after the second's and overwrite
+ * the UI with stale permissions/role label. Each call to
+ * updateTAPermission/applyRolePreset for a given TA bumps this and stamps
+ * its own response; only the response matching the *current* value is
+ * applied to the cache/DOM.
+ */
+let taRequestSeq = {};
+
+const PERMISSION_LABELS = {
+    materials: 'Course Materials',
+    questions: 'Question Bank',
+    flags: 'Flagged Content',
+    roster: 'Student Roster',
+    transcripts: 'Student Transcripts',
+    settings: 'Course Settings'
+};
+
+// ROLE_PRESET_LABELS comes from common/scripts/auth.js (window.ROLE_PRESET_LABELS).
+
+/**
+ * The named role presets a TA can be assigned in one action. Fetched once
+ * so the dropdown never hardcodes its own copy of what a preset expands to
+ * - src/services/permissions.js is the single source of truth.
+ */
+async function loadRolePresets() {
+    try {
+        const response = await authenticatedFetch('/api/courses/permissions/presets');
+        if (response.ok) {
+            const result = await response.json();
+            if (result.success) {
+                rolePresets = result.data.presets || {};
+            }
+        }
+    } catch (error) {
+        console.error('Error loading role presets:', error);
+    }
+}
 
 document.addEventListener('DOMContentLoaded', async function() {
     // Wait for authentication to be ready
     await waitForAuth();
-    
+
     // Check if user is a TA and redirect them to TA courses page
     if (typeof isTA === 'function' && isTA()) {
         console.log('🔄 [TA_HUB] User is a TA, redirecting to TA courses page...');
         window.location.href = '/ta/courses';
         return;
     }
-    
+
     // Initialize TA Hub functionality
     initializeTAHub();
-    
+
     // Load instructor courses
     await loadInstructorCourses();
-    
-    // Load current TAs
+
+    // Load role presets and current TAs
+    await loadRolePresets();
     await loadCurrentTAs();
 });
 
@@ -240,19 +283,31 @@ async function loadCurrentTAs() {
  * Load TA permissions for all courses
  */
 async function loadTAPermissions() {
+    taPermissionsLoadFailed.clear();
     try {
         // Load permissions for each course
         for (const course of instructorCourses) {
-            const response = await authenticatedFetch(`/api/courses/${course.courseId}/ta-permissions`);
-            
-            if (response.ok) {
-                const result = await response.json();
-                if (result.success) {
-                    taPermissions[course.courseId] = result.data.taPermissions || {};
+            try {
+                const response = await authenticatedFetch(`/api/courses/${course.courseId}/ta-permissions`);
+
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success) {
+                        taPermissions[course.courseId] = result.data.taPermissions || {};
+                        continue;
+                    }
                 }
+                // A failed fetch here must not be displayed the same as a
+                // TA with every permission denied - mark it so displayTAs
+                // can render a distinct "couldn't load" state instead of
+                // checkboxes that look like deliberate fail-closed access.
+                taPermissionsLoadFailed.add(course.courseId);
+            } catch (courseError) {
+                console.error(`Error loading TA permissions for course ${course.courseId}:`, courseError);
+                taPermissionsLoadFailed.add(course.courseId);
             }
         }
-        
+
         console.log('TA permissions loaded:', taPermissions);
     } catch (error) {
         console.error('Error loading TA permissions:', error);
@@ -283,45 +338,62 @@ function displayTAs() {
     // Create TA cards with permission controls
     tasContainer.innerHTML = currentTAs.map(ta => {
         const coursePermissions = taPermissions[ta.courseId] || {};
-        const permissions = coursePermissions[ta.userId] || { canAccessCourses: true, canAccessFlags: true };
-        const displayLabel = ta.displayName || ta.username || ta.userId;
+        // Default is now fail-closed (no keys set) rather than the old
+        // fail-open {canAccessCourses:true, canAccessFlags:true} - matches
+        // the server's default for a TA with no permissions record yet.
+        const permissions = coursePermissions[ta.userId] || {};
+        // Escaped once here: displayName/username/email/courseName are all
+        // user-supplied (profile fields, course name), and this template
+        // goes straight into innerHTML below.
+        const displayLabel = escapeHTML(ta.displayName || ta.username || ta.userId);
+        const roleLabel = permissions.roleLabel || 'custom';
+
+        const checkboxes = window.TA_PERMISSION_KEYS.map(key => `
+                        <label class="permission-toggle">
+                            <input type="checkbox"
+                                   id="${key}-permission-${ta.userId}"
+                                   ${permissions[key] ? 'checked' : ''}
+                                   onchange="updateTAPermission('${ta.courseId}', '${ta.userId}', '${key}', this.checked)">
+                            <span class="toggle-label">${PERMISSION_LABELS[key]}</span>
+                        </label>`).join('');
+
+        const presetOptions = Object.keys(rolePresets).map(presetName =>
+            `<option value="${presetName}" ${roleLabel === presetName ? 'selected' : ''}>${ROLE_PRESET_LABELS[presetName] || presetName}</option>`
+        ).join('');
 
         return `
-            <div class="ta-card">
+            <div class="ta-card" data-ta-id="${ta.userId}">
                 <div class="ta-header">
                     <h3 class="ta-name">${displayLabel}</h3>
                     <span class="ta-role">TA</span>
                 </div>
                 <div class="ta-info">
-                    <p><strong>Username:</strong> ${ta.username}</p>
-                    <p><strong>Email:</strong> ${ta.email || 'Not provided'}</p>
-                    <p><strong>Course:</strong> ${ta.courseName || 'Unknown'}</p>
+                    <p><strong>Username:</strong> ${escapeHTML(ta.username)}</p>
+                    <p><strong>Email:</strong> ${escapeHTML(ta.email) || 'Not provided'}</p>
+                    <p><strong>Course:</strong> ${escapeHTML(ta.courseName) || 'Unknown'}</p>
                     <p><strong>Joined:</strong> ${ta.createdAt ? new Date(ta.createdAt).toLocaleDateString() : 'Unknown'}</p>
                 </div>
-                
+
                 <!-- Permission Controls -->
                 <div class="ta-permissions">
                     <h4>Permissions</h4>
-                    <div class="permission-controls">
-                        <label class="permission-toggle">
-                            <input type="checkbox" 
-                                   id="courses-permission-${ta.userId}" 
-                                   ${permissions.canAccessCourses ? 'checked' : ''}
-                                   onchange="updateTAPermission('${ta.courseId}', '${ta.userId}', 'courses', this.checked)">
-                            <span class="toggle-label">My Courses</span>
-                        </label>
-                        <label class="permission-toggle">
-                            <input type="checkbox" 
-                                   id="flags-permission-${ta.userId}" 
-                                   ${permissions.canAccessFlags ? 'checked' : ''}
-                                   onchange="updateTAPermission('${ta.courseId}', '${ta.userId}', 'flags', this.checked)">
-                            <span class="toggle-label">Flagged Content</span>
-                        </label>
-                    </div>
+                    ${taPermissionsLoadFailed.has(ta.courseId) ? `
+                    <p class="permissions-load-error">
+                        Couldn't load this TA's permissions. <a href="#" onclick="loadCurrentTAs(); return false;">Retry</a>
+                    </p>` : `
+                    <label class="role-preset-picker">
+                        <span class="toggle-label">Role</span>
+                        <select onchange="applyRolePreset('${ta.courseId}', '${ta.userId}', this.value)">
+                            <option value="custom" ${roleLabel === 'custom' ? 'selected' : ''} disabled>${ROLE_PRESET_LABELS.custom}</option>
+                            ${presetOptions}
+                        </select>
+                    </label>
+                    <div class="permission-controls">${checkboxes}
+                    </div>`}
                 </div>
-                
+
                 <div class="ta-actions">
-                    <button class="btn-small btn-danger" onclick="openRemoveTAModal('${ta.userId}', '${displayLabel}')">Remove</button>
+                    <button class="btn-small btn-danger" onclick="openRemoveTAModal('${ta.userId}')">Remove</button>
                 </div>
             </div>
         `;
@@ -357,18 +429,29 @@ function displayCourseTAs() {
 }
 
 /**
- * Open remove TA modal
+ * Open remove TA modal. Takes only taId - not also the display name - so
+ * the caller never has to interpolate a user-supplied displayName into an
+ * inline onclick string (a single quote in the name would otherwise break
+ * out of that string literal); the name is looked up here instead.
  */
-function openRemoveTAModal(taId, taName) {
+function openRemoveTAModal(taId) {
     taToRemove = taId;
+    const ta = currentTAs.find(t => t.userId === taId);
+    const taName = ta ? (ta.displayName || ta.username || ta.userId) : taId;
     const modal = document.getElementById('remove-ta-modal');
     if (modal) {
         modal.classList.add('show');
         a11yModal.open(modal, { onRequestClose: closeRemoveTAModal });
-        // Update modal content with TA name
+        // Update modal content with TA name (built via DOM nodes, not innerHTML,
+        // so the name can't inject markup).
         const modalBody = modal.querySelector('.modal-body p');
         if (modalBody) {
-            modalBody.textContent = `Are you sure you want to remove ${taName} from all courses?`;
+            modalBody.textContent = '';
+            modalBody.append('Are you sure you want to remove ');
+            const nameEl = document.createElement('strong');
+            nameEl.textContent = taName;
+            modalBody.append(nameEl);
+            modalBody.append(' from all courses?');
         }
     }
 }
@@ -416,65 +499,135 @@ async function handleRemoveTA() {
 }
 
 /**
- * Update TA permission
+ * Toggle a single TA permission. The PUT route accepts a partial body, so
+ * this sends just the one changed key rather than reading the current five
+ * other flags and re-sending all six - removes the read-modify-write race
+ * between two toggles in flight that the old merge-then-PUT dance had.
  */
-async function updateTAPermission(courseId, taId, permissionType, value) {
+async function updateTAPermission(courseId, taId, permissionKey, value) {
+    const requestSeq = (taRequestSeq[taId] || 0) + 1;
+    taRequestSeq[taId] = requestSeq;
+    const isStale = () => taRequestSeq[taId] !== requestSeq;
+
     try {
-        // Determine which permission to update
-        const permissions = {
-            canAccessCourses: permissionType === 'courses' ? value : undefined,
-            canAccessFlags: permissionType === 'flags' ? value : undefined
-        };
-        
-        // Get current permissions to preserve the other one
-        const currentPermissions = taPermissions[courseId] && taPermissions[courseId][taId] 
-            ? taPermissions[courseId][taId] 
-            : { canAccessCourses: true, canAccessFlags: true };
-        
-        // Merge with current permissions
-        const updatedPermissions = {
-            canAccessCourses: permissions.canAccessCourses !== undefined ? permissions.canAccessCourses : currentPermissions.canAccessCourses,
-            canAccessFlags: permissions.canAccessFlags !== undefined ? permissions.canAccessFlags : currentPermissions.canAccessFlags
-        };
-        
         const response = await authenticatedFetch(`/api/courses/${courseId}/ta-permissions/${taId}`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify(updatedPermissions)
+            body: JSON.stringify({ [permissionKey]: value })
         });
-        
+
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-        
+
         const result = await response.json();
-        
+
         if (result.success) {
-            // Update local permissions cache
-            if (!taPermissions[courseId]) {
-                taPermissions[courseId] = {};
-            }
-            taPermissions[courseId][taId] = updatedPermissions;
-            
-            const permissionName = permissionType === 'courses' ? 'My Courses' : 'Flagged Content';
+            // A newer toggle/preset for this TA fired while this one was in
+            // flight - its own resolution (success or failure) owns the
+            // cache and DOM now; applying this older response would stomp it.
+            if (isStale()) return;
+
+            applyPermissionsToCache(courseId, taId, result.data.permissions, result.data.roleLabel);
+            renderRolePickerForTA(taId, result.data.roleLabel);
+            // Sync every checkbox from the authoritative response, not just
+            // the one just toggled: a legacy-shaped record migrates its
+            // other five flags server-side on this same PUT (see
+            // updateTAPermissions), so their displayed state can change too.
+            window.TA_PERMISSION_KEYS.forEach(key => {
+                const checkbox = document.getElementById(`${key}-permission-${taId}`);
+                if (checkbox) checkbox.checked = !!result.data.permissions[key];
+            });
+
+            const permissionName = PERMISSION_LABELS[permissionKey] || permissionKey;
             const action = value ? 'enabled' : 'disabled';
-            showNotification(`${permissionName} access ${action} for ${taId}`, 'success');
+            const ta = currentTAs.find(t => t.userId === taId);
+            const displayLabel = ta ? (ta.displayName || ta.username || ta.userId) : taId;
+            showNotification(`${permissionName} access ${action} for TA: ${displayLabel}`, 'success');
         } else {
             throw new Error(result.message || 'Failed to update TA permission');
         }
-        
+
     } catch (error) {
         console.error('Error updating TA permission:', error);
+        if (isStale()) return;
+
         showNotification(`Error updating permission: ${error.message}`, 'error');
-        
+
         // Revert the checkbox state
-        const checkbox = document.getElementById(`${permissionType}-permission-${taId}`);
+        const checkbox = document.getElementById(`${permissionKey}-permission-${taId}`);
         if (checkbox) {
             checkbox.checked = !value;
         }
     }
+}
+
+/**
+ * Apply a named role preset (its full six-flag set) to a TA in one action.
+ */
+async function applyRolePreset(courseId, taId, presetName) {
+    const requestSeq = (taRequestSeq[taId] || 0) + 1;
+    taRequestSeq[taId] = requestSeq;
+    const isStale = () => taRequestSeq[taId] !== requestSeq;
+
+    // Captured before the request so a failure can put the <select> back to
+    // what it displayed before this change was attempted - the browser's
+    // native <select> already shows presetName the instant the user picks
+    // it, so without this the dropdown and the (untouched, still-old)
+    // checkboxes would show two different roles after a failed PUT.
+    const previousRoleLabel = (taPermissions[courseId] && taPermissions[courseId][taId] && taPermissions[courseId][taId].roleLabel) || 'custom';
+
+    try {
+        const response = await authenticatedFetch(`/api/courses/${courseId}/ta-permissions/${taId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ role: presetName })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+
+        if (result.success) {
+            if (isStale()) return;
+
+            applyPermissionsToCache(courseId, taId, result.data.permissions, result.data.roleLabel);
+            renderRolePickerForTA(taId, result.data.roleLabel);
+            window.TA_PERMISSION_KEYS.forEach(key => {
+                const checkbox = document.getElementById(`${key}-permission-${taId}`);
+                if (checkbox) checkbox.checked = !!result.data.permissions[key];
+            });
+            const ta = currentTAs.find(t => t.userId === taId);
+            const displayLabel = ta ? (ta.displayName || ta.username || ta.userId) : taId;
+            showNotification(`Applied "${ROLE_PRESET_LABELS[presetName] || presetName}" role to TA: ${displayLabel}`, 'success');
+        } else {
+            throw new Error(result.message || 'Failed to apply role preset');
+        }
+    } catch (error) {
+        console.error('Error applying role preset:', error);
+        if (isStale()) return;
+
+        showNotification(`Error applying role: ${error.message}`, 'error');
+        renderRolePickerForTA(taId, previousRoleLabel);
+    }
+}
+
+function applyPermissionsToCache(courseId, taId, permissions, roleLabel) {
+    if (!taPermissions[courseId]) {
+        taPermissions[courseId] = {};
+    }
+    taPermissions[courseId][taId] = { ...permissions, roleLabel };
+}
+
+function renderRolePickerForTA(taId, roleLabel) {
+    const select = document.querySelector(`.ta-card[data-ta-id="${taId}"] .role-preset-picker select`);
+    if (select) select.value = roleLabel;
 }
 
 

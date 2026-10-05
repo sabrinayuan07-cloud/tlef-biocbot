@@ -972,8 +972,11 @@ test.describe('upsertCourse re-save via cleanup-orphans', () => {
 //   - Course.getCoursesForUser  role==='instructor' branch: callers in
 //     src/middleware/auth.js and src/routes/courses.js only invoke it with
 //     role='ta'.
-//   - Course.checkTAPermission's default switch case: routes hard-code
-//     'courses' / 'flags' as the feature argument.
+//   - Course.checkTAPermission's invalid-feature whitelist branch: every
+//     route hard-codes one of the six TA_PERMISSION_KEYS ('materials',
+//     'questions', 'flags', 'roster', 'transcripts', 'settings') as the
+//     feature argument, so the `!TA_PERMISSION_KEYS.includes(feature)`
+//     early-return is never hit from the public API surface.
 //   - Course.ensureCourseCodes migration block: runs only on server boot
 //     (src/server.js:536); cannot be triggered at runtime.
 //   - Course.removeDocumentFromAnyUnit "Course not found": the

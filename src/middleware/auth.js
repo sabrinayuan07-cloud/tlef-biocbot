@@ -633,60 +633,159 @@ function createAuthMiddleware(db) {
     }
 
     /**
-     * Middleware to check TA permissions for specific features
-     * @param {string} feature - Feature to check ('courses' or 'flags')
+     * Middleware gating a route on one of the six granular permissions
+     * (materials/questions/flags/roster/transcripts/settings; see
+     * src/services/permissions.js). Thin wrapper around that module's
+     * hasPermission() for routes that are clean entry gates - most
+     * TA-reachable routes call hasPermission() directly instead, since they
+     * need to resolve courseId or branch on other state before checking
+     * (see src/services/permissions.js's file comment for why).
+     *
+     * Unlike the old per-feature requireTAPermission this replaces, this
+     * actively enforces for every role (previously it was a no-op unless
+     * req.user.role === 'ta', which only worked because it was always
+     * composed after requireInstructorOrTA). The one carve-out: when no
+     * courseId can be resolved at all, an instructor/admin is let through
+     * rather than blocked - the two routes this is used on today are static
+     * pages an instructor can land on before picking a course, and the
+     * actual per-course data the page then fetches is checked separately by
+     * those API calls. A TA with no resolvable course is still redirected/
+     * 400'd, matching the original behavior.
+     * @param {string} permission - One of the six permission keys
      */
-    function requireTAPermission(feature) {
+    /**
+     * Shared courseId resolution for requirePermission/requireAnyPermission.
+     * Returns the resolved courseId, or null after already sending a
+     * response (401 unauthenticated; for a TA with no resolvable course,
+     * redirect/400; an instructor/admin with none is allowed to fall
+     * through to the caller's own next() - the page picks a course itself).
+     */
+    async function resolveCourseIdForPermissionCheck(req, res) {
+        if (!req.user) {
+            if (!req.originalUrl.startsWith('/api/')) {
+                res.redirect('/login');
+            } else {
+                res.status(401).json({ success: false, message: 'Authentication required' });
+            }
+            return { courseId: null, handled: true };
+        }
+
+        const CourseModel = require('../models/Course');
+
+        let courseId = req.query.courseId ||
+            (req.body && req.body.courseId) ||
+            (req.params && req.params.courseId) ||
+            req.user.preferences?.courseId;
+
+        if (!courseId && req.user.role === 'ta') {
+            const courses = await CourseModel.getCoursesForUser(db, req.user.userId, 'ta');
+            if (courses.length === 1) {
+                courseId = courses[0].courseId;
+            }
+        }
+
+        if (!courseId) {
+            if (req.user.role === 'ta') {
+                if (!req.originalUrl.startsWith('/api/')) {
+                    res.redirect('/ta');
+                } else {
+                    res.status(400).json({
+                        success: false,
+                        message: 'Course ID is required to check permissions'
+                    });
+                }
+                return { courseId: null, handled: true };
+            }
+            // Instructor/admin with no course context yet - let the caller's
+            // own next() run; the page handles course selection itself.
+            return { courseId: null, handled: false };
+        }
+
+        return { courseId, handled: false };
+    }
+
+    function denyPermission(req, res, message) {
+        if (!req.originalUrl.startsWith('/api/')) {
+            return res.redirect(req.user.role === 'ta' ? '/ta' : '/instructor');
+        }
+        return res.status(403).json({ success: false, message });
+    }
+
+    function requirePermission(permission) {
         return async (req, res, next) => {
             try {
-                // Only apply to TAs
-                if (req.user.role !== 'ta') {
-                    return next();
+                if (!req.user) {
+                    if (!req.originalUrl.startsWith('/api/')) return res.redirect('/login');
+                    return res.status(401).json({ success: false, message: 'Authentication required' });
                 }
 
-                const taId = req.user.userId;
-                let courseId = req.query.courseId ||
-                    (req.body && req.body.courseId) ||
-                    (req.params && req.params.courseId) ||
-                    req.user.preferences?.courseId;
+                // Only TAs are checked past this point, matching the
+                // original requireTAPermission this replaces - an instructor
+                // reaching this far already passed requireInstructorOrTA,
+                // and the actual course data on these pages is fetched
+                // through separately-gated API calls that already check
+                // instructor course ownership. Widening this specific
+                // page-shell gate to instructors too broke test setups that
+                // mock a session without a real backing DB course (this
+                // check queries Mongo directly, which route-level mocking
+                // can't intercept) for no corresponding security benefit,
+                // since nothing here reads course data.
+                if (req.user.role !== 'ta') return next();
 
-                if (!courseId) {
-                    const CourseModel = require('../models/Course');
-                    const courses = await CourseModel.getCoursesForUser(db, taId, 'ta');
+                const { courseId, handled } = await resolveCourseIdForPermissionCheck(req, res);
+                if (handled) return;
+                if (!courseId) return next();
 
-                    if (courses.length === 1) {
-                        courseId = courses[0].courseId;
-                    }
-                }
+                const { hasPermission } = require('../services/permissions');
+                const allowed = await hasPermission(db, req.user, courseId, permission);
 
-                if (!courseId) {
-                    if (!req.originalUrl.startsWith('/api/')) {
-                        return res.redirect('/ta');
-                    }
-
-                    return res.status(400).json({
-                        success: false,
-                        message: 'Course ID is required to check TA permissions'
-                    });
-                }
-
-                // Import CourseModel here to avoid circular dependency
-                const CourseModel = require('../models/Course');
-
-                // Check if TA has permission for this feature
-                const hasPermission = await CourseModel.checkTAPermission(db, courseId, taId, feature);
-                
-                if (!hasPermission) {
-                    const featureName = feature === 'courses' ? 'My Courses' : 'Flagged Content';
-                    return res.status(403).json({
-                        success: false,
-                        message: `Access denied. You do not have permission to access ${featureName}. Contact your instructor.`
-                    });
+                if (!allowed) {
+                    return denyPermission(req, res, `Access denied. You do not have the '${permission}' permission for this course. Contact your instructor.`);
                 }
 
                 next();
             } catch (error) {
-                console.error('Error checking TA permission:', error);
+                console.error('Error checking permission:', error);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Error checking permissions'
+                });
+            }
+        };
+    }
+
+    /**
+     * Like requirePermission, but passes if the caller has ANY of the given
+     * permissions - for pages that host several independently-toggleable
+     * sections (e.g. /instructor/documents hosts materials/questions/
+     * settings), where a TA needs only one reason to load the page, but an
+     * unassigned/fully-revoked TA (none of them) still shouldn't reach it.
+     */
+    function requireAnyPermission(permissions) {
+        return async (req, res, next) => {
+            try {
+                if (!req.user) {
+                    if (!req.originalUrl.startsWith('/api/')) return res.redirect('/login');
+                    return res.status(401).json({ success: false, message: 'Authentication required' });
+                }
+
+                // Only TAs are checked - see requirePermission's comment above.
+                if (req.user.role !== 'ta') return next();
+
+                const { courseId, handled } = await resolveCourseIdForPermissionCheck(req, res);
+                if (handled) return;
+                if (!courseId) return next();
+
+                const { hasAnyPermission } = require('../services/permissions');
+                const allowed = await hasAnyPermission(db, req.user, courseId, permissions);
+
+                if (!allowed) {
+                    return denyPermission(req, res, `Access denied. You do not have any of the required permissions (${permissions.join(', ')}) for this course. Contact your instructor.`);
+                }
+
+                next();
+            } catch (error) {
+                console.error('Error checking permission:', error);
                 return res.status(500).json({
                     success: false,
                     message: 'Error checking permissions'
@@ -824,7 +923,8 @@ function createAuthMiddleware(db) {
         populateUser,
         redirectIfAuthenticated,
         requireCourseContext,
-        requireTAPermission,
+        requirePermission,
+        requireAnyPermission,
         requireStudentEnrolled,
         requireActiveCourseForNonInstructors,
         authService

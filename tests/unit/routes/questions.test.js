@@ -104,8 +104,9 @@ describe('GET /lecture — list unit questions', () => {
         expect(res.body.data.questions[0]).toMatchObject({ questionId: 'q1', correctAnswer: 'A' });
     });
 
-    test('allows an assigned TA with course permission', async () => {
-        const res = await request(app({ db: courseDb(), user: ta })).get('/lecture?courseId=C1&lectureName=Unit%201');
+    test('allows an assigned TA with the questions permission', async () => {
+        const db = courseDb({ taPermissions: { t1: { questions: true } } });
+        const res = await request(app({ db, user: ta })).get('/lecture?courseId=C1&lectureName=Unit%201');
         expect(res.status).toBe(200);
     });
 });

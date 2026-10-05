@@ -442,12 +442,13 @@ test.describe('PUT /api/flags/:flagId/response', () => {
     });
 
     test('TA happy path is permitted', async ({ baseURL }) => {
-        // Ensure the TA has access through course's tas array.
+        // Ensure the TA has access through course's tas array plus the
+        // 'flags' permission (fail-closed default otherwise blocks this).
         // tas is [String] in product code (Course.js:1219, schema L18).
         await withDb(async (db) => {
             await db.collection('courses').updateOne(
                 { courseId: COURSE_A },
-                { $set: { tas: [taId] } }
+                { $set: { tas: [taId], [`taPermissions.${taId}`]: { flags: true } } }
             );
         });
         const id = await seedFlagDoc({ flagId: 'cov-resp-ta' });

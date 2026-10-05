@@ -261,7 +261,40 @@ function generateUnitsFromOnboarding(onboardingData) {
     } else if (isRerender) {
         window.requestAnimationFrame(() => window.scrollTo(window.scrollX, previousScrollY));
     }
+
+    applyTASectionPermissions();
 }
+
+/**
+ * Hide unit sub-sections a TA can't act on, so the UI doesn't offer actions
+ * the server would reject (materials/questions are independently toggleable
+ * now, unlike the old single canAccessCourses boolean that covered both).
+ * No-ops for instructors/admins, and for a TA whose permissions haven't
+ * loaded yet - instructor-ta.js re-calls this once they have (see
+ * updateTANavigationBasedOnPermissions), and this function itself re-runs
+ * on every unit re-render, so both orderings end up correct.
+ */
+function applyTASectionPermissions() {
+    if (typeof isTA !== 'function' || !isTA()) return;
+    const courseId = typeof getSelectedCourseIdForTA === 'function' ? getSelectedCourseIdForTA() : null;
+    const permissions = courseId && window.taPermissions ? window.taPermissions[courseId] : null;
+    if (!permissions) return;
+
+    const sectionSelectorsByPermission = {
+        materials: ['.course-materials-section', '.learning-objectives-section'],
+        questions: ['.assessment-questions-section']
+    };
+
+    Object.entries(sectionSelectorsByPermission).forEach(([key, selectors]) => {
+        const allowed = window.permissionIsGranted(permissions, key);
+        selectors.forEach(selector => {
+            document.querySelectorAll(selector).forEach(section => {
+                section.style.display = allowed ? '' : 'none';
+            });
+        });
+    });
+}
+window.applyTASectionPermissions = applyTASectionPermissions;
 
 /**
  * Build the label shown for a unit, honouring the per-unit "show number" choice.
