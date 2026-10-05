@@ -680,7 +680,7 @@ function createQuestionElement(question, questionNumber, week) {
             <span class="question-type-badge ${typeBadgeClass}">${questionType.replace('-', ' ')}</span>
             <span class="question-number">Question ${questionNumber}</span>
             <div class="question-action-buttons">
-                <button class="edit-question-btn" onclick="openQuestionLearningObjectiveModal('${week}', ${question.id})" title="Edit learning objective">✎</button>
+                <button class="edit-question-btn" onclick="openQuestionLearningObjectiveModal('${week}', ${question.id})" title="Edit learning objective">${Icons.pencil}</button>
                 <button class="delete-question-btn" onclick="deleteAssessmentQuestion('${week}', ${question.id})" title="Delete question">×</button>
             </div>
         </div>

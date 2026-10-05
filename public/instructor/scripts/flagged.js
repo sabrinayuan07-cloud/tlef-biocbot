@@ -866,7 +866,7 @@ function createFlagElement(flag) {
             </div>
             <div class="flag-meta-info">
                 <span class="flag-student">
-                    <span class="meta-icon">👤</span> ${escapeHtml(reporterName)}
+                    <span class="meta-icon">${Icons.user}</span> ${escapeHtml(reporterName)}
                 </span>
                 <span class="flag-date">${timestamp}</span>
                 <span class="flag-status-badge ${statusClass}">${statusDisplayText}</span>
