@@ -74,18 +74,6 @@
     gap: 20px;
 }
 
-.ta-card {
-    background: white;
-    border: 1px solid var(--bb-ink-16);
-    border-radius: 8px;
-    padding: 20px;
-    transition: box-shadow 0.2s;
-}
-
-.ta-card:hover {
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-}
-
 .ta-header {
     display: flex;
     justify-content: space-between;
@@ -191,33 +179,6 @@
 .ta-actions {
     display: flex;
     gap: 8px;
-}
-
-.btn-small {
-    padding: 6px 12px;
-    font-size: var(--bb-text-card-kicker);
-    border-radius: 4px;
-    border: none;
-    cursor: pointer;
-    transition: background-color 0.2s;
-}
-
-.btn-small.btn-secondary {
-    background: #6c757d;
-    color: white;
-}
-
-.btn-small.btn-secondary:hover {
-    background: #5a6268;
-}
-
-.btn-small.btn-danger {
-    background: #dc3545;
-    color: white;
-}
-
-.btn-small.btn-danger:hover {
-    background: #c82333;
 }
 
 /* Course TAs List */
@@ -341,22 +302,6 @@
     display: flex;
     gap: 12px;
     justify-content: flex-end;
-}
-
-.btn-danger {
-    background: #dc3545;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: var(--bb-text-card-kicker);
-    font-weight: 500;
-    transition: background-color 0.2s;
-}
-
-.btn-danger:hover {
-    background: #c82333;
 }
 
 /* Loading States */

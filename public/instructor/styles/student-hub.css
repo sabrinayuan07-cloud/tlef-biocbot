@@ -5,17 +5,6 @@
     align-items: stretch;
 }
 
-.student-card {
-    background: var(--bb-white);
-    border: 1px solid var(--bb-ink-16);
-    border-radius: 10px;
-    padding: var(--bb-gap-loose);
-    display: flex;
-    flex-direction: column;
-    min-height: 160px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
-}
-
 .student-header {
     display: flex;
     align-items: center;
@@ -44,24 +33,6 @@
     align-items: center;
     gap: 10px;
     margin-bottom: 16px;
-}
-
-.btn-small {
-    padding: 6px 10px;
-    font-size: var(--bb-text-card-body);
-}
-
-.btn-secondary {
-    background: var(--bb-ground);
-    border: 1px solid var(--bb-ink-16);
-    color: #111827;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.btn-secondary:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
 }
 
 .enroll-toggle {
@@ -303,14 +274,6 @@
     display: grid;
     grid-template-columns: 1fr;
     gap: 12px;
-}
-
-.survey-response-card {
-    padding: 16px;
-    border: 1px solid var(--bb-ink-16);
-    border-radius: 8px;
-    background: var(--bb-white);
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
 }
 
 .survey-response-main {

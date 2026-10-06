@@ -1,0 +1,104 @@
+/*
+ * Shared button and card classes for the instructor pages that load this
+ * file (onboarding.html, student-hub.html, ta-hub.html). Consolidated out
+ * of onboarding.css/student-hub.css/ta-hub.css, which each used to define
+ * their own copy of .btn-primary/.btn-secondary/.btn-danger/.btn-small
+ * with slightly different colors and padding.
+ */
+
+/* ─── Buttons ──────────────────────────────────────────────────────────── */
+.btn-primary,
+.btn-secondary,
+.btn-danger {
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-size: var(--bb-text-nav);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-primary { background: #2e7d32; color: white; }
+.btn-primary:hover { background: #45a049; }
+
+.btn-secondary { background: #6c757d; color: white; }
+.btn-secondary:hover { background: #5a6268; }
+
+.btn-danger { background: #dc3545; color: white; }
+.btn-danger:hover { background: #c82333; }
+
+.btn-primary:disabled,
+.btn-secondary:disabled,
+.btn-danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Size modifier - must come after the base classes above to win the
+   padding/font-size/border-radius cascade at equal specificity. */
+.btn-small {
+  padding: 6px 12px;
+  font-size: var(--bb-text-card-kicker);
+  border-radius: 4px;
+}
+
+/* ─── Cards ────────────────────────────────────────────────────────────── */
+/* These five card classes are relocated here as-is (not unified) - each
+   has its own radius/padding/background tuned to its page, so merging
+   their values would be a visual design change, not just deduplication. */
+
+.feature-card {
+  background: var(--bb-ground);
+  padding: var(--bb-gap-loose);
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid var(--bb-ink-16);
+}
+
+.progress-card {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  padding: 1rem;
+  background: var(--bb-ground);
+  border-radius: 8px;
+  border: 2px solid var(--bb-ink-16);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.student-card {
+  background: var(--bb-white);
+  border: 1px solid var(--bb-ink-16);
+  border-radius: 10px;
+  padding: var(--bb-gap-loose);
+  display: flex;
+  flex-direction: column;
+  min-height: 160px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.survey-response-card {
+  padding: 16px;
+  border: 1px solid var(--bb-ink-16);
+  border-radius: 8px;
+  background: var(--bb-white);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.ta-card {
+  background: var(--bb-white);
+  border: 1px solid var(--bb-ink-16);
+  border-radius: 8px;
+  padding: 20px;
+  transition: box-shadow 0.2s;
+}
+
+.ta-card:hover {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
