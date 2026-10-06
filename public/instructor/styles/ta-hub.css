@@ -14,17 +14,17 @@
 
 .dashboard-section h2 {
     margin: 0 0 20px 0;
-    color: #333;
+    color: var(--bb-ink);
     font-size: var(--bb-text-h3-flip);
     font-weight: 600;
 }
 
 /* Add TA Form */
 .add-ta-form {
-    background: #f8f9fa;
+    background: var(--bb-ground);
     border-radius: 6px;
     padding: 20px;
-    border: 1px solid #e9ecef;
+    border: 1px solid var(--bb-ink-16);
 }
 
 .form-row {
@@ -42,13 +42,13 @@
 .form-group label {
     font-weight: 500;
     margin-bottom: 8px;
-    color: #555;
+    color: var(--bb-ink-75);
 }
 
 .form-group input,
 .form-group select {
     padding: 12px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--bb-ink-16);
     border-radius: 4px;
     font-size: var(--bb-text-card-kicker);
     transition: border-color 0.2s;
@@ -76,7 +76,7 @@
 
 .ta-card {
     background: white;
-    border: 1px solid #e9ecef;
+    border: 1px solid var(--bb-ink-16);
     border-radius: 8px;
     padding: 20px;
     transition: box-shadow 0.2s;
@@ -96,7 +96,7 @@
 .ta-name {
     font-size: var(--bb-text-lede);
     font-weight: 600;
-    color: #333;
+    color: var(--bb-ink);
     margin: 0;
 }
 
@@ -115,7 +115,7 @@
 
 .ta-info p {
     margin: 4px 0;
-    color: #666;
+    color: var(--bb-ink-70);
     font-size: var(--bb-text-card-body);
 }
 
@@ -123,14 +123,14 @@
 .ta-permissions {
     margin: 16px 0;
     padding: 16px;
-    background: #f8f9fa;
+    background: var(--bb-ground);
     border-radius: 6px;
-    border: 1px solid #e9ecef;
+    border: 1px solid var(--bb-ink-16);
 }
 
 .ta-permissions h4 {
     margin: 0 0 12px 0;
-    color: #333;
+    color: var(--bb-ink);
     font-size: var(--bb-text-card-body);
     font-weight: 600;
     text-transform: uppercase;
@@ -154,7 +154,7 @@
 }
 
 .permission-toggle:hover {
-    background-color: #e9ecef;
+    background-color: var(--bb-ground-alt);
 }
 
 .permission-toggle input[type="checkbox"] {
@@ -167,7 +167,7 @@
 
 .toggle-label {
     font-size: var(--bb-text-card-body);
-    color: #555;
+    color: var(--bb-ink-75);
     font-weight: 500;
     user-select: none;
 }
@@ -228,8 +228,8 @@
 }
 
 .course-ta-item {
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
+    background: var(--bb-ground);
+    border: 1px solid var(--bb-ink-16);
     border-radius: 6px;
     padding: 16px;
     display: flex;
@@ -239,13 +239,13 @@
 
 .course-ta-info h4 {
     margin: 0 0 8px 0;
-    color: #333;
+    color: var(--bb-ink);
     font-size: var(--bb-text-nav);
 }
 
 .course-ta-info p {
     margin: 0;
-    color: #666;
+    color: var(--bb-ink-70);
     font-size: var(--bb-text-card-body);
 }
 
@@ -258,12 +258,12 @@
 .no-tas-message {
     text-align: center;
     padding: 40px 20px;
-    color: #666;
+    color: var(--bb-ink-70);
 }
 
 .no-tas-message h3 {
     margin: 0 0 12px 0;
-    color: #333;
+    color: var(--bb-ink);
 }
 
 .no-tas-message p {
@@ -305,7 +305,7 @@
 
 .modal-header h2 {
     margin: 0;
-    color: #333;
+    color: var(--bb-ink);
     font-size: var(--bb-text-h3-group);
 }
 
@@ -314,7 +314,7 @@
     border: none;
     font-size: var(--bb-text-h3-flip);
     cursor: pointer;
-    color: #999;
+    color: var(--bb-ink-65);
     padding: 0;
     width: 30px;
     height: 30px;
@@ -324,7 +324,7 @@
 }
 
 .modal-close:hover {
-    color: #333;
+    color: var(--bb-ink);
 }
 
 .modal-body {
@@ -333,7 +333,7 @@
 
 .modal-body p {
     margin: 0 0 12px 0;
-    color: #666;
+    color: var(--bb-ink-70);
 }
 
 .modal-footer {
@@ -373,7 +373,7 @@
     width: 20px;
     height: 20px;
     margin: -10px 0 0 -10px;
-    border: 2px solid #f3f3f3;
+    border: 2px solid var(--bb-ink-16);
     border-top: 2px solid #007bff;
     border-radius: 50%;
     animation: spin 1s linear infinite;
