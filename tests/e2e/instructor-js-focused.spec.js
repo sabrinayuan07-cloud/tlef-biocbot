@@ -217,7 +217,7 @@ async function installInstructorRoutes(page, options = {}) {
             await route.fulfill({
                 json: {
                     success: true,
-                    data: { permissions: { canAccessCourses: true, canAccessFlags: false } },
+                    data: { permissions: { materials: true, questions: true, settings: true, transcripts: true, flags: false, roster: false } },
                 },
             });
             return;

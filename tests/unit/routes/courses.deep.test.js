@@ -139,6 +139,20 @@ describe('POST /:courseId/extract-topics — mocked LLM', () => {
         expect(res.body.data.topics).toEqual(['DNA Replication']);
     });
 
+    test('denies a TA without the materials permission, even with every other permission on', async () => {
+        // Content curation, like approved-topics/unit management - this
+        // runs the course's LLM over its documents, so it must be gated on
+        // 'materials', not just general course membership.
+        const db = memoryDb({ courses: [{
+            ...topicCourse,
+            taPermissions: { t1: { materials: false, questions: true, settings: true, transcripts: true, flags: true, roster: true } },
+            taPermissionsMigrated: true,
+        }] });
+        const res = await request(app({ db, user: { userId: 't1', role: 'ta' } }))
+            .post('/C1/extract-topics').send({ content: 'DNA replication and nucleotides' });
+        expect(res.status).toBe(403);
+    });
+
     test('loads source content from a course document', async () => {
         const db = memoryDb({
             courses: [topicCourse],

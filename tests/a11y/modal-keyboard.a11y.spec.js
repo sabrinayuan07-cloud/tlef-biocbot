@@ -57,7 +57,14 @@ async function seedRemovableTA(page) {
             success: true,
             data: {
                 taPermissions: {
-                    [taId]: { canAccessCourses: true, canAccessFlags: true },
+                    [taId]: {
+                        materials: true,
+                        questions: true,
+                        settings: true,
+                        transcripts: true,
+                        flags: true,
+                        roster: true,
+                    },
                 },
             },
         },

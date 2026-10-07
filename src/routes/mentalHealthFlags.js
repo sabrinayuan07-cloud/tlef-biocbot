@@ -7,8 +7,8 @@
 const express = require('express');
 const router = express.Router();
 const MentalHealthFlag = require('../models/MentalHealthFlag');
-const CourseModel = require('../models/Course');
 const { hasSystemAdminAccess } = require('../services/authorization');
+const { hasPermission } = require('../services/permissions');
 
 /**
  * Check if the current user is a system admin
@@ -34,11 +34,11 @@ async function requireCourseStaff(req, res, db, courseId) {
         res.status(401).json({ success: false, message: 'Authentication required' });
         return false;
     }
-    if (isAdmin(user)) return true;
-    if (user.role === 'instructor' &&
-        await CourseModel.userHasCourseAccess(db, courseId, user.userId, 'instructor')) return true;
-    if (user.role === 'ta' &&
-        await CourseModel.checkTAPermission(db, courseId, user.userId, 'courses')) return true;
+    // Gated on 'transcripts', not 'materials'/'courses' - this is raw
+    // flagged-conversation content (anonymizeFlags only strips identity
+    // fields, not conversationContext), so a TA with document/question
+    // access shouldn't automatically get it too.
+    if (await hasPermission(db, user, courseId, 'transcripts')) return true;
     res.status(403).json({ success: false, message: 'Access denied' });
     return false;
 }

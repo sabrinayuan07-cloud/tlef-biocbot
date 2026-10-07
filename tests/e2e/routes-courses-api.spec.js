@@ -835,13 +835,19 @@ test.describe('TA management', () => {
     test('PUT /ta-permissions/:taId updates and validates', async ({ request: api }) => {
         await api.post(`/api/courses/${COURSE_A}/tas`, { data: { taId } });
 
-        const bad = await api.put(`/api/courses/${COURSE_A}/ta-permissions/${taId}`, {
-            data: { canAccessCourses: 'yes', canAccessFlags: true },
+        const emptyBody = await api.put(`/api/courses/${COURSE_A}/ta-permissions/${taId}`, {
+            data: {},
         });
-        expect(bad.status()).toBe(400);
+        expect(emptyBody.status()).toBe(400);
 
+        const badType = await api.put(`/api/courses/${COURSE_A}/ta-permissions/${taId}`, {
+            data: { materials: 'yes' },
+        });
+        expect(badType.status()).toBe(400);
+
+        // Partial patch: only the sent key changes.
         const good = await api.put(`/api/courses/${COURSE_A}/ta-permissions/${taId}`, {
-            data: { canAccessCourses: true, canAccessFlags: false },
+            data: { materials: true, flags: false },
         });
         expect(good.ok()).toBeTruthy();
 
@@ -849,20 +855,35 @@ test.describe('TA management', () => {
             db.collection('courses').findOne({ courseId: COURSE_A })
         );
         expect(doc.taPermissions[taId]).toMatchObject({
-            canAccessCourses: true,
-            canAccessFlags: false,
+            materials: true,
+            flags: false,
         });
+    });
+
+    test('PUT /ta-permissions/:taId accepts a named role preset', async ({ request: api }) => {
+        await api.post(`/api/courses/${COURSE_A}/tas`, { data: { taId } });
+
+        const res = await api.put(`/api/courses/${COURSE_A}/ta-permissions/${taId}`, {
+            data: { role: 'fullTA' },
+        });
+        expect(res.ok()).toBeTruthy();
+        const body = await res.json();
+        expect(body.data.permissions).toEqual({
+            materials: true, questions: true, flags: true, roster: true, transcripts: true, settings: true,
+        });
+        expect(body.data.roleLabel).toBe('fullTA');
     });
 
     test('GET /ta-permissions returns all TA permissions for course', async ({ request: api }) => {
         await api.post(`/api/courses/${COURSE_A}/tas`, { data: { taId } });
         await api.put(`/api/courses/${COURSE_A}/ta-permissions/${taId}`, {
-            data: { canAccessCourses: true, canAccessFlags: true },
+            data: { materials: true, flags: true },
         });
         const res = await api.get(`/api/courses/${COURSE_A}/ta-permissions`);
         expect(res.ok()).toBeTruthy();
         const body = await res.json();
         expect(body.data.taPermissions[taId]).toBeTruthy();
+        expect(body.data.taPermissions[taId].roleLabel).toBeTruthy();
     });
 
     test('GET /ta-permissions/:taId — instructor can read any TA', async ({ request: api }) => {
@@ -892,7 +913,7 @@ test.describe('TA-side permissions reads', () => {
             courseId: COURSE_A,
             instructorId,
             tas: [taId],
-            taPermissions: { [taId]: { canAccessCourses: true, canAccessFlags: true } },
+            taPermissions: { [taId]: { materials: true, questions: true, settings: true, transcripts: true, flags: true, roster: true } },
         });
         const res = await api.get(`/api/courses/ta/${taId}`);
         expect(res.ok()).toBeTruthy();

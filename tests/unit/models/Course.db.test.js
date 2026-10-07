@@ -241,22 +241,96 @@ describe('Course.getTAPermissions / updateTAPermissions', () => {
         });
     });
 
-    test('getTAPermissions defaults to full access when none are stored', async () => {
-        const db = memoryDb({ courses: [{ courseId: 'C1', tas: ['t1'] }] });
+    const ALL_FALSE = { materials: false, questions: false, flags: false, roster: false, transcripts: false, settings: false };
+
+    test('getTAPermissions defaults to no access (fail-closed) when none are stored on a migrated course', async () => {
+        const db = memoryDb({ courses: [{ courseId: 'C1', tas: ['t1'], taPermissionsMigrated: true }] });
         expect(await Course.getTAPermissions(db, 'C1', 't1')).toEqual({
             success: true,
-            permissions: { canAccessCourses: true, canAccessFlags: true },
+            permissions: ALL_FALSE,
         });
     });
 
-    test('updateTAPermissions persists, and getTAPermissions reads it back', async () => {
+    test('getTAPermissions defaults to the old fail-open access when none are stored and the course has not run the migration', async () => {
+        // A course that predates the six-flag feature has no taPermissionsMigrated
+        // marker: an absent record there means a pre-existing TA whose record
+        // was never backfilled, not a newly-added TA meant to start with none.
         const db = memoryDb({ courses: [{ courseId: 'C1', tas: ['t1'] }] });
-        const upd = await Course.updateTAPermissions(db, 'C1', 't1', { canAccessCourses: false, canAccessFlags: true });
+        expect(await Course.getTAPermissions(db, 'C1', 't1')).toEqual({
+            success: true,
+            permissions: { materials: true, questions: true, settings: true, transcripts: true, flags: true, roster: true },
+        });
+    });
+
+    test('getTAPermissions lazily normalizes a still-legacy two-boolean record, preserving its effective access', async () => {
+        const db = memoryDb({
+            courses: [{ courseId: 'C1', tas: ['t1'], taPermissions: { t1: { canAccessCourses: true, canAccessFlags: false } } }],
+        });
+        expect(await Course.getTAPermissions(db, 'C1', 't1')).toEqual({
+            success: true,
+            // canAccessCourses covered materials/questions/settings, and -
+            // via the mentalHealthFlags 'courses' bug - transcripts too.
+            // canAccessFlags covered flags and (bundled in) roster.
+            permissions: { materials: true, questions: true, settings: true, transcripts: true, flags: false, roster: false },
+        });
+    });
+
+    test('getTAPermissions reads an already-new-shape record directly, ignoring extra stored keys like updatedAt', async () => {
+        const db = memoryDb({
+            courses: [{
+                courseId: 'C1', tas: ['t1'],
+                taPermissions: { t1: { materials: true, questions: false, flags: true, roster: true, transcripts: false, settings: false, updatedAt: new Date() } },
+            }],
+        });
+        expect(await Course.getTAPermissions(db, 'C1', 't1')).toEqual({
+            success: true,
+            permissions: { materials: true, questions: false, flags: true, roster: true, transcripts: false, settings: false },
+        });
+    });
+
+    test('updateTAPermissions persists a partial patch, and getTAPermissions reads it back merged with fail-closed defaults, on a migrated course', async () => {
+        const db = memoryDb({ courses: [{ courseId: 'C1', tas: ['t1'], taPermissionsMigrated: true }] });
+        const upd = await Course.updateTAPermissions(db, 'C1', 't1', { flags: true });
         expect(upd.success).toBe(true);
 
         const read = await Course.getTAPermissions(db, 'C1', 't1');
         expect(read.success).toBe(true);
-        expect(read.permissions).toMatchObject({ canAccessCourses: false, canAccessFlags: true });
+        expect(read.permissions).toEqual({ ...ALL_FALSE, flags: true });
+    });
+
+    test('updateTAPermissions on a no-record TA before the course is migrated seeds the fail-open baseline, not fail-closed', async () => {
+        // Same reasoning as the no-record read above: before --apply has run,
+        // this TA's actual access is the old fail-open default. A partial
+        // patch must merge onto that baseline, not onto all-false.
+        const db = memoryDb({ courses: [{ courseId: 'C1', tas: ['t1'] }] });
+        const upd = await Course.updateTAPermissions(db, 'C1', 't1', { flags: false });
+        expect(upd.success).toBe(true);
+
+        const read = await Course.getTAPermissions(db, 'C1', 't1');
+        expect(read.success).toBe(true);
+        expect(read.permissions).toEqual({ materials: true, questions: true, settings: true, transcripts: true, flags: false, roster: true });
+    });
+
+    test('two concurrent PUTs on a legacy record do not clobber each other', async () => {
+        // Both start from the same legacy-shaped record and migrate it in
+        // the same call. Without a guard on the update filter, whichever
+        // write lands second overwrites the first's revoke with its own
+        // (stale) read of the baseline - this reproduced in 19/20 runs
+        // against a real MongoDB before the filter guard + retry was added.
+        const db = memoryDb({
+            courses: [{ courseId: 'C1', tas: ['t1'], taPermissions: { t1: { canAccessCourses: true, canAccessFlags: true } } }],
+        });
+        const [r1, r2] = await Promise.all([
+            Course.updateTAPermissions(db, 'C1', 't1', { transcripts: false }),
+            Course.updateTAPermissions(db, 'C1', 't1', { roster: false }),
+        ]);
+        expect(r1.success).toBe(true);
+        expect(r2.success).toBe(true);
+
+        const read = await Course.getTAPermissions(db, 'C1', 't1');
+        expect(read.permissions).toEqual({
+            materials: true, questions: true, settings: true, transcripts: false, flags: true, roster: false,
+        });
     });
 
     test('updateTAPermissions rejects for a missing course or unassigned TA', async () => {
@@ -269,21 +343,28 @@ describe('Course.getTAPermissions / updateTAPermissions', () => {
 });
 
 describe('Course.checkTAPermission', () => {
-    test('reflects the stored per-feature permission', async () => {
+    test('reflects the stored per-permission flag', async () => {
         const db = memoryDb({
-            courses: [{ courseId: 'C1', tas: ['t1'], taPermissions: { t1: { canAccessCourses: true, canAccessFlags: false } } }],
+            courses: [{ courseId: 'C1', tas: ['t1'], taPermissions: { t1: { materials: true, questions: false, flags: false, roster: false, transcripts: false, settings: false } } }],
         });
-        expect(await Course.checkTAPermission(db, 'C1', 't1', 'courses')).toBe(true);
+        expect(await Course.checkTAPermission(db, 'C1', 't1', 'materials')).toBe(true);
         expect(await Course.checkTAPermission(db, 'C1', 't1', 'flags')).toBe(false);
+    });
+
+    test('does not let a stray stored key (e.g. updatedAt) resolve as a granted permission', async () => {
+        const db = memoryDb({
+            courses: [{ courseId: 'C1', tas: ['t1'], taPermissions: { t1: { materials: true, updatedAt: new Date() } } }],
+        });
+        expect(await Course.checkTAPermission(db, 'C1', 't1', 'updatedAt')).toBe(false);
     });
 
     test('returns false for an unknown feature, an unassigned TA, or a deleted course', async () => {
         const db = memoryDb({ courses: [{ courseId: 'C1', tas: ['t1'] }] });
         expect(await Course.checkTAPermission(db, 'C1', 't1', 'banana')).toBe(false);
-        expect(await Course.checkTAPermission(db, 'C1', 't2', 'courses')).toBe(false);
+        expect(await Course.checkTAPermission(db, 'C1', 't2', 'materials')).toBe(false);
 
         const deleted = memoryDb({ courses: [{ courseId: 'C1', tas: ['t1'], status: 'deleted' }] });
-        expect(await Course.checkTAPermission(deleted, 'C1', 't1', 'courses')).toBe(false);
+        expect(await Course.checkTAPermission(deleted, 'C1', 't1', 'materials')).toBe(false);
     });
 });
 
@@ -688,5 +769,31 @@ describe('Course.addTAToCourse', () => {
         await Course.addTAToCourse(db, 'C1', 't1');
         await Course.addTAToCourse(db, 'C1', 't1');
         expect((await db.collection('courses').findOne({ courseId: 'C1' })).tas).toEqual(['t1']);
+    });
+
+    test('re-adding a TA who is already in tas.tas (stale invite, no record, unmigrated course) does not lock them out', async () => {
+        // The TA is already assigned and has no record yet - this course
+        // simply hasn't been swept by the migration script. A second call
+        // into addTAToCourse (e.g. a stale join link) must leave that alone
+        // rather than reading "no record" as "first time" and writing an
+        // all-false record over their actual fail-open access.
+        const db = memoryDb({ courses: [{ courseId: 'C1', tas: ['t1'] }] });
+        await Course.addTAToCourse(db, 'C1', 't1');
+        const course = await db.collection('courses').findOne({ courseId: 'C1' });
+        expect(course.taPermissions).toBeUndefined();
+    });
+
+    test('re-adding a TA after removal gets a fresh fail-closed record, not their old permissions back', async () => {
+        const db = memoryDb({
+            courses: [{
+                courseId: 'C1', tas: [],
+                taPermissions: { t1: { materials: true, questions: true, settings: true, transcripts: true, flags: true, roster: true } },
+            }],
+        });
+        await Course.addTAToCourse(db, 'C1', 't1');
+        const course = await db.collection('courses').findOne({ courseId: 'C1' });
+        expect(course.taPermissions.t1).toMatchObject({
+            materials: false, questions: false, settings: false, transcripts: false, flags: false, roster: false,
+        });
     });
 });

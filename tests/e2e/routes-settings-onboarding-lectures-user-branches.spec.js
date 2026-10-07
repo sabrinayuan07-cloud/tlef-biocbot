@@ -448,13 +448,13 @@ test.describe('onboarding.js — additional branches', () => {
         expect(res.status()).toBe(404);
     });
 
-    test('GET /:courseId as TA with course access succeeds', async ({ request: api }) => {
+    test('GET /:courseId as TA with course access succeeds', async ({ request: api, baseURL }) => {
         // hasInstructorOrTAAccess branch via the `tas` array — currently only
         // the hasInstructorAccess branch is exercised by happy-path tests.
         const taId = await getUserIdByUsername(TEST_USERS.ta.username);
         await seedCourse({ courseId: COURSE_A, instructorId, tas: [taId] });
         const taApi = await request.newContext({
-            baseURL: 'http://localhost:8050',
+            baseURL,
             storageState: storageStatePath('ta'),
         });
         try {

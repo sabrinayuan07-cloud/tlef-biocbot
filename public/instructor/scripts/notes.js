@@ -281,7 +281,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const wrap = document.createElement('div');
         wrap.className = 'notes-empty';
         wrap.innerHTML = `
-            <div class="empty-icon">&#128218;</div>
+            <div class="empty-icon">${Icons.inbox}</div>
             <h3>No notes yet</h3>
             <p>Super Chat Notes are a shared notebook the bot reads. Add corrections, explanations,
                or things students keep asking about &mdash; and the bot will use them in Super Chat answers.</p>

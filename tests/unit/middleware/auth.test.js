@@ -194,49 +194,77 @@ describe('requireCourseContext', () => {
     });
 });
 
-describe('requireTAPermission', () => {
+describe('requirePermission', () => {
     function taMiddleware() {
         const db = memoryDb({
-            courses: [{ courseId: 'C1', tas: ['t1'], taPermissions: { t1: { canAccessCourses: true, canAccessFlags: false } } }],
+            courses: [{
+                courseId: 'C1',
+                instructorId: 'i1',
+                tas: ['t1'],
+                taPermissions: { t1: { materials: true, questions: false, flags: false, roster: false, transcripts: false, settings: false } },
+            }],
         });
         return createAuthMiddleware(db);
     }
 
-    test('is a no-op for non-TA users', async () => {
+    // Only TAs are actively checked - matching the original requireTAPermission
+    // this replaces. Instructors reaching this middleware already passed
+    // requireInstructorOrTA, and the actual course data on these pages is
+    // fetched through separately-gated API calls that check instructor
+    // course ownership on their own; widening this specific page-shell gate
+    // to instructors too broke test setups (and, more importantly, any real
+    // flow) that don't expect a Mongo-level ownership check on a page load
+    // that returns no course data itself.
+    test('denies an unauthenticated caller', async () => {
         const res = makeRes();
-        await taMiddleware().requireTAPermission('courses')(makeReq({ user: { role: 'instructor', userId: 'i1' } }), res, next);
+        await taMiddleware().requirePermission('materials')(makeReq({ originalUrl: '/api/x' }), res, next);
+        expect(res.statusCode).toBe(401);
+        expect(next).not.toHaveBeenCalled();
+    });
+
+    test('is a no-op for a student', async () => {
+        const res = makeRes();
+        const req = makeReq({ originalUrl: '/api/x', user: { role: 'student', userId: 's1' }, query: { courseId: 'C1' } });
+        await taMiddleware().requirePermission('materials')(req, res, next);
+        expect(next).toHaveBeenCalledTimes(1);
+    });
+
+    test('is a no-op for an instructor, even for a course they do not own', async () => {
+        const res = makeRes();
+        const req = makeReq({ originalUrl: '/api/x', user: { role: 'instructor', userId: 'someone-else' }, query: { courseId: 'C1' } });
+        await taMiddleware().requirePermission('materials')(req, res, next);
         expect(next).toHaveBeenCalledTimes(1);
     });
 
     test('allows a TA who has the requested permission', async () => {
         const res = makeRes();
         const req = makeReq({ user: { role: 'ta', userId: 't1' }, query: { courseId: 'C1' } });
-        await taMiddleware().requireTAPermission('courses')(req, res, next);
+        await taMiddleware().requirePermission('materials')(req, res, next);
         expect(next).toHaveBeenCalledTimes(1);
     });
 
     test('denies a TA who lacks the requested permission with 403', async () => {
         const res = makeRes();
-        const req = makeReq({ user: { role: 'ta', userId: 't1' }, query: { courseId: 'C1' } });
-        await taMiddleware().requireTAPermission('flags')(req, res, next);
+        const req = makeReq({ originalUrl: '/api/x', user: { role: 'ta', userId: 't1' }, query: { courseId: 'C1' } });
+        await taMiddleware().requirePermission('flags')(req, res, next);
         expect(res.statusCode).toBe(403);
-        expect(res.body.message).toMatch(/do not have permission to access Flagged Content/);
+        expect(res.body.message).toMatch(/do not have the 'flags' permission/);
         expect(next).not.toHaveBeenCalled();
     });
 
-    test('API request with no resolvable course returns 400', async () => {
+    test('API request with no resolvable course returns 400 for a TA', async () => {
         const res = makeRes();
         // TA belongs to no course, and no courseId in query/body/params/preferences.
         const req = makeReq({ originalUrl: '/api/x', user: { role: 'ta', userId: 'orphan' } });
-        await taMiddleware().requireTAPermission('courses')(req, res, next);
+        await taMiddleware().requirePermission('materials')(req, res, next);
         expect(res.statusCode).toBe(400);
-        expect(res.body).toMatchObject({ success: false, message: 'Course ID is required to check TA permissions' });
+        expect(res.body).toMatchObject({ success: false, message: 'Course ID is required to check permissions' });
     });
 
     test('resolves courseId from the TA preferences when none is in the request', async () => {
         const res = makeRes();
         const req = makeReq({ user: { role: 'ta', userId: 't1', preferences: { courseId: 'C1' } } });
-        await taMiddleware().requireTAPermission('courses')(req, res, next);
+        await taMiddleware().requirePermission('materials')(req, res, next);
         expect(next).toHaveBeenCalledTimes(1);
     });
 
@@ -244,24 +272,75 @@ describe('requireTAPermission', () => {
         const res = makeRes();
         // No courseId anywhere; getCoursesForUser returns exactly C1, so it is used.
         const req = makeReq({ user: { role: 'ta', userId: 't1' } });
-        await taMiddleware().requireTAPermission('courses')(req, res, next);
+        await taMiddleware().requirePermission('materials')(req, res, next);
         expect(next).toHaveBeenCalledTimes(1);
     });
 
-    test('page request with no resolvable course redirects to /ta', async () => {
+    test('page request with no resolvable course redirects a TA to /ta', async () => {
         const res = makeRes();
         const req = makeReq({ originalUrl: '/page', user: { role: 'ta', userId: 'orphan' } });
-        await taMiddleware().requireTAPermission('courses')(req, res, next);
+        await taMiddleware().requirePermission('materials')(req, res, next);
         expect(res.redirectedTo).toBe('/ta');
+    });
+
+    test('page request denied by permission redirects rather than returning JSON', async () => {
+        const res = makeRes();
+        const req = makeReq({ originalUrl: '/page', user: { role: 'ta', userId: 't1' }, query: { courseId: 'C1' } });
+        await taMiddleware().requirePermission('flags')(req, res, next);
+        expect(res.redirectedTo).toBe('/ta');
+        expect(res.body).toBeUndefined();
     });
 
     test('returns 500 when the permission lookup throws', async () => {
         jest.spyOn(CourseModel, 'checkTAPermission').mockRejectedValueOnce(new Error('boom'));
         const res = makeRes();
         const req = makeReq({ user: { role: 'ta', userId: 't1' }, query: { courseId: 'C1' } });
-        await taMiddleware().requireTAPermission('courses')(req, res, next);
+        await taMiddleware().requirePermission('materials')(req, res, next);
         expect(res.statusCode).toBe(500);
         expect(res.body).toMatchObject({ success: false, message: 'Error checking permissions' });
+    });
+});
+
+describe('requireAnyPermission', () => {
+    function taMiddleware() {
+        const db = memoryDb({
+            courses: [{
+                courseId: 'C1',
+                instructorId: 'i1',
+                tas: ['t1'],
+                taPermissions: { t1: { materials: false, questions: true, flags: false, roster: false, transcripts: false, settings: false } },
+            }],
+        });
+        return createAuthMiddleware(db);
+    }
+
+    test('is a no-op for non-TA roles, same as requirePermission', async () => {
+        const res = makeRes();
+        const req = makeReq({ user: { role: 'instructor', userId: 'someone-else' }, query: { courseId: 'C1' } });
+        await taMiddleware().requireAnyPermission(['materials', 'questions', 'settings'])(req, res, next);
+        expect(next).toHaveBeenCalledTimes(1);
+    });
+
+    test('allows a TA who has just one of the listed permissions', async () => {
+        const res = makeRes();
+        const req = makeReq({ user: { role: 'ta', userId: 't1' }, query: { courseId: 'C1' } });
+        await taMiddleware().requireAnyPermission(['materials', 'questions', 'settings'])(req, res, next);
+        expect(next).toHaveBeenCalledTimes(1);
+    });
+
+    test('denies a TA who has none of the listed permissions', async () => {
+        const res = makeRes();
+        const req = makeReq({ originalUrl: '/api/x', user: { role: 'ta', userId: 't1' }, query: { courseId: 'C1' } });
+        await taMiddleware().requireAnyPermission(['materials', 'flags', 'roster'])(req, res, next);
+        expect(res.statusCode).toBe(403);
+        expect(next).not.toHaveBeenCalled();
+    });
+
+    test('denies an unauthenticated caller', async () => {
+        const res = makeRes();
+        await taMiddleware().requireAnyPermission(['materials'])(makeReq({ originalUrl: '/api/x' }), res, next);
+        expect(res.statusCode).toBe(401);
+        expect(next).not.toHaveBeenCalled();
     });
 });
 

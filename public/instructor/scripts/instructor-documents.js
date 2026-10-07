@@ -185,7 +185,7 @@ function createDocumentItem(doc) {
     }
     documentItem.dataset.documentType = documentType;
     
-    const fileIcon = doc.contentType === 'text' ? '📝' : '📄';
+    const fileIcon = doc.contentType === 'text' ? Icons.fileText : Icons.file;
     
     // Map status values to display text consistently
     // Issue #497 intentionally collapses legacy parsed/processed states into

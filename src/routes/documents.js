@@ -8,6 +8,7 @@ const DocumentModel = require('../models/Document');
 const CourseModel = require('../models/Course');
 const FlashcardDeck = require('../models/FlashcardDeck');
 const { hasSystemAdminAccess } = require('../services/authorization');
+const { hasPermission } = require('../services/permissions');
 const { QUESTION_EXTRACTION_SYSTEM_PROMPT, buildQuestionExtractionPrompt } = require('../services/prompts');
 const { resolveCourseAi, sendLlmKeyError } = require('./llmKeyMiddleware');
 const qdrantMaintenance = require('../services/qdrantMaintenance');
@@ -73,26 +74,6 @@ function setAttachmentHeaders(res, filename) {
     );
 }
 
-async function canManageCourseDocuments(db, courseId, user) {
-    if (!user) {
-        return false;
-    }
-
-    if (hasSystemAdminAccess(user)) {
-        return true;
-    }
-
-    if (user.role === 'instructor') {
-        return CourseModel.userHasCourseAccess(db, courseId, user.userId, 'instructor');
-    }
-
-    if (user.role === 'ta') {
-        return CourseModel.checkTAPermission(db, courseId, user.userId, 'courses');
-    }
-
-    return false;
-}
-
 async function requireCourseDocumentAccess(req, res, db, courseId, { instructorId } = {}) {
     const user = req.user;
     if (!user) {
@@ -125,7 +106,7 @@ async function requireCourseDocumentAccess(req, res, db, courseId, { instructorI
         return { user, course: null };
     }
 
-    if (!(await canManageCourseDocuments(db, courseId, user))) {
+    if (!(await hasPermission(db, user, courseId, 'materials'))) {
         res.status(403).json({
             success: false,
             message: 'You do not have permission to manage documents for this course'
@@ -511,11 +492,7 @@ router.get('/:documentId/download', async (req, res) => {
             });
         }
 
-        let hasAccess = await CourseModel.userHasCourseAccess(db, document.courseId, user.userId, user.role);
-
-        if (hasAccess && user.role === 'ta') {
-            hasAccess = await CourseModel.checkTAPermission(db, document.courseId, user.userId, 'courses');
-        }
+        const hasAccess = await hasPermission(db, user, document.courseId, 'materials');
 
         if (!hasAccess) {
             return res.status(403).json({

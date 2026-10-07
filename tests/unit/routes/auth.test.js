@@ -229,6 +229,21 @@ describe('DELETE /tas/:taId', () => {
         expect((await db.collection('courses').findOne({ courseId: 'C1' })).tas).toEqual(['t2']);
         expect((await db.collection('courses').findOne({ courseId: 'C2' })).tas).toEqual([]);
     });
+
+    test('clears the taPermissions record on every course, not just the tas array', async () => {
+        // Otherwise a re-added TA inherits whatever permissions were left
+        // over from before they were removed, instead of starting fresh.
+        const db = memoryDb({
+            users: [{ userId: 't1', role: 'ta' }],
+            courses: [{
+                courseId: 'C1', tas: ['t1'],
+                taPermissions: { t1: { materials: true, questions: true, settings: true, transcripts: true, flags: true, roster: true } },
+            }],
+        });
+        const res = await request(app({ db, user: instructor })).delete('/tas/t1');
+        expect(res.status).toBe(200);
+        expect((await db.collection('courses').findOne({ courseId: 'C1' })).taPermissions.t1).toBeUndefined();
+    });
 });
 
 describe('POST /promote-to-ta', () => {

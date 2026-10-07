@@ -310,9 +310,9 @@ describe('remaining public validation and role branches', () => {
 
     test('permission endpoints cover every guard and model failure response', async () => {
         const db = memoryDb({ courses: [course] });
-        expect((await request(app({ db })).put('/C1/ta-permissions/t1').send({ canAccessCourses: true, canAccessFlags: true })).status).toBe(401);
-        expect((await request(app({ db, user: student })).put('/C1/ta-permissions/t1').send({ canAccessCourses: true, canAccessFlags: true })).status).toBe(403);
-        expect((await request(app({ db: null, user: instructor })).put('/C1/ta-permissions/t1').send({ canAccessCourses: true, canAccessFlags: true })).status).toBe(503);
+        expect((await request(app({ db })).put('/C1/ta-permissions/t1').send({ materials: true, flags: true })).status).toBe(401);
+        expect((await request(app({ db, user: student })).put('/C1/ta-permissions/t1').send({ materials: true, flags: true })).status).toBe(403);
+        expect((await request(app({ db: null, user: instructor })).put('/C1/ta-permissions/t1').send({ materials: true, flags: true })).status).toBe(503);
         expect((await request(app({ db })).get('/C1/ta-permissions/t1')).status).toBe(401);
         expect((await request(app({ db: null, user: ta })).get('/C1/ta-permissions/t1')).status).toBe(503);
         expect((await request(app({ db })).get('/C1/ta-permissions')).status).toBe(401);
@@ -320,7 +320,7 @@ describe('remaining public validation and role branches', () => {
         expect((await request(app({ db: null, user: instructor })).get('/C1/ta-permissions')).status).toBe(503);
         const access = jest.spyOn(CourseModel, 'userHasCourseAccess').mockResolvedValueOnce(true);
         const update = jest.spyOn(CourseModel, 'updateTAPermissions').mockResolvedValueOnce({ success: false, error: 'bad perms' });
-        expect((await request(app({ db, user: instructor })).put('/C1/ta-permissions/t1').send({ canAccessCourses: true, canAccessFlags: true })).status).toBe(400);
+        expect((await request(app({ db, user: instructor })).put('/C1/ta-permissions/t1').send({ materials: true, flags: true })).status).toBe(400);
         access.mockRestore(); update.mockRestore();
     });
 
@@ -470,7 +470,7 @@ describe('last-mile edge and exception coverage', () => {
 
     test('permission, student, enrollment, and unit endpoints map all final guards', async () => {
         let spy = jest.spyOn(CourseModel, 'updateTAPermissions').mockRejectedValueOnce(new Error('permissions exploded'));
-        expect((await request(app({ db: memoryDb({ courses: [course] }), user: instructor })).put('/C1/ta-permissions/t1').send({ canAccessCourses: true, canAccessFlags: true })).status).toBe(500);
+        expect((await request(app({ db: memoryDb({ courses: [course] }), user: instructor })).put('/C1/ta-permissions/t1').send({ materials: true, flags: true })).status).toBe(500);
         spy.mockRestore();
 
         expect((await request(app({ db: memoryDb({ courses: [course] }), user: { userId: 'other', role: 'ta' } })).get('/C1/ta-permissions/t1')).status).toBe(403);

@@ -713,7 +713,7 @@ test.describe('TA permissions error branches', () => {
 
     test('PUT /ta-permissions/:taId 400 when TA is not assigned to the course', async ({ request: api }) => {
         const res = await api.put(`/api/courses/${COURSE_BR_A}/ta-permissions/${taId}`, {
-            data: { canAccessCourses: true, canAccessFlags: true },
+            data: { materials: true, flags: true },
         });
         // TA isn't on the tas[] array → model returns
         // { success: false, error: 'TA is not assigned to this course' }
@@ -728,7 +728,7 @@ test.describe('TA permissions error branches', () => {
         });
         try {
             const res = await api.put(`/api/courses/${COURSE_BR_B}/ta-permissions/${taId}`, {
-                data: { canAccessCourses: true, canAccessFlags: true },
+                data: { materials: true, flags: true },
             });
             expect(res.status()).toBe(403);
         } finally {
@@ -743,7 +743,7 @@ test.describe('TA permissions error branches', () => {
         });
         try {
             const res = await api.put(`/api/courses/${COURSE_BR_A}/ta-permissions/${taId}`, {
-                data: { canAccessCourses: true, canAccessFlags: true },
+                data: { materials: true, flags: true },
             });
             expect(res.status()).toBe(403);
         } finally {
@@ -818,16 +818,17 @@ test.describe('TA permissions error branches', () => {
         }
     });
 
-    test('GET /ta-permissions for course with TAs returns mapping with permissions', async ({ request: api }) => {
+    test('GET /ta-permissions for course with TAs returns fail-closed defaults when no override', async ({ request: api }) => {
         await api.post(`/api/courses/${COURSE_BR_A}/tas`, { data: { taId } });
         const res = await api.get(`/api/courses/${COURSE_BR_A}/ta-permissions`);
         expect(res.ok()).toBeTruthy();
         const body = await res.json();
-        // Default permissions returned by getTAPermissions when no override
+        // A newly-added TA with no permissions ever set defaults to no
+        // access (fail-closed) - reverses the old fail-open default.
         expect(body.data.taPermissions[taId]).toMatchObject({
-            canAccessCourses: true,
-            canAccessFlags: true,
+            materials: false, questions: false, flags: false, roster: false, transcripts: false, settings: false,
         });
+        expect(body.data.taPermissions[taId].roleLabel).toBe('custom');
     });
 });
 
@@ -976,12 +977,12 @@ test.describe('GET /api/courses/:courseId/students (fallback paths)', () => {
         expect(phantom.enrolled).toBe(true);
     });
 
-    test('TA without canAccessFlags is blocked with 403', async ({ baseURL }) => {
+    test('TA without roster permission is blocked with 403', async ({ baseURL }) => {
         await seedCourse({
             courseId: COURSE_BR_A,
             instructorId,
             tas: [taId],
-            taPermissions: { [taId]: { canAccessCourses: true, canAccessFlags: false } },
+            taPermissions: { [taId]: { materials: true, roster: false } },
         });
         const taApi = await request.newContext({
             baseURL,
@@ -995,12 +996,12 @@ test.describe('GET /api/courses/:courseId/students (fallback paths)', () => {
         }
     });
 
-    test('TA with canAccessFlags can view students', async ({ baseURL }) => {
+    test('TA with roster permission can view students', async ({ baseURL }) => {
         await seedCourse({
             courseId: COURSE_BR_A,
             instructorId,
             tas: [taId],
-            taPermissions: { [taId]: { canAccessCourses: true, canAccessFlags: true } },
+            taPermissions: { [taId]: { materials: true, roster: true } },
         });
         const taApi = await request.newContext({
             baseURL,

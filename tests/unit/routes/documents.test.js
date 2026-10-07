@@ -55,6 +55,12 @@ function documentsDb({ documents, course = {} } = {}) {
         courses: [{
             courseId: 'C1', instructorId: 'i1', tas: ['t1'],
             lectures: [{ name: 'Unit 1', documents: [] }],
+            // Default TA (t1) is granted 'materials' - the permission that
+            // gates every route in this file - since most tests here exist
+            // to prove an assigned TA succeeds. Tests exercising denial pass
+            // their own `course.taPermissions` override, which fully
+            // replaces this default (object spread, not a deep merge).
+            taPermissions: { t1: { materials: true } },
             ...course,
         }],
         documents: documents || [{

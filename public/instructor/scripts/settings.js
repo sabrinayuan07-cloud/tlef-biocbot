@@ -3065,7 +3065,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         deleteCollectionBtn.addEventListener('click', async () => {
             // Show confirmation dialog
             const confirmed = confirm(
-                '⚠️ WARNING: This will permanently delete ALL BiocBot data!\n\n' +
+                'WARNING: This will permanently delete ALL BiocBot data!\n\n' +
                 'This includes:\n' +
                 '• Vector embeddings (Qdrant)\n' +
                 '• Document metadata (MongoDB)\n' +

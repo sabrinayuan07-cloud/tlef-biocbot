@@ -273,14 +273,15 @@ test.describe('GET /api/flags/course/:courseId additional branches', () => {
     });
 
     test('TA can read flags for the course (no role gate on this route)', async ({ baseURL }) => {
-        // Add TA to course so userHasCourseAccess (role=ta) finds them.
+        // Add TA to course so userHasCourseAccess (role=ta) finds them, and
+        // grant the 'flags' permission (fail-closed default otherwise blocks this).
         // Canonical shape for the `tas` array is a list of user-id strings —
         // the model's access query is `{ tas: userId }`, which only matches
         // when the array contains the bare ID.
         await withDb((db) =>
             db.collection('courses').updateOne(
                 { courseId: COURSE_A },
-                { $set: { tas: [taId] } }
+                { $set: { tas: [taId], [`taPermissions.${taId}`]: { flags: true } } }
             )
         );
         await seedFlagDoc({ flagId: 'eb-ta-read-1' });
@@ -414,7 +415,8 @@ test.describe('PUT /api/flags/:flagId/status non-resolved branches', () => {
                 { courseId: COURSE_A },
                 // tas is [String] in product code (Course.js:1219, schema L18);
                 // userHasCourseAccess queries `tas: userId` against bare strings.
-                { $set: { tas: [taId] } }
+                // Also grant 'flags' permission (fail-closed default otherwise blocks this).
+                { $set: { tas: [taId], [`taPermissions.${taId}`]: { flags: true } } }
             )
         );
         const id = await seedFlagDoc({ flagId: 'eb-st-reviewed-ta' });

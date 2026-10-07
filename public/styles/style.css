@@ -971,3 +971,28 @@ summary:focus-visible {
         font-size: var(--bb-text-card-kicker);
     }
 }
+
+.icon-inline {
+    vertical-align: middle;
+}
+
+/* Heading line-boxes reserve descender space that pushes their optical
+   center above true geometric center; measured consistently at ~12% of
+   font-size across h1/h2/h3, so nudge icons up by that fraction to match. */
+h1 .icon-inline,
+h2 .icon-inline,
+h3 .icon-inline {
+    position: relative;
+    top: -0.12em;
+}
+
+.flashcard-generate-btn .icon-inline,
+.auto-link-btn .icon-inline {
+    width: 18px;
+    height: 18px;
+}
+
+.missing-answer-warning .icon-inline {
+    width: 16px;
+    height: 16px;
+}

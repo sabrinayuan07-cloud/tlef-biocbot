@@ -10,6 +10,7 @@ const router = express.Router();
 const FlaggedQuestionModel = require('../models/FlaggedQuestion');
 const CourseModel = require('../models/Course');
 const { hasSystemAdminAccess } = require('../services/authorization');
+const { hasPermission } = require('../services/permissions');
 const previewSession = require('../services/previewSession');
 
 const SUPER_COURSE_FLAG_COURSE_ID = 'SUPER_COURSE';
@@ -56,20 +57,15 @@ async function loadFlagAndAssertCourseAccess(req, res, flagId) {
 
 async function canReadCourseFlags(db, user, courseId) {
     if (!user) return false;
-    if (user.role !== 'instructor' && user.role !== 'ta') return false;
 
+    // Super-course flags aren't scoped to any one course a TA could be
+    // granted access to - only system-admin instructors can see them,
+    // regardless of the 'flags' permission.
     if (courseId === SUPER_COURSE_FLAG_COURSE_ID) {
         return user.role === 'instructor' && hasSystemAdminAccess(user);
     }
 
-    const hasCourseAccess = await CourseModel.userHasCourseAccess(db, courseId, user.userId, user.role);
-    if (!hasCourseAccess) return false;
-
-    if (user.role === 'ta') {
-        return CourseModel.checkTAPermission(db, courseId, user.userId, 'flags');
-    }
-
-    return true;
+    return hasPermission(db, user, courseId, 'flags');
 }
 
 async function filterFlagsByReadableCourse(db, user, flags) {

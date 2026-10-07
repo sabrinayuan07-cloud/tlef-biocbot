@@ -80,7 +80,7 @@
             <div id="onboarding-complete" class="onboarding-complete" style="display: none;">
                 <div class="step-content">
                     <div class="welcome-header">
-                        <h1><span aria-hidden="true">🎉</span> Onboarding Completed!</h1>
+                        <h1><span aria-hidden="true"><svg class="icon-inline" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"/><path d="M20 2v4"/><path d="M22 4h-4"/><circle cx="4" cy="20" r="2"/></svg></span> Onboarding Completed!</h1>
                         <p class="welcome-subtitle">Your course has been successfully set up. You can now enjoy using BiocBot!</p>
                     </div>
                     
@@ -397,11 +397,11 @@
                             <!-- Action Buttons -->
                             <div class="assessment-actions">
                                 <button class="add-question-btn" onclick="openQuestionModal('Onboarding')">
-                                    <span class="btn-icon">➕</span>
+                                    <span class="btn-icon"><svg class="icon-inline" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14"/><path d="M12 5v14"/></svg></span>
                                     Add Question
                                 </button>
                                 <button class="auto-link-btn" onclick="openAutoLinkConfirmationModal('Onboarding', this)">
-                                    <span class="btn-icon">🪄</span>
+                                    <span class="btn-icon"><svg class="icon-inline" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"/><path d="m14 7 3 3"/><path d="M5 6v4"/><path d="M19 14v4"/><path d="M10 2v2"/><path d="M7 8H3"/><path d="M21 16h-4"/><path d="M11 3H9"/></svg></span>
                                     Auto-link Questions
                                 </button>
                             </div>
@@ -443,7 +443,7 @@
                     <!-- File Upload Button -->
                     <div class="file-upload-container">
                         <button class="upload-file-btn" onclick="triggerFileInput()">
-                            <span class="upload-icon">📁</span>
+                            <span class="upload-icon"><svg class="icon-inline" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg></span>
                             <span>Upload Summarized/Expert notes</span>
                         </button>
                         <input type="file" id="file-input" accept=".pdf,.docx,.txt,.ppt,.pptx" style="display: none;">
@@ -695,6 +695,7 @@
         </div>
     </div>
     
+    <script src="../common/scripts/icons.js"></script>
     <script src="../common/scripts/modal-a11y.js"></script>
     <script src="../common/scripts/auth.js"></script>
     <script src="../common/scripts/notifications.js"></script>
