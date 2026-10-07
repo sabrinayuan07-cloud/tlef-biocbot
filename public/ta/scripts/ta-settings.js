@@ -140,11 +140,11 @@ async function loadTAPermissions() {
             if (response.ok) {
                 const result = await response.json();
                 if (result.success) {
-                    permissions[course.courseId] = result.data.permissions;
+                    permissions[course.courseId] = { ...result.data.permissions, roleLabel: result.data.roleLabel };
                 }
             }
         }
-        
+
         console.log('TA permissions loaded:', permissions);
         taPermissions = permissions;
         
@@ -224,42 +224,44 @@ function updatePermissionsStatus() {
         return;
     }
     
-    const canAccessCourses = hasPermissionForFeature('courses');
-    const canAccessFlags = hasPermissionForFeature('flags');
-    
-    container.innerHTML = `
+    const permissions = getSelectedTAPermissions();
+    const labels = {
+        materials: 'Course Materials',
+        questions: 'Question Bank',
+        flags: 'Flagged Content',
+        roster: 'Student Roster',
+        transcripts: 'Student Transcripts',
+        settings: 'Course Settings'
+    };
+
+    const roleKey = permissions && permissions.roleLabel ? permissions.roleLabel : 'custom';
+    const roleDisplay = window.ROLE_PRESET_LABELS[roleKey] || roleKey;
+    const roleNote = `<div class="permission-item"><span class="permission-name">Role</span><span class="permission-status role">${roleDisplay}</span></div>`;
+
+    const rows = window.TA_PERMISSION_KEYS.map(key => {
+        const allowed = hasPermissionForFeature(key);
+        return `
         <div class="permission-item">
-            <span class="permission-name">Course Access</span>
-            <span class="permission-status ${canAccessCourses ? 'allowed' : 'denied'}">
-                ${canAccessCourses ? 'Allowed' : 'Denied'}
+            <span class="permission-name">${labels[key]}</span>
+            <span class="permission-status ${allowed ? 'allowed' : 'denied'}">
+                ${allowed ? 'Allowed' : 'Denied'}
             </span>
-        </div>
-        <div class="permission-item">
-            <span class="permission-name">Student Support</span>
-            <span class="permission-status ${canAccessFlags ? 'allowed' : 'denied'}">
-                ${canAccessFlags ? 'Allowed' : 'Denied'}
-            </span>
-        </div>
-    `;
+        </div>`;
+    }).join('');
+
+    container.innerHTML = roleNote + rows;
 }
 
 /**
  * Check if TA has permission for the selected course context.
+ * 'courses' is the nav-link name for /instructor/documents, which the
+ * server gates on ANY of materials/questions/settings - see
+ * window.DOCUMENTS_PAGE_PERMISSIONS - not just 'materials'.
  */
 function hasPermissionForFeature(feature) {
     const permissions = getSelectedTAPermissions();
-    if (!permissions) {
-        return false;
-    }
-
-    if (feature === 'courses') {
-        return permissions.canAccessCourses !== false;
-    }
-    if (feature === 'flags') {
-        return permissions.canAccessFlags !== false;
-    }
-
-    return false;
+    const keys = feature === 'courses' ? window.DOCUMENTS_PAGE_PERMISSIONS : [feature];
+    return keys.some(key => window.permissionIsGranted(permissions, key));
 }
 
 /**

@@ -62,7 +62,7 @@ async function installBranchRoutes(page, options = {}) {
         publishMode: 'success',
         publishStatusMode: 'normal',
         taCourses: [{ courseId: COURSE_ID, courseName: course.courseName }],
-        taPermissions: { canAccessCourses: true, canAccessFlags: true },
+        taPermissions: { materials: true, questions: true, settings: true, transcripts: true, flags: true, roster: true },
         instructorCourses: [course],
         instructorCoursesMode: 'success',
         instructorCoursesStatus: 200,
@@ -775,7 +775,7 @@ test.describe('instructor publish, TA, course, and polling branches', () => {
         await openInstructorScriptHarness(page, {
             role: 'ta',
             controls: {
-                taPermissions: { canAccessCourses: true, canAccessFlags: true },
+                taPermissions: { materials: true, questions: true, settings: true, transcripts: true, flags: true, roster: true },
             },
         });
 
@@ -804,7 +804,7 @@ test.describe('instructor publish, TA, course, and polling branches', () => {
     test('hides TA links when permissions deny access', async ({ page }) => {
         await openInstructorDocuments(page, {
             controls: {
-                taPermissions: { canAccessCourses: false, canAccessFlags: false },
+                taPermissions: { materials: false, questions: false, settings: false, transcripts: false, flags: false, roster: false },
             },
         });
 
@@ -899,7 +899,7 @@ test.describe('instructor publish, TA, course, and polling branches', () => {
         const permissions = await page.evaluate(async () => {
             const instructorWindow = /** @type {InstructorWindow} */ (window);
             const testWindow = /** @type {any} */ (window);
-            testWindow.taPermissions = { stale: { canAccessCourses: true } };
+            testWindow.taPermissions = { stale: { materials: true } };
             await instructorWindow.loadTAPermissions();
             return {
                 permissions: testWindow.taPermissions,
@@ -933,8 +933,8 @@ test.describe('instructor publish, TA, course, and polling branches', () => {
             testWindow.getCurrentUser = () => ({ preferences: {} });
             testWindow.taCourses = [];
             testWindow.taPermissions = {
-                'TA-DENIED-COURSE': { canAccessCourses: false, canAccessFlags: false },
-                'TA-ALLOWED-COURSE': { canAccessCourses: false, canAccessFlags: true },
+                'TA-DENIED-COURSE': { materials: false, questions: false, settings: false, transcripts: false, flags: false, roster: false },
+                'TA-ALLOWED-COURSE': { materials: false, questions: false, settings: false, transcripts: false, flags: true, roster: true },
             };
             return {
                 canAccessFlags: instructorWindow.hasPermissionForFeature('flags'),
@@ -1002,7 +1002,7 @@ test.describe('instructor publish, TA, course, and polling branches', () => {
         await openInstructorDocuments(page, {
             controls: {
                 taCourses: [],
-                taPermissions: { canAccessCourses: true, canAccessFlags: true },
+                taPermissions: { materials: true, questions: true, settings: true, transcripts: true, flags: true, roster: true },
             },
         });
 

@@ -79,12 +79,16 @@ test.describe('Instructor TA Hub branch coverage', () => {
         await resetTAUser();
     });
 
-    test('updates both TA permission toggles and persists the preserved flags', async ({ page }) => {
+    test('updates TA permission toggles independently and persists each as a partial patch', async ({ page }) => {
         await seedTAHubCourse({
             taPermissions: {
                 [taId]: {
-                    canAccessCourses: false,
-                    canAccessFlags: true,
+                    materials: false,
+                    questions: false,
+                    flags: true,
+                    roster: false,
+                    transcripts: false,
+                    settings: false,
                     updatedAt: new Date(),
                 },
             },
@@ -95,29 +99,31 @@ test.describe('Instructor TA Hub branch coverage', () => {
         const card = page.locator('.ta-card', { hasText: taUser.displayName });
         await expect(card).toBeVisible({ timeout: 15_000 });
 
-        const coursesPermission = card.locator(`#courses-permission-${taId}`);
+        const materialsPermission = card.locator(`#materials-permission-${taId}`);
         const flagsPermission = card.locator(`#flags-permission-${taId}`);
-        await expect(coursesPermission).not.toBeChecked();
+        await expect(materialsPermission).not.toBeChecked();
         await expect(flagsPermission).toBeChecked();
 
-        await coursesPermission.click();
-        await expect(coursesPermission).toBeChecked();
-        const coursesSuccess = `My Courses access enabled for ${taId}`;
-        await expect(page.locator('.notification.success').filter({ hasText: coursesSuccess }))
+        await materialsPermission.click();
+        await expect(materialsPermission).toBeChecked();
+        const materialsSuccess = `Course Materials access enabled for TA: ${taUser.displayName}`;
+        await expect(page.locator('.notification.success').filter({ hasText: materialsSuccess }))
             .toBeVisible();
 
         await flagsPermission.click();
         await expect(flagsPermission).not.toBeChecked();
-        const flagsSuccess = `Flagged Content access disabled for ${taId}`;
+        const flagsSuccess = `Flagged Content access disabled for TA: ${taUser.displayName}`;
         await expect(page.locator('.notification.success').filter({ hasText: flagsSuccess }))
             .toBeVisible();
 
+        // Each toggle is written as a single-key partial patch (no read-merge-write),
+        // but both changes still land on the stored document.
         const doc = await withDb((db) =>
             db.collection('courses').findOne({ courseId: COURSE_ID })
         );
         expect(doc.taPermissions[taId]).toMatchObject({
-            canAccessCourses: true,
-            canAccessFlags: false,
+            materials: true,
+            flags: false,
         });
     });
 
@@ -141,8 +147,12 @@ test.describe('Instructor TA Hub branch coverage', () => {
         await seedTAHubCourse({
             taPermissions: {
                 [taId]: {
-                    canAccessCourses: true,
-                    canAccessFlags: true,
+                    materials: true,
+                    questions: true,
+                    flags: true,
+                    roster: true,
+                    transcripts: true,
+                    settings: true,
                     updatedAt: new Date(),
                 },
             },
@@ -157,7 +167,7 @@ test.describe('Instructor TA Hub branch coverage', () => {
                 contentType: 'application/json',
                 body: JSON.stringify({
                     success: false,
-                    message: 'canAccessCourses and canAccessFlags must be boolean values',
+                    message: "'flags' must be a boolean value",
                 }),
             });
         });
@@ -169,10 +179,8 @@ test.describe('Instructor TA Hub branch coverage', () => {
 
         await flagsPermission.click();
 
-        expect(putPayload).toMatchObject({
-            canAccessCourses: true,
-            canAccessFlags: false,
-        });
+        // Partial patch: only the toggled key is sent, not the other five.
+        expect(putPayload).toEqual({ flags: false });
         await expect(page.locator('.notification.error')).toContainText(
             'Error updating permission: HTTP error! status: 400'
         );

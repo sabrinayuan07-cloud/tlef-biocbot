@@ -143,6 +143,12 @@
     gap: 12px;
 }
 
+.permissions-load-error {
+    margin: 0;
+    color: #b02a37;
+    font-size: 0.85rem;
+}
+
 .permission-toggle {
     display: flex;
     align-items: center;
@@ -170,6 +176,23 @@
     color: #555;
     font-weight: 500;
     user-select: none;
+}
+
+.role-preset-picker {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 8px;
+}
+
+.role-preset-picker select {
+    padding: 4px 8px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    background: #fff;
 }
 
 /* Section Description */
@@ -341,6 +364,8 @@
     display: flex;
     gap: 12px;
     justify-content: flex-end;
+    border-top: none;
+    background: none;
 }
 
 .btn-danger {

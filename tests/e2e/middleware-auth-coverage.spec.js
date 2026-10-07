@@ -254,13 +254,13 @@ test.describe('populateUser fallback path', () => {
 // ---------------------------------------------------------------------------
 // requireTAPermission (via flag/courses pages)
 // ---------------------------------------------------------------------------
-test.describe('requireTAPermission', () => {
-    test('TA without flags permission → /api/courses/:courseId/students returns 403', async ({ baseURL }) => {
+test.describe('requirePermission (student roster)', () => {
+    test('TA without roster permission → /api/courses/:courseId/students returns 403', async ({ baseURL }) => {
         await seedCourse({
             courseId: COURSE_A,
             instructorId,
             tas: [taId],
-            taPermissions: { [taId]: { canAccessCourses: true, canAccessFlags: false } },
+            taPermissions: { [taId]: { materials: true, roster: false } },
         });
         const api = await request.newContext({
             baseURL,
@@ -274,12 +274,12 @@ test.describe('requireTAPermission', () => {
         }
     });
 
-    test('TA with flags permission → /api/courses/:courseId/students returns 200', async ({ baseURL }) => {
+    test('TA with roster permission → /api/courses/:courseId/students returns 200', async ({ baseURL }) => {
         await seedCourse({
             courseId: COURSE_A,
             instructorId,
             tas: [taId],
-            taPermissions: { [taId]: { canAccessCourses: true, canAccessFlags: true } },
+            taPermissions: { [taId]: { materials: true, roster: true } },
         });
         const api = await request.newContext({
             baseURL,

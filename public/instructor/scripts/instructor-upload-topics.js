@@ -780,7 +780,7 @@ function addContentToWeek(week, fileName, description, documentId, status = 'upl
         }
         
         fileItem.innerHTML = `
-            <span class="file-icon">📄</span>
+            <span class="file-icon">${Icons.file}</span>
             <div class="file-info">
                 <h3>${fileName}</h3>
                 <p>${description}</p>

@@ -780,11 +780,17 @@ router.delete('/tas/:taId', async (req, res) => {
             }
         );
 
-        // Remove TA from all courses
+        // Remove TA from all courses, and clear their permissions record on
+        // each one - otherwise a stale record survives the removal and
+        // comes right back (unrevoked) if this TA is ever re-added later.
         const coursesCollection = db.collection('courses');
         const result = await coursesCollection.updateMany(
             { tas: taId },
-            { $pull: { tas: taId } }
+            {
+                $pull: { tas: taId },
+                $unset: { [`taPermissions.${taId}`]: '' },
+                $set: { updatedAt: new Date() }
+            }
         );
 
         console.log(`Removed TA ${taId} from ${result.modifiedCount} courses`);

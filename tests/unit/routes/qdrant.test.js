@@ -91,7 +91,7 @@ describe('Qdrant route access and status', () => {
         expect((await request(app({ db, user: instructor })).post('/search').send({ courseId: 'C1' })).status).toBe(400);
         expect(Course.userHasCourseAccess).toHaveBeenCalledWith(db, 'C1', 'i1', 'instructor');
         expect((await request(app({ db, user: ta })).post('/search').send({ courseId: 'C1' })).status).toBe(400);
-        expect(Course.checkTAPermission).toHaveBeenCalledWith(db, 'C1', 't1', 'courses');
+        expect(Course.checkTAPermission).toHaveBeenCalledWith(db, 'C1', 't1', 'materials');
 
         expect((await request(app({ db, user: instructor })).post('/search').send({ courseId: 'NEW' })).status).toBe(400);
     });

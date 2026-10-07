@@ -535,7 +535,7 @@ test.describe('requireTAPermission fallbacks', () => {
             courseId: COURSE_A,
             instructorId,
             tas: [taId],
-            taPermissions: { [taId]: { canAccessCourses: true, canAccessFlags: true } },
+            taPermissions: { [taId]: { materials: true, questions: true, flags: true, roster: true, transcripts: true, settings: true } },
         });
         // Ensure the TA has no preferences.courseId
         await withDb((db) =>
@@ -549,8 +549,9 @@ test.describe('requireTAPermission fallbacks', () => {
             storageState: storageStatePath('ta'),
         });
         try {
-            // /instructor/documents uses requireTAPermission('courses') with no
-            // courseId in query/body/params — exercises the fallback lookup.
+            // /instructor/documents uses requireAnyPermission(['materials',
+            // 'questions', 'settings']) with no courseId in query/body/params
+            // — exercises the fallback lookup.
             const res = await api.get('/instructor/documents', {
                 maxRedirects: 0,
                 failOnStatusCode: false,

@@ -12,6 +12,7 @@ const prompts = require('../services/prompts');
 const CourseModel = require('../models/Course');
 const DocumentModel = require('../models/Document');
 const MessageFeedback = require('../models/MessageFeedback');
+const { hasPermission } = require('../services/permissions');
 const ChatSurveyResponse = require('../models/ChatSurveyResponse');
 const BadWordsFilter = require('bad-words');
 const profanityFilter = new BadWordsFilter();
@@ -308,18 +309,7 @@ function parseBooleanQuery(value) {
 }
 
 async function canReadCourseFeedback(db, user, courseId) {
-    if (!user || (user.role !== 'instructor' && user.role !== 'ta')) {
-        return false;
-    }
-
-    const hasCourseAccess = await CourseModel.userHasCourseAccess(db, courseId, user.userId, user.role);
-    if (!hasCourseAccess) return false;
-
-    if (user.role === 'ta') {
-        return CourseModel.checkTAPermission(db, courseId, user.userId, 'flags');
-    }
-
-    return true;
+    return hasPermission(db, user, courseId, 'flags');
 }
 
 async function canCreateFeedbackForCourse(db, user, courseId) {

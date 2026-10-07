@@ -201,7 +201,7 @@ function generateUnitsFromOnboarding(onboardingData) {
     
     addUnitContainer.innerHTML = `
         <button id="add-unit-btn" class="btn-secondary" onclick="addNewUnit()" ${isAdding ? 'disabled' : ''}>
-            <span class="btn-icon">➕</span>
+            <span class="btn-icon">${Icons.plus}</span>
             ${isAdding ? 'Adding Unit...' : 'Add New Unit'}
         </button>
     `;
@@ -261,7 +261,40 @@ function generateUnitsFromOnboarding(onboardingData) {
     } else if (isRerender) {
         window.requestAnimationFrame(() => window.scrollTo(window.scrollX, previousScrollY));
     }
+
+    applyTASectionPermissions();
 }
+
+/**
+ * Hide unit sub-sections a TA can't act on, so the UI doesn't offer actions
+ * the server would reject (materials/questions are independently toggleable
+ * now, unlike the old single canAccessCourses boolean that covered both).
+ * No-ops for instructors/admins, and for a TA whose permissions haven't
+ * loaded yet - instructor-ta.js re-calls this once they have (see
+ * updateTANavigationBasedOnPermissions), and this function itself re-runs
+ * on every unit re-render, so both orderings end up correct.
+ */
+function applyTASectionPermissions() {
+    if (typeof isTA !== 'function' || !isTA()) return;
+    const courseId = typeof getSelectedCourseIdForTA === 'function' ? getSelectedCourseIdForTA() : null;
+    const permissions = courseId && window.taPermissions ? window.taPermissions[courseId] : null;
+    if (!permissions) return;
+
+    const sectionSelectorsByPermission = {
+        materials: ['.course-materials-section', '.learning-objectives-section'],
+        questions: ['.assessment-questions-section']
+    };
+
+    Object.entries(sectionSelectorsByPermission).forEach(([key, selectors]) => {
+        const allowed = window.permissionIsGranted(permissions, key);
+        selectors.forEach(selector => {
+            document.querySelectorAll(selector).forEach(section => {
+                section.style.display = allowed ? '' : 'none';
+            });
+        });
+    });
+}
+window.applyTASectionPermissions = applyTASectionPermissions;
 
 /**
  * Build the label shown for a unit, honouring the per-unit "show number" choice.
@@ -351,7 +384,7 @@ function createUnitElement(unitName, unitData, isExpanded = false, canDelete = t
                         title="${canDelete ? 'Delete Unit' : 'A course must have at least one unit'}"
                         aria-label="${canDelete ? `Delete ${unitName}` : `Cannot delete ${unitName}: a course must have at least one unit`}"
                         ${canDelete ? '' : 'disabled'}
-                        style="background: none; border: none; cursor: ${canDelete ? 'pointer' : 'not-allowed'}; font-size: 1.2rem; margin-right: 10px; color: ${canDelete ? '#dc3545' : '#9ca3af'};">🗑️</button>
+                        style="background: none; border: none; cursor: ${canDelete ? 'pointer' : 'not-allowed'}; display: inline-flex; margin-right: 10px; color: ${canDelete ? '#dc3545' : '#9ca3af'};">${Icons.trash}</button>
 
                 <span class="accordion-toggle">${isExpanded ? '▼' : '▶'}</span>
             </div>
@@ -441,7 +474,7 @@ function createUnitElement(unitName, unitData, isExpanded = false, canDelete = t
                             <span>Chemistry notation</span>
                         </label>
                         <button type="button" class="flashcard-generate-btn" onclick="generateFlashcardDraft('${unitName}', this)">
-                            <span aria-hidden="true">🪄</span> Generate Draft
+                            <span aria-hidden="true">${Icons.wand}</span> Generate Draft
                         </button>
                     </div>
                     <p class="flashcard-section-message" id="flashcard-message-${unitId}">Upload course materials to generate a shared deck.</p>
@@ -478,11 +511,11 @@ function createUnitElement(unitName, unitData, isExpanded = false, canDelete = t
                     <!-- Action Buttons -->
                     <div class="assessment-actions">
                         <button class="add-question-btn" onclick="openQuestionModal('${unitName}')">
-                            <span class="btn-icon">➕</span>
+                            <span class="btn-icon">${Icons.plus}</span>
                             Add Question
                         </button>
                         <button class="auto-link-btn" onclick="openAutoLinkConfirmationModal('${unitName}', this)">
-                            <span class="btn-icon">🪄</span>
+                            <span class="btn-icon">${Icons.wand}</span>
                             Auto-link Questions
                         </button>
                     </div>
@@ -696,7 +729,7 @@ function addRequiredPlaceholders(container, unitName) {
         lectureNotesItem.className = 'file-item placeholder-item';
         lectureNotesItem.dataset.status = 'not-uploaded';
         lectureNotesItem.innerHTML = `
-            <span class="file-icon">📄</span>
+            <span class="file-icon">${Icons.file}</span>
             <div class="file-info">
                 <h3>*Lecture Notes - ${unitName}</h3>
                 <p>Placeholder for required lecture notes. Please upload content.</p>
@@ -715,7 +748,7 @@ function addRequiredPlaceholders(container, unitName) {
         practiceQuestionsItem.className = 'file-item placeholder-item';
         practiceQuestionsItem.dataset.status = 'not-uploaded';
         practiceQuestionsItem.innerHTML = `
-            <span class="file-icon">📄</span>
+            <span class="file-icon">${Icons.file}</span>
             <div class="file-info">
                 <h3>*Practice Questions/Tutorial</h3>
                 <p>Placeholder for required practice questions. Please upload content.</p>
@@ -755,15 +788,15 @@ function addActionButtonsIfMissing(container, unitName) {
         addContentSection.className = 'add-content-section';
         addContentSection.innerHTML = `
             <button class="add-content-btn lecture-notes" onclick="openUploadModal('${unitName}', 'lecture-notes')">
-                <span class="btn-icon">➕</span>
+                <span class="btn-icon">${Icons.plus}</span>
                 Add Lecture Notes
             </button>
             <button class="add-content-btn practice-quiz" onclick="openUploadModal('${unitName}', 'practice-quiz')">
-                <span class="btn-icon">➕</span>
+                <span class="btn-icon">${Icons.plus}</span>
                 Add Practice Questions/Tutorial
             </button>
             <button class="add-content-btn additional-material" onclick="openUploadModal('${unitName}', 'additional')">
-                <span class="btn-icon">➕</span>
+                <span class="btn-icon">${Icons.plus}</span>
                 Add Additional Material
             </button>
         `;

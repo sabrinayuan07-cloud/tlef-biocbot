@@ -12,7 +12,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const messages = document.getElementById('chat-messages');
     const sendButton = document.getElementById('send-button');
     const newChatButton = document.getElementById('new-super-course-chat');
-    const levelSelect = document.getElementById('answer-level');
+    const levelSelector = document.getElementById('answer-level-selector');
+    const levelTrigger = document.getElementById('answer-level-trigger');
+    const levelValueLabel = document.getElementById('answer-level-value');
+    const levelMenu = document.getElementById('answer-level-menu');
+    const levelOptions = levelMenu ? Array.from(levelMenu.querySelectorAll('[role="option"]')) : [];
     const scopeLabel = document.getElementById('super-course-scope');
     const poolPanel = document.getElementById('super-course-pool-panel');
     const poolList = document.getElementById('super-course-pool-list');
@@ -33,28 +37,144 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    // Persist the user's chosen answer depth across sessions.
+    // Custom answer-depth dropdown (replaces a native <select> so the
+    // popup can be positioned off to the side instead of the browser's
+    // fixed native listbox). Persist the chosen level across sessions.
     const levelStorageKey = `biocbot_instructor_super_level_${instructorId}`;
-    if (levelSelect) {
-        const savedLevel = localStorage.getItem(levelStorageKey);
-        if (savedLevel && [...levelSelect.options].some(opt => opt.value === savedLevel)) {
-            levelSelect.value = savedLevel;
-        }
-        levelSelect.addEventListener('keydown', (event) => {
-            if (event.key !== 'Enter' && event.key !== ' ') return;
+    let currentLevel = 'standard';
+    let isLevelMenuOpen = false;
 
-            try {
-                if (typeof levelSelect.showPicker === 'function') {
-                    levelSelect.showPicker();
-                    event.preventDefault();
-                }
-            } catch {
-                // Preserve the browser's native Space-key behavior.
+    function selectLevel(value, { persist = true } = {}) {
+        const option = levelOptions.find(opt => opt.dataset.value === value);
+        if (!option) return;
+
+        currentLevel = value;
+        if (levelValueLabel) {
+            levelValueLabel.textContent = option.querySelector('.answer-level-option-label')?.textContent || value;
+        }
+        levelOptions.forEach(opt => {
+            opt.setAttribute('aria-selected', opt === option ? 'true' : 'false');
+        });
+        if (persist) {
+            localStorage.setItem(levelStorageKey, currentLevel);
+        }
+    }
+
+    function positionLevelMenu() {
+        if (!levelMenu || !levelTrigger) return;
+
+        levelMenu.style.visibility = 'hidden';
+        levelMenu.style.left = '0px';
+        levelMenu.style.top = '0px';
+
+        const triggerRect = levelTrigger.getBoundingClientRect();
+        const menuRect = levelMenu.getBoundingClientRect();
+        const gap = 10;
+        const margin = 8;
+
+        let left = triggerRect.right + gap;
+        if (left + menuRect.width > window.innerWidth - margin) {
+            left = Math.max(margin, triggerRect.left - menuRect.width - gap);
+        }
+
+        let top = triggerRect.top + (triggerRect.height / 2) - (menuRect.height / 2);
+        top = Math.min(Math.max(top, margin), window.innerHeight - menuRect.height - margin);
+
+        levelMenu.style.left = `${left}px`;
+        levelMenu.style.top = `${top}px`;
+        levelMenu.style.visibility = 'visible';
+    }
+
+    function openLevelMenu() {
+        if (!levelMenu || !levelTrigger || isLevelMenuOpen) return;
+
+        levelMenu.hidden = false;
+        isLevelMenuOpen = true;
+        levelTrigger.setAttribute('aria-expanded', 'true');
+        positionLevelMenu();
+
+        const activeOption = levelOptions.find(opt => opt.dataset.value === currentLevel) || levelOptions[0];
+        activeOption?.focus();
+    }
+
+    function closeLevelMenu({ focusTrigger = false } = {}) {
+        if (!levelMenu || !levelTrigger || !isLevelMenuOpen) return;
+
+        levelMenu.hidden = true;
+        isLevelMenuOpen = false;
+        levelTrigger.setAttribute('aria-expanded', 'false');
+        if (focusTrigger) {
+            levelTrigger.focus();
+        }
+    }
+
+    if (levelTrigger && levelMenu && levelOptions.length) {
+        // Reparent the menu onto <body> so position:fixed isn't clipped by
+        // .chat-container/.chat-input-container's overflow:hidden - an
+        // overflow:hidden ancestor clips fixed-position descendants too,
+        // it's not just about positioning context.
+        document.body.appendChild(levelMenu);
+
+        const savedLevel = localStorage.getItem(levelStorageKey);
+        if (savedLevel && levelOptions.some(opt => opt.dataset.value === savedLevel)) {
+            selectLevel(savedLevel, { persist: false });
+        }
+
+        levelTrigger.addEventListener('click', () => {
+            if (isLevelMenuOpen) {
+                closeLevelMenu();
+            } else {
+                openLevelMenu();
             }
         });
-        levelSelect.addEventListener('change', () => {
-            localStorage.setItem(levelStorageKey, levelSelect.value);
+
+        levelOptions.forEach(option => {
+            option.addEventListener('click', () => {
+                selectLevel(option.dataset.value);
+                closeLevelMenu({ focusTrigger: true });
+            });
         });
+
+        levelMenu.addEventListener('keydown', (event) => {
+            const currentIndex = levelOptions.indexOf(document.activeElement);
+
+            if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                const next = levelOptions[Math.min(currentIndex + 1, levelOptions.length - 1)];
+                next?.focus();
+            } else if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                const prev = levelOptions[Math.max(currentIndex - 1, 0)];
+                prev?.focus();
+            } else if (event.key === 'Home') {
+                event.preventDefault();
+                levelOptions[0]?.focus();
+            } else if (event.key === 'End') {
+                event.preventDefault();
+                levelOptions[levelOptions.length - 1]?.focus();
+            } else if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                const active = document.activeElement;
+                if (active && active.dataset && active.dataset.value) {
+                    selectLevel(active.dataset.value);
+                    closeLevelMenu({ focusTrigger: true });
+                }
+            } else if (event.key === 'Escape') {
+                event.preventDefault();
+                closeLevelMenu({ focusTrigger: true });
+            } else if (event.key === 'Tab') {
+                closeLevelMenu();
+            }
+        });
+
+        document.addEventListener('click', (event) => {
+            if (isLevelMenuOpen && levelSelector && !levelSelector.contains(event.target) && !levelMenu.contains(event.target)) {
+                closeLevelMenu();
+            }
+        });
+
+        window.addEventListener('resize', () => closeLevelMenu());
+        document.addEventListener('scroll', () => closeLevelMenu(), true);
     }
 
     loadSourcePool();
@@ -104,7 +224,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 body: JSON.stringify({
                     message: text,
                     conversationMessages,
-                    level: levelSelect ? levelSelect.value : undefined
+                    level: currentLevel
                 })
             });
 
@@ -141,7 +261,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     function setBusy(isBusy) {
         sendButton.disabled = isBusy;
         input.disabled = isBusy;
-        sendButton.textContent = isBusy ? 'Sending...' : 'Send';
     }
 
     function addMessage(content, sender, options = {}) {
@@ -207,7 +326,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'flag-button';
-        button.innerHTML = '⚑';
+        button.innerHTML = Icons.flag;
         button.title = 'Flag this message';
         button.addEventListener('click', (event) => {
             event.stopPropagation();

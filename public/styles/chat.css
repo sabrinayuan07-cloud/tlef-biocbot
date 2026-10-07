@@ -116,7 +116,7 @@
 
 .super-course-history-panel {
     border-bottom: 1px solid var(--border-color, #e0e0e0);
-    background: #fff;
+    background: #eceef1;
 }
 
 .super-course-history-header {
@@ -152,18 +152,29 @@
 }
 
 .super-course-history-refresh {
-    padding: 5px 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
     border: 1px solid #cdd7e6;
-    border-radius: 6px;
+    border-radius: 50%;
     background: #fff;
     color: #2f3a4a;
-    font-size: 12px;
-    font-weight: 600;
     cursor: pointer;
+    line-height: 1;
 }
 
 .super-course-history-refresh:hover {
     background: #f5f7fb;
+    border-color: var(--primary-color, #0055b7);
+    color: var(--primary-color, #0055b7);
+}
+
+.super-course-history-refresh:focus-visible {
+    outline: 3px solid rgba(0, 85, 183, 0.25);
+    outline-offset: 1px;
 }
 
 .super-course-history-list {
@@ -191,7 +202,7 @@
     padding: 10px;
     border: 1px solid #d9e2f0;
     border-radius: 8px;
-    background: #fbfcff;
+    background: #fff;
     cursor: pointer;
 }
 
@@ -1377,6 +1388,172 @@
     outline: none;
     border-color: var(--primary-color, #4a90e2);
     box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb, 74, 144, 226), 0.15);
+}
+
+/* Instructor Super Chat composer: the input takes its own row, with the
+ * answer-depth control and send button on the row below. The depth select
+ * is stripped of its own border/background so it fuses with the
+ * surrounding .answer-level-selector pill into a single "Answer depth:
+ * <value>" control, matching a Claude-style model picker. Scoped to
+ * #instructor-chat-form only - the shared .answer-level-selector classes
+ * still render as plain label + select everywhere else (e.g. the student
+ * Super Course composer). */
+#instructor-chat-form {
+    flex-wrap: wrap;
+    padding: 18px 16px 14px;
+}
+
+#instructor-chat-form #instructor-chat-input {
+    flex: 1 0 100%;
+    border: 0;
+    border-radius: 0;
+    padding: 8px 4px 22px;
+    font-size: 16px;
+}
+
+#instructor-chat-form #instructor-chat-input:focus,
+#instructor-chat-form #instructor-chat-input:focus-visible {
+    outline: none !important;
+    box-shadow: none;
+}
+
+#instructor-chat-form .answer-level-selector {
+    position: relative;
+    margin-right: auto;
+    font-size: 14px;
+    padding: 0;
+    border: none;
+    background: transparent;
+}
+
+#instructor-chat-form .answer-level-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--border-color, #ddd);
+    border-radius: 8px;
+    background: var(--card-bg, #fff);
+    padding: 5px 10px;
+    font: inherit;
+    font-size: 14px;
+    cursor: pointer;
+    transition: border-color 0.2s ease;
+}
+
+#instructor-chat-form .answer-level-trigger:hover {
+    border-color: var(--primary-color, #4a90e2);
+}
+
+#instructor-chat-form .answer-level-trigger:focus,
+#instructor-chat-form .answer-level-trigger:focus-visible {
+    outline: none !important;
+    border-color: var(--primary-color, #4a90e2);
+}
+
+#instructor-chat-form .answer-level-trigger-label {
+    font-weight: 500;
+    color: #5f666d;
+    white-space: nowrap;
+}
+
+#instructor-chat-form .answer-level-trigger-value {
+    font-weight: 600;
+    color: var(--text-color, #333);
+    white-space: nowrap;
+}
+
+#instructor-chat-form .answer-level-caret {
+    color: #888;
+    flex-shrink: 0;
+    transition: transform 0.15s ease;
+}
+
+#instructor-chat-form .answer-level-trigger[aria-expanded="true"] .answer-level-caret {
+    transform: rotate(180deg);
+}
+
+/* The menu is reparented onto <body> by instructor-chat.js and positioned
+ * via JS (fixed, anchored off the trigger's bounding rect) so it can float
+ * to the right of the composer without being clipped by
+ * .chat-container/.chat-input-container's overflow: hidden - an
+ * overflow:hidden ancestor clips position:fixed descendants too, so the
+ * menu can't stay inside that DOM subtree. Scoped by #answer-level-menu's
+ * own id (not #instructor-chat-form ancestry) because of that reparenting. */
+#answer-level-menu {
+    position: fixed;
+    z-index: 60;
+    min-width: 220px;
+    margin: 0;
+    padding: 8px;
+    list-style: none;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.18), 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
+#answer-level-menu[hidden] {
+    display: none;
+}
+
+#answer-level-menu .answer-level-option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 15px;
+    color: var(--text-color, #333);
+    cursor: pointer;
+}
+
+#answer-level-menu .answer-level-option:hover,
+#answer-level-menu .answer-level-option:focus {
+    background: #f2f4f9;
+    outline: none;
+}
+
+#answer-level-menu .answer-level-option[aria-selected="true"] {
+    font-weight: 600;
+    color: var(--primary-color, #0055b7);
+}
+
+#answer-level-menu .answer-level-check {
+    opacity: 0;
+    color: var(--primary-color, #0055b7);
+    flex-shrink: 0;
+}
+
+#answer-level-menu .answer-level-option[aria-selected="true"] .answer-level-check {
+    opacity: 1;
+}
+
+#instructor-chat-form #send-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 38px;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border-radius: 12px;
+}
+
+.instructor-chat-disclaimer {
+    justify-content: center;
+    padding: 8px 16px 14px;
+    background: none;
+    text-align: center;
+}
+
+.instructor-new-chat-btn {
+    background: #e3edfb;
+    border-color: #b9d2f3;
+    color: #0055b7;
+}
+
+.instructor-new-chat-btn:hover {
+    background: #d3e2f9;
 }
 
 /* Mode Toggle */

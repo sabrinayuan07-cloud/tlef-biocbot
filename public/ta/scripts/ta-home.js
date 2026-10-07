@@ -100,15 +100,10 @@ function getCoursePermission(courseId, feature) {
         return false;
     }
 
-    const permissions = taPermissions[courseId] || {};
-    if (feature === 'courses') {
-        return permissions.canAccessCourses !== false;
-    }
-    if (feature === 'flags') {
-        return permissions.canAccessFlags !== false;
-    }
-
-    return false;
+    // 'courses' gates /instructor/documents, which the server allows for
+    // ANY of materials/questions/settings - see window.DOCUMENTS_PAGE_PERMISSIONS.
+    const keys = feature === 'courses' ? window.DOCUMENTS_PAGE_PERMISSIONS : [feature];
+    return keys.some(key => window.permissionIsGranted(taPermissions[courseId], key));
 }
 
 function hasPermissionForFeature(feature) {
@@ -145,7 +140,7 @@ async function loadTAPermissions() {
             if (response.ok) {
                 const result = await response.json();
                 if (result.success) {
-                    taPermissions[course.courseId] = result.data.permissions;
+                    taPermissions[course.courseId] = { ...result.data.permissions, roleLabel: result.data.roleLabel };
                 }
             }
         }
@@ -529,8 +524,8 @@ function displayTACourses() {
     }
 
     coursesContainer.innerHTML = taCourses.map(course => {
-        const canAccessCourses = getCoursePermission(course.courseId, 'courses');
-        const canAccessFlags = getCoursePermission(course.courseId, 'flags');
+        const roleKey = (taPermissions[course.courseId] && taPermissions[course.courseId].roleLabel) || 'custom';
+        const roleLabel = window.ROLE_PRESET_LABELS[roleKey] || roleKey;
         const isInactive = isCourseInactive(course);
         const isSelected = selectedTACourseId === course.courseId;
         const statusLabel = isInactive ? 'Inactive' : 'Active';
@@ -547,8 +542,7 @@ function displayTACourses() {
                 <p><strong>Units:</strong> ${escapeHtml(course.totalUnits || 0)}</p>
             </div>
             <div class="course-permissions">
-                <span class="permission-pill ${canAccessCourses ? 'allowed' : 'denied'}">Course Upload: ${canAccessCourses ? 'Allowed' : 'Denied'}</span>
-                <span class="permission-pill ${canAccessFlags ? 'allowed' : 'denied'}">Flags: ${canAccessFlags ? 'Allowed' : 'Denied'}</span>
+                <span class="permission-pill role">Role: ${escapeHtml(roleLabel)}</span>
             </div>
             <button type="button" class="course-select-button">${isSelected ? 'Selected' : 'Select Course'}</button>
         </div>

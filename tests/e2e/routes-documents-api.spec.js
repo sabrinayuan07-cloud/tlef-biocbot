@@ -392,12 +392,12 @@ test.describe('GET /api/documents/:documentId/download', () => {
     test.describe('as TA', () => {
         test.use({ storageState: storageStatePath('ta') });
 
-        test('403 when TA lacks the courses permission', async ({ request: api }) => {
+        test('403 when TA lacks the materials permission', async ({ request: api }) => {
             await seedCourse({
                 courseId: COURSE_A,
                 instructorId,
                 tas: [taId],
-                taPermissions: { [taId]: { canAccessCourses: false, canAccessFlags: false } },
+                taPermissions: { [taId]: { materials: false } },
             });
             const now = new Date();
             await withDb((db) =>
@@ -421,12 +421,12 @@ test.describe('GET /api/documents/:documentId/download', () => {
             expect(res.status()).toBe(403);
         });
 
-        test('200 when TA has the courses permission', async ({ request: api }) => {
+        test('200 when TA has the materials permission', async ({ request: api }) => {
             await seedCourse({
                 courseId: COURSE_A,
                 instructorId,
                 tas: [taId],
-                taPermissions: { [taId]: { canAccessCourses: true, canAccessFlags: true } },
+                taPermissions: { [taId]: { materials: true } },
             });
             const now = new Date();
             await withDb((db) =>

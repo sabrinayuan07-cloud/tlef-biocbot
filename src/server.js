@@ -567,11 +567,18 @@ function setupProtectedRoutes() {
         res.sendFile(path.join(__dirname, '../public/instructor/notes.html'));
     });
 
-    app.get('/instructor/documents', authMiddleware.requireInstructorOrTA, authMiddleware.requireTAPermission('courses'), (req, res) => {
+    // Gated on ANY of materials/questions/settings, not one specific
+    // permission: this page's sections span all three independently now, so
+    // a TA with only one of them (e.g. 'questions' but not 'materials')
+    // still needs to reach it - but a TA with none of them (e.g. fully
+    // revoked) shouldn't. Each section is further hidden client-side per
+    // instructor-units.js's applyTASectionPermissions, and every underlying
+    // API call remains gated on its own specific permission regardless.
+    app.get('/instructor/documents', authMiddleware.requireInstructorOrTA, authMiddleware.requireAnyPermission(['materials', 'questions', 'settings']), (req, res) => {
         res.sendFile(path.join(__dirname, '../public/instructor/index.html'));
     });
 
-    app.get('/instructor/flagged', authMiddleware.requireInstructorOrTA, authMiddleware.requireTAPermission('flags'), (req, res) => {
+    app.get('/instructor/flagged', authMiddleware.requireInstructorOrTA, authMiddleware.requirePermission('flags'), (req, res) => {
         res.sendFile(path.join(__dirname, '../public/instructor/flagged.html'));
     });
 

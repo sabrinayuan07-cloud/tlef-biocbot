@@ -42,7 +42,7 @@ test.beforeAll(async () => {
  * @param {import('@playwright/test').Page} page
  * @param {{
  *   courses?: Array<Record<string, any>>,
- *   permissions?: Record<string, { canAccessCourses: boolean, canAccessFlags: boolean } | null>,
+ *   permissions?: Record<string, { materials?: boolean, questions?: boolean, flags?: boolean, roster?: boolean, transcripts?: boolean, settings?: boolean, roleLabel?: string } | null>,
  *   coursesStatus?: number,
  *   permissionsStatus?: Record<string, number>,
  *   userPreferences?: Record<string, any>,
@@ -102,7 +102,10 @@ async function mockTASettingsAPI(page, options = {}) {
             await route.fulfill({
                 json: {
                     success: true,
-                    data: { permissions: perms ?? { canAccessCourses: true, canAccessFlags: true } },
+                    data: {
+                        permissions: perms ?? { materials: true, questions: true, settings: true, transcripts: true, flags: true, roster: true },
+                        roleLabel: (options.roleLabels && options.roleLabels[courseId]) ?? 'fullTA',
+                    },
                 },
             });
             return;
@@ -144,7 +147,7 @@ test.describe('ta-settings.js focused coverage', () => {
     test('renders account, permission status, and respects per-feature link visibility', async ({ page }) => {
         await mockTASettingsAPI(page, {
             courses: [{ courseId: COURSE_A, courseName: 'TA Coverage Course A', status: 'active' }],
-            permissions: { [COURSE_A]: { canAccessCourses: true, canAccessFlags: false } },
+            permissions: { [COURSE_A]: { materials: true, questions: true, settings: true, transcripts: true, flags: false, roster: false } },
         });
 
         await page.goto('/ta/settings');
@@ -154,7 +157,7 @@ test.describe('ta-settings.js focused coverage', () => {
         await expect(page.locator('#ta-email')).toHaveValue(TEST_USERS.ta.email);
 
         const status = page.locator('#permissions-status');
-        await expect(status).toContainText('Course Access');
+        await expect(status).toContainText('Course Materials');
         await expect(status.locator('.permission-status.allowed').filter({ hasText: /^\s*Allowed\s*$/ }).first()).toBeVisible();
         await expect(status.locator('.permission-status.denied').filter({ hasText: /^\s*Denied\s*$/ }).first()).toBeVisible();
 
@@ -182,8 +185,8 @@ test.describe('ta-settings.js focused coverage', () => {
                 { courseId: COURSE_B, courseName: 'Inactive TA Course', status: 'inactive' },
             ],
             permissions: {
-                [COURSE_A]: { canAccessCourses: true, canAccessFlags: true },
-                [COURSE_B]: { canAccessCourses: true, canAccessFlags: true },
+                [COURSE_A]: { materials: true, questions: true, settings: true, transcripts: true, flags: true, roster: true },
+                [COURSE_B]: { materials: true, questions: true, settings: true, transcripts: true, flags: true, roster: true },
             },
         });
 
@@ -231,8 +234,8 @@ test.describe('ta-settings.js focused coverage', () => {
                 { courseId: COURSE_B, courseName: 'B', status: 'active' },
             ],
             permissions: {
-                [COURSE_A]: { canAccessCourses: true, canAccessFlags: true },
-                [COURSE_B]: { canAccessCourses: true, canAccessFlags: true },
+                [COURSE_A]: { materials: true, questions: true, settings: true, transcripts: true, flags: true, roster: true },
+                [COURSE_B]: { materials: true, questions: true, settings: true, transcripts: true, flags: true, roster: true },
             },
         });
 
@@ -290,8 +293,8 @@ test.describe('ta-settings.js focused coverage', () => {
                 { courseId: COURSE_B, courseName: 'B', status: 'active' },
             ],
             permissions: {
-                [COURSE_A]: { canAccessCourses: true, canAccessFlags: false },
-                [COURSE_B]: { canAccessCourses: false, canAccessFlags: true },
+                [COURSE_A]: { materials: true, questions: true, settings: true, transcripts: true, flags: false, roster: false },
+                [COURSE_B]: { materials: false, questions: false, settings: false, transcripts: false, flags: true, roster: true },
             },
         });
 
@@ -317,8 +320,8 @@ test.describe('ta-settings.js focused coverage', () => {
                 { courseId: COURSE_B, courseName: 'B', status: 'active' },
             ],
             permissions: {
-                [COURSE_A]: { canAccessCourses: true, canAccessFlags: true },
-                [COURSE_B]: { canAccessCourses: true, canAccessFlags: true },
+                [COURSE_A]: { materials: true, questions: true, settings: true, transcripts: true, flags: true, roster: true },
+                [COURSE_B]: { materials: true, questions: true, settings: true, transcripts: true, flags: true, roster: true },
             },
             userPreferences: { courseId: COURSE_B },
         });
@@ -345,8 +348,8 @@ test.describe('ta-settings.js focused coverage', () => {
                 { courseId: COURSE_B, courseName: 'B', status: 'active' },
             ],
             permissions: {
-                [COURSE_A]: { canAccessCourses: true, canAccessFlags: false },
-                [COURSE_B]: { canAccessCourses: true, canAccessFlags: false },
+                [COURSE_A]: { materials: true, questions: true, settings: true, transcripts: true, flags: false, roster: false },
+                [COURSE_B]: { materials: true, questions: true, settings: true, transcripts: true, flags: false, roster: false },
             },
             userPreferences: {},
         });

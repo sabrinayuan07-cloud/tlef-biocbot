@@ -6,8 +6,8 @@
 const express = require('express');
 const router = express.Router();
 const QdrantService = require('../services/qdrantService');
-const CourseModel = require('../models/Course');
 const { hasSystemAdminAccess } = require('../services/authorization');
+const { hasPermission } = require('../services/permissions');
 const { contentHash, markDocumentIndexReady } = require('../services/embeddingIndexService');
 const { resolveCourseAi, sendLlmKeyError } = require('./llmKeyMiddleware');
 
@@ -16,26 +16,6 @@ const qdrantService = new QdrantService({ skipEmbeddings: true });
 
 // Middleware to parse JSON bodies
 router.use(express.json());
-
-async function canUseQdrantForCourse(db, courseId, user) {
-    if (!user) {
-        return false;
-    }
-
-    if (hasSystemAdminAccess(user)) {
-        return true;
-    }
-
-    if (user.role === 'instructor') {
-        return CourseModel.userHasCourseAccess(db, courseId, user.userId, 'instructor');
-    }
-
-    if (user.role === 'ta') {
-        return CourseModel.checkTAPermission(db, courseId, user.userId, 'courses');
-    }
-
-    return false;
-}
 
 async function requireDirectQdrantAccess(req, res, { courseId, requireExistingCourse = false } = {}) {
     const user = req.user;
@@ -82,7 +62,7 @@ async function requireDirectQdrantAccess(req, res, { courseId, requireExistingCo
         return user;
     }
 
-    if (!(await canUseQdrantForCourse(db, courseId, user))) {
+    if (!(await hasPermission(db, user, courseId, 'materials'))) {
         res.status(403).json({
             success: false,
             message: 'You do not have permission to access vectors for this course'

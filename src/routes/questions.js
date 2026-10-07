@@ -5,6 +5,7 @@ const router = express.Router();
 const CourseModel = require('../models/Course');
 const prompts = require('../services/prompts');
 const { hasSystemAdminAccess } = require('../services/authorization');
+const { hasPermission } = require('../services/permissions');
 const { resolveCourseAi, sendLlmKeyError } = require('./llmKeyMiddleware');
 const { LANES } = require('../services/llmLanes');
 
@@ -93,32 +94,23 @@ function summarizeAutoLinkResults(matchedQuestions = []) {
     };
 }
 
-async function canReadCourseQuestions(db, courseId, user) {
-    if (hasSystemAdminAccess(user)) {
-        return true;
-    }
-
-    if (user.role === 'ta') {
-        return CourseModel.checkTAPermission(db, courseId, user.userId, 'courses');
-    }
-
+// Reading questions is not staff-only - enrolled students reach this same
+// route for quizzes/practice, so a student role still falls through to
+// userHasCourseAccess's enrollment check (that's the real getStudentEnrollment
+// path, not the lectures.js-style footgun, since this route genuinely
+// serves students). Only the TA branch is gated by the 'questions'
+// permission; instructors and students keep their pre-existing checks.
+function canReadCourseQuestions(db, courseId, user) {
+    if (hasSystemAdminAccess(user)) return true;
+    if (user.role === 'ta') return hasPermission(db, user, courseId, 'questions');
     return CourseModel.userHasCourseAccess(db, courseId, user.userId, user.role);
 }
-
-async function canMutateCourseQuestions(db, courseId, user) {
-    if (hasSystemAdminAccess(user)) {
-        return true;
-    }
-
-    if (user.role === 'instructor') {
-        return CourseModel.userHasCourseAccess(db, courseId, user.userId, 'instructor');
-    }
-
-    if (user.role === 'ta') {
-        return CourseModel.checkTAPermission(db, courseId, user.userId, 'courses');
-    }
-
-    return false;
+// Mutating (creating/editing) questions IS staff-only - no student role
+// should ever reach this, so it can safely delegate to hasPermission()
+// wholesale (denies students, checks TA 'questions' permission, checks
+// instructor course ownership).
+function canMutateCourseQuestions(db, courseId, user) {
+    return hasPermission(db, user, courseId, 'questions');
 }
 
 async function requireCourseQuestionAccess(req, res, db, courseId, { mode, instructorId } = {}) {
@@ -1264,19 +1256,15 @@ router.post('/generate-ai', async (req, res) => {
             });
         }
         
-        // Check if the user has access to this course
-        // Uses session user (req.user) for reliable authentication
-        // Also allows TAs who are assigned to this course
+        // AI generation is gated on 'questions' (folded together with manual
+        // question-bank management - no role has asked to generate without
+        // also being able to edit questions directly). Previously this ran
+        // its own ad-hoc check that also assumed course.tas held {userId,
+        // email} objects rather than the actual plain-string schema, so a
+        // real TA could never pass it via that branch.
         const user = req.user;
-        const hasAccess = user && (
-            course.instructorId === user.userId ||
-            course.instructorId === user.email ||
-            course.instructors?.includes(user.userId) ||
-            course.instructors?.includes(user.email) ||
-            course.tas?.some(ta => ta.email === user.email || ta.userId === user.userId) ||
-            hasSystemAdminAccess(user)
-        );
-        
+        const hasAccess = await hasPermission(db, user, courseId, 'questions');
+
         if (!hasAccess) {
             console.log(`🚫 [PERMISSION] Access denied for user ${user?.userId || 'unknown'} to course ${courseId}`);
             console.log(`🔍 [PERMISSION] Course instructorId: ${course.instructorId}, User: ${user?.userId}, Email: ${user?.email}`);
