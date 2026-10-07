@@ -1,16 +1,13 @@
 /* Super Chat Notes page */
 
-.notes-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 1.5rem 2rem 0.25rem 2rem;
-}
+/* Box model (padding/display/alignment) and h1 font-size/color/weight are
+   set by the shared .instructor-app .main-content header rule in style.css,
+   which wins on specificity - only the h1 margin reset still applies. */
 .notes-header h1 { margin: 0; }
 
 .notes-intro {
     padding: 0 2rem 1rem 2rem;
-    color: var(--text-secondary, #555);
+    color: var(--bb-ink-70);
     font-size: 0.98rem;
     line-height: 1.55;
     max-width: 840px;
@@ -20,16 +17,16 @@
 .hub-cards {
     display: flex;
     gap: 1rem;
-    padding: 0 2rem 1.5rem 2rem;
+    padding: 0 2rem var(--bb-gap-loose) 2rem;
     flex-wrap: wrap;
 }
 .hub-card {
     flex: 1;
     min-width: 280px;
     background: var(--card-bg, #fff);
-    border: 1px solid var(--border-color, #e0e0e0);
+    border: 1px solid var(--bb-ink-16);
     border-radius: 12px;
-    padding: 1.3rem 1.5rem;
+    padding: 1.3rem var(--bb-gap-loose);
     cursor: pointer;
     transition: box-shadow 0.15s, border-color 0.15s, transform 0.1s;
     font: inherit;
@@ -40,26 +37,26 @@
 }
 .hub-card:hover {
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.09);
-    border-color: var(--primary-color, #002145);
+    border-color: var(--bb-steel);
     transform: translateY(-2px);
 }
 .hub-card.active {
-    border-color: var(--primary-color, #002145);
+    border-color: var(--bb-steel);
     box-shadow: 0 2px 10px rgba(0, 33, 69, 0.12);
 }
 .hub-card .hub-icon { font-size: 1.7rem; margin-bottom: 0.5rem; }
-.hub-card h2 { margin: 0 0 0.4rem 0; color: var(--primary-color, #002145); font-size: 1.12rem; }
-.hub-card p { margin: 0; color: var(--text-secondary, #666); font-size: 0.9rem; line-height: 1.45; }
-.hub-card .hub-count { font-weight: 600; color: var(--primary-color, #002145); }
+.hub-card h2 { margin: 0 0 0.4rem 0; color: var(--bb-steel); font-size: 1.12rem; }
+.hub-card p { margin: 0; color: var(--bb-ink-70); font-size: 0.9rem; line-height: 1.45; }
+.hub-card .hub-count { font-weight: 600; color: var(--bb-steel); }
 
 /* Panels */
 .notes-panel { display: none; padding: 0 2rem 2rem 2rem; }
 .notes-panel.active { display: block; }
-.panel-heading { font-size: 1.05rem; color: var(--primary-color, #002145); margin: 0.5rem 0 1rem 0; }
+.panel-heading { font-size: 1.05rem; color: var(--bb-steel); margin: 0.5rem 0 1rem 0; }
 
 /* Buttons */
 .btn-primary {
-    background: var(--primary-color, #002145);
+    background: var(--bb-steel);
     color: #fff;
     border: none;
     padding: 0.6rem 1.1rem;
@@ -72,8 +69,8 @@
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 .btn-secondary {
     background: transparent;
-    color: var(--primary-color, #002145);
-    border: 1px solid var(--primary-color, #002145);
+    color: var(--bb-steel);
+    border: 1px solid var(--bb-steel);
     padding: 0.45rem 0.85rem;
     border-radius: 6px;
     cursor: pointer;
@@ -94,7 +91,7 @@
 /* Editor */
 .note-editor {
     background: var(--card-bg, #fff);
-    border: 1px solid var(--border-color, #e0e0e0);
+    border: 1px solid var(--bb-ink-16);
     border-radius: 10px;
     padding: 1.3rem;
 }
@@ -103,7 +100,7 @@
     width: 100%;
     box-sizing: border-box;
     padding: 0.7rem 0.9rem;
-    border: 1px solid var(--border-color, #d0d0d0);
+    border: 1px solid var(--bb-ink-16);
     border-radius: 6px;
     font-size: 0.95rem;
     font-family: inherit;
@@ -117,8 +114,8 @@
 
 .editor-footer { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; margin-top: 0.5rem; flex-wrap: wrap; }
 .editor-tags { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; flex: 1; }
-.editor-tags input { border: 1px solid var(--border-color, #d0d0d0); border-radius: 6px; padding: 0.3rem 0.55rem; font-size: 0.82rem; width: 130px; }
-.tag-chip { background: #eef2f7; color: var(--primary-color, #002145); border-radius: 12px; padding: 0.2rem 0.65rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem; }
+.editor-tags input { border: 1px solid var(--bb-ink-16); border-radius: 6px; padding: 0.3rem 0.55rem; font-size: 0.82rem; width: 130px; }
+.tag-chip { background: #eef2f7; color: var(--bb-steel); border-radius: 12px; padding: 0.2rem 0.65rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem; }
 .tag-chip button { background: none; border: none; color: #6b7a8a; cursor: pointer; font-size: 0.9rem; line-height: 1; padding: 0; }
 .editor-actions { display: flex; gap: 0.5rem; }
 
@@ -156,14 +153,14 @@
 }
 .note-card {
     background: var(--card-bg, #fff);
-    border: 1px solid var(--border-color, #e0e0e0);
+    border: 1px solid var(--bb-ink-16);
     border-radius: 10px;
     padding: 1rem 1.25rem;
     margin-bottom: 0.75rem;
 }
-.note-card.mine { border-left: 4px solid var(--primary-color, #002145); }
+.note-card.mine { border-left: 4px solid var(--bb-steel); }
 .note-card-header { display: flex; justify-content: space-between; align-items: baseline; gap: 1rem; margin-bottom: 0.4rem; }
-.note-card h3 { margin: 0; font-size: 1.05rem; color: var(--primary-color, #002145); }
+.note-card h3 { margin: 0; font-size: 1.05rem; color: var(--bb-steel); }
 .note-meta { font-size: 0.8rem; color: #5f666d; white-space: nowrap; }
 .note-excerpt { color: var(--text-primary, #444); font-size: 0.92rem; line-height: 1.5; margin: 0.4rem 0 0.6rem 0; white-space: pre-wrap; }
 .note-card-footer { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap; }
@@ -174,11 +171,11 @@
 /* Empty state */
 .notes-empty {
     text-align: center;
-    padding: 3rem 1.5rem;
-    color: var(--text-secondary, #666);
+    padding: 3rem var(--bb-gap-loose);
+    color: var(--bb-ink-70);
 }
 .notes-empty .empty-icon { font-size: 2.4rem; margin-bottom: 0.75rem; }
-.notes-empty h3 { color: var(--primary-color, #002145); margin: 0 0 0.5rem 0; }
+.notes-empty h3 { color: var(--bb-steel); margin: 0 0 0.5rem 0; }
 .notes-empty p { max-width: 480px; margin: 0 auto 1.25rem auto; line-height: 1.55; }
 
 .notes-loading { padding: 2rem; color: #888; }
