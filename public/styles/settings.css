@@ -391,7 +391,7 @@
 .text-input,
 .select-input {
     padding: 8px 10px;
-    border: 1px solid var(--border-color, #ccc);
+    border: 1px solid var(--bb-ink-16);
     border-radius: 6px;
     font-size: 14px;
     background-color: var(--card-bg, #fff);
@@ -457,7 +457,7 @@
     row-gap: 8px;
     margin: 0;
     padding: 8px 12px;
-    border: 1px solid var(--border-color, #d7d7d7);
+    border: 1px solid var(--bb-ink-16);
     border-radius: 6px;
 }
 
@@ -587,7 +587,7 @@
 .llm-migration {
     margin-top: 12px;
     padding: 10px 12px;
-    border: 1px solid var(--border-color, #d7d7d7);
+    border: 1px solid var(--bb-ink-16);
     border-radius: 6px;
     background: var(--surface-alt, #fafafa);
 }
@@ -864,7 +864,7 @@ input.is-invalid {
     flex-wrap: wrap;
     gap: 0.5rem;
     padding: 0.75rem;
-    border: 1px solid var(--border-color, #e0e0e0);
+    border: 1px solid var(--bb-ink-16);
     border-radius: 8px;
     background: var(--card-bg, #fff);
 }
@@ -874,7 +874,7 @@ input.is-invalid {
     align-items: center;
     gap: 0.4rem;
     padding: 0.4rem 0.75rem;
-    border: 1px solid var(--border-color, #e0e0e0);
+    border: 1px solid var(--bb-ink-16);
     border-radius: 20px;
     cursor: pointer;
     transition: background 0.15s, border-color 0.15s;
@@ -885,7 +885,7 @@ input.is-invalid {
 
 #testable-units-container label:hover {
     background: var(--hover-bg, #f0f4f8);
-    border-color: var(--primary-color, #0055b7);
+    border-color: var(--bb-steel);
 }
 
 #testable-units-container input[type="checkbox"] {
@@ -893,7 +893,7 @@ input.is-invalid {
     height: auto;
     padding: 0;
     flex-shrink: 0;
-    accent-color: var(--primary-color, #0055b7);
+    accent-color: var(--bb-steel);
 }
 
 #testable-units-container .loading-text {
@@ -972,7 +972,7 @@ input.is-invalid {
 .setting-item .transfer-option {
     min-height: 56px;
     padding: 0.85rem 1rem;
-    border: 1px solid var(--border-color, #e0e0e0);
+    border: 1px solid var(--bb-ink-16);
     border-radius: 10px;
     background: white;
     cursor: pointer;
@@ -981,7 +981,7 @@ input.is-invalid {
 
 .setting-item .transfer-option:hover,
 .setting-item .transfer-master-option:hover {
-    border-color: var(--primary-color, #0055b7);
+    border-color: var(--bb-steel);
     background: rgba(var(--primary-rgb), 0.04);
 }
 
@@ -991,7 +991,7 @@ input.is-invalid {
 }
 
 .transfer-unit-section {
-    border: 1px solid var(--border-color, #e0e0e0);
+    border: 1px solid var(--bb-ink-16);
     border-radius: 10px;
     padding: 1rem;
     background: #fafbfd;
@@ -1033,7 +1033,7 @@ input.is-invalid {
 
 .setting-item .transfer-master-option {
     padding: 0.55rem 0.8rem;
-    border: 1px solid var(--border-color, #e0e0e0);
+    border: 1px solid var(--bb-ink-16);
     border-radius: 999px;
     background: white;
     cursor: pointer;
@@ -1064,7 +1064,7 @@ input.is-invalid {
 
 .transfer-unit-name {
     padding: 0.85rem 0.95rem;
-    border: 1px solid var(--border-color, #e0e0e0);
+    border: 1px solid var(--bb-ink-16);
     border-radius: 10px;
     background: white;
     font-weight: 500;
@@ -1075,7 +1075,7 @@ input.is-invalid {
     justify-content: center;
     align-items: center;
     min-height: 52px;
-    border: 1px solid var(--border-color, #e0e0e0);
+    border: 1px solid var(--bb-ink-16);
     border-radius: 10px;
     background: white;
 }
@@ -1083,7 +1083,7 @@ input.is-invalid {
 .transfer-unit-checkbox input,
 .setting-item .transfer-master-option input,
 .setting-item .transfer-option input {
-    accent-color: var(--primary-color, #0055b7);
+    accent-color: var(--bb-steel);
     width: auto;
     height: 16px;
     padding: 0;
@@ -1096,7 +1096,7 @@ input.is-invalid {
     padding: 1rem;
     color: var(--bb-ink-70);
     text-align: center;
-    border: 1px dashed var(--border-color, #d9d9d9);
+    border: 1px dashed var(--bb-ink-16);
     border-radius: 10px;
     background: white;
 }
@@ -1124,7 +1124,7 @@ input.is-invalid {
 .transfer-modal {
     width: min(100%, 560px);
     background: #fff;
-    border: 1px solid var(--border-color, #e0e0e0);
+    border: 1px solid var(--bb-ink-16);
     border-radius: 16px;
     box-shadow: 0 24px 64px rgba(15, 23, 42, 0.2);
     overflow: hidden;
@@ -1137,7 +1137,7 @@ input.is-invalid {
 }
 
 .transfer-modal-header {
-    border-bottom: 1px solid var(--border-color, #e0e0e0);
+    border-bottom: 1px solid var(--bb-ink-16);
 }
 
 .transfer-modal-header h2 {
@@ -1204,7 +1204,7 @@ input.is-invalid {
     height: 54px;
     border-radius: 50%;
     border: 4px solid #dfe5ec;
-    border-top-color: var(--primary-color, #0055b7);
+    border-top-color: var(--bb-steel);
     animation: transferModalSpin 0.9s linear infinite;
 }
 
@@ -1222,7 +1222,7 @@ input.is-invalid {
     display: flex;
     justify-content: flex-end;
     gap: 0.75rem;
-    border-top: 1px solid var(--border-color, #e0e0e0);
+    border-top: 1px solid var(--bb-ink-16);
 }
 
 .transfer-modal-footer button[disabled] {
@@ -1252,7 +1252,7 @@ input.is-invalid {
     align-items: center;
     gap: 1rem;
     padding: 1rem;
-    border: 1px solid var(--border-color, #e0e0e0);
+    border: 1px solid var(--bb-ink-16);
     border-radius: 12px;
     background: #fff;
 }

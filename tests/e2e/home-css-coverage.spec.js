@@ -30,7 +30,7 @@ function homeCssHarness() {
     <link rel="stylesheet" href="/styles/style.css">
     <link rel="stylesheet" href="/styles/home.css">
 </head>
-<body>
+<body class="instructor-app">
     <div class="app-container">
         <header class="sidebar">
             <div class="logo-container"><h2>BiocBot</h2></div>
@@ -382,7 +382,7 @@ test.describe('home.css harness coverage', () => {
         await page.setViewportSize({ width: 1180, height: 1200 });
         await gotoHarness(page);
 
-        await expect(page.locator('.home-header')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
+        await expect(page.locator('.home-header')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)');
         const sidebarLayout = await page.locator('.sidebar').evaluate((sidebar) => {
             const nav = sidebar.querySelector('.main-nav');
             if (!nav) return null;
@@ -401,7 +401,7 @@ test.describe('home.css harness coverage', () => {
         await expect(page.locator('.selected-course-details')).toHaveCSS('background-color', 'rgb(255, 255, 255)');
 
         await page.locator('#course-select-dropdown').hover();
-        await expect(page.locator('#course-select-dropdown')).toHaveCSS('border-color', 'rgb(74, 111, 165)');
+        await expect(page.locator('#course-select-dropdown')).toHaveCSS('border-color', 'rgb(44, 69, 93)');
         await page.locator('#course-select-dropdown').focus();
         await expect(page.locator('#course-select-dropdown')).toHaveCSS('box-shadow', 'rgba(74, 144, 226, 0.1) 0px 0px 0px 3px');
 
@@ -413,7 +413,7 @@ test.describe('home.css harness coverage', () => {
         await expect(page.locator('.activity-item.error .activity-text')).toHaveCSS('color', 'rgb(220, 53, 69)');
 
         await page.locator('.activity-item').first().hover();
-        await expect(page.locator('.activity-item').first()).toHaveCSS('background-color', 'rgb(233, 236, 239)');
+        await expect(page.locator('.activity-item').first()).toHaveCSS('background-color', 'rgb(234, 235, 236)');
         await page.locator('.activity-item').first().focus();
         await expect(page.locator('.activity-item').first()).toHaveCSS('outline-style', 'solid');
 
@@ -422,12 +422,12 @@ test.describe('home.css harness coverage', () => {
         expect(await page.locator('.course-actions .action-btn.primary').evaluate((el) => getComputedStyle(el).transform)).not.toBe('none');
         await expect(page.locator('.action-btn.secondary').first()).toHaveCSS('background-color', 'rgb(108, 117, 125)');
 
-        await expect(page.locator('.flagged-section.has-pending-flags')).toHaveCSS('border-left-color', 'rgb(74, 111, 165)');
+        await expect(page.locator('.flagged-section.has-pending-flags')).toHaveCSS('border-left-color', 'rgb(44, 69, 93)');
         await expect(page.locator('.flagged-content')).toHaveCSS('display', 'flex');
         await expect(page.locator('.missing-item')).toHaveCSS('background-color', 'rgb(255, 243, 205)');
         await expect(page.locator('.missing-items-section')).toHaveCSS('border-left-color', 'rgb(255, 193, 7)');
         await expect(page.locator('.complete-section')).toHaveCSS('border-left-color', 'rgb(40, 167, 69)');
-        await expect(page.locator('.onboarding-prompt-section')).toHaveCSS('border-left-color', 'rgb(74, 111, 165)');
+        await expect(page.locator('.onboarding-prompt-section')).toHaveCSS('border-left-color', 'rgb(44, 69, 93)');
         await expect(page.locator('.disclaimer-item').first()).toHaveCSS('border-left-color', 'rgb(108, 117, 125)');
 
         await expect(page.locator('.statistics-grid')).toHaveCSS('display', 'grid');
@@ -452,12 +452,12 @@ test.describe('home.css harness coverage', () => {
         await expect(page.locator('.filter-checkbox')).toHaveCSS('user-select', 'none');
         await expect(page.locator('.table-scroll-container')).toHaveCSS('overflow-x', 'auto');
         await expect(page.locator('.live-struggle-table')).toHaveCSS('border-collapse', 'collapse');
-        await expect(page.locator('.live-struggle-table thead')).toHaveCSS('background-color', 'rgb(248, 249, 250)');
+        await expect(page.locator('.live-struggle-table thead')).toHaveCSS('background-color', 'rgb(242, 242, 243)');
         await expect(page.locator('.state-badge.active')).toHaveCSS('background-color', 'rgb(220, 53, 69)');
         await expect(page.locator('.state-badge.inactive')).toHaveCSS('background-color', 'rgb(108, 117, 125)');
-        await expect(page.locator('.live-struggle-table .no-data-row')).toHaveCSS('background-color', 'rgb(248, 249, 250)');
+        await expect(page.locator('.live-struggle-table .no-data-row')).toHaveCSS('background-color', 'rgb(242, 242, 243)');
         await page.locator('.live-struggle-table tbody tr').first().hover();
-        await expect(page.locator('.live-struggle-table tbody tr').first()).toHaveCSS('background-color', 'rgb(248, 249, 250)');
+        await expect(page.locator('.live-struggle-table tbody tr').first()).toHaveCSS('background-color', 'rgb(242, 242, 243)');
 
         await expect(page.locator('.weekly-struggle-chart-container')).toHaveCSS('border-radius', '8px');
         await expect(page.locator('.weekly-struggle-chart-container .chart-header')).toHaveCSS('display', 'flex');
@@ -520,8 +520,8 @@ test.describe('home.css harness coverage', () => {
 
         await expect(page.locator('.home-container')).toHaveCSS('padding', '15px');
         await expect(page.locator('.home-section').first()).toHaveCSS('padding', '15px');
-        await expect(page.locator('.home-header')).toHaveCSS('padding', '20px');
-        await expect(page.locator('.home-header h1')).toHaveCSS('font-size', '32px');
+        await expect(page.locator('.home-header')).toHaveCSS('padding', '0px 0px 20px');
+        await expect(page.locator('.home-header h1')).toHaveCSS('font-size', '20px');
         await expect(page.locator('.section-header h2').first()).toHaveCSS('font-size', '20.8px');
         await expect(page.locator('.course-summary .course-info')).toHaveCSS('flex-direction', 'column');
         await expect(page.locator('.course-name')).toHaveCSS('font-size', '24px');

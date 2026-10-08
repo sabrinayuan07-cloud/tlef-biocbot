@@ -24,7 +24,7 @@ function settingsHarness(role = 'instructor') {
     <link rel="stylesheet" href="/styles/style.css">
     <link rel="stylesheet" href="/styles/settings.css">
 </head>
-<body>
+<body class="instructor-app">
     <div class="app-container">
         <main class="main-content">
             <header class="settings-header">
@@ -381,7 +381,7 @@ test.describe('settings.css harness coverage', () => {
         await page.locator('#danger-enabled').hover();
         await expect(page.locator('#danger-enabled')).toHaveCSS('background-color', 'rgb(211, 47, 47)');
 
-        await expect(page.locator('#quiz-enabled-toggle + .toggle-slider')).toHaveCSS('background-color', 'rgb(74, 111, 165)');
+        await expect(page.locator('#quiz-enabled-toggle + .toggle-slider')).toHaveCSS('background-color', 'rgb(44, 69, 93)');
         expect(await pseudoStyle(page.locator('#quiz-enabled-toggle + .toggle-slider'), '::before', 'transform')).not.toBe('none');
         await page.locator('#quiz-enabled-toggle').evaluate((element) => {
             const input = /** @type {HTMLInputElement} */ (element);
@@ -391,14 +391,14 @@ test.describe('settings.css harness coverage', () => {
         await expect(page.locator('#quiz-enabled-toggle + .toggle-slider')).toHaveCSS('background-color', 'rgb(118, 118, 118)');
 
         await expect(page.locator('#testable-units-container')).toHaveCSS('display', 'flex');
-        await expect(page.locator('#testable-units-container .loading-text')).toHaveCSS('color', 'rgb(102, 102, 102)');
+        await expect(page.locator('#testable-units-container .loading-text')).toHaveCSS('color', 'rgba(29, 31, 32, 0.7)');
         await page.locator('#testable-units-container label').first().hover();
-        await expect(page.locator('#testable-units-container label').first()).toHaveCSS('border-color', 'rgb(74, 111, 165)');
+        await expect(page.locator('#testable-units-container label').first()).toHaveCSS('border-color', 'rgb(44, 69, 93)');
 
         await expect(page.locator('.invalid-feedback')).toHaveCSS('color', 'rgb(220, 53, 69)');
         await expect(page.locator('#invalid-course-name')).toHaveCSS('border-color', 'rgb(220, 53, 69)');
         await page.locator('#base-prompt').focus();
-        await expect(page.locator('#base-prompt')).toHaveCSS('border-color', 'rgb(74, 111, 165)');
+        await expect(page.locator('#base-prompt')).toHaveCSS('border-color', 'rgb(44, 69, 93)');
 
         await expect(page.locator('.course-status-panel')).toHaveCSS('display', 'flex');
         await expect(page.locator('.course-state-badge.active')).toHaveCSS('color', 'rgb(31, 122, 70)');
@@ -406,9 +406,9 @@ test.describe('settings.css harness coverage', () => {
 
         await expect(page.locator('.transfer-global-options')).toHaveCSS('display', 'grid');
         await page.locator('.transfer-option').first().hover();
-        await expect(page.locator('.transfer-option').first()).toHaveCSS('border-color', 'rgb(74, 111, 165)');
+        await expect(page.locator('.transfer-option').first()).toHaveCSS('border-color', 'rgb(44, 69, 93)');
         await page.locator('.transfer-master-option').first().hover();
-        await expect(page.locator('.transfer-master-option').first()).toHaveCSS('border-color', 'rgb(74, 111, 165)');
+        await expect(page.locator('.transfer-master-option').first()).toHaveCSS('border-color', 'rgb(44, 69, 93)');
         await expect(page.locator('.transfer-unit-grid-head').first()).toHaveCSS('text-transform', 'uppercase');
         await expect(page.locator('.transfer-unit-row')).toHaveCSS('display', 'contents');
         await expect(page.locator('.transfer-unit-checkbox').first()).toHaveCSS('min-height', '52px');
@@ -422,7 +422,7 @@ test.describe('settings.css harness coverage', () => {
         await page.locator('#transfer-course-btn').click();
         await expect(page.locator('#transfer-course-modal')).toHaveCSS('display', 'flex');
         await expect(page.locator('.transfer-modal')).toHaveCSS('overflow', 'hidden');
-        await expect(page.locator('.transfer-modal-header')).toHaveCSS('border-bottom-color', 'rgb(225, 229, 235)');
+        await expect(page.locator('.transfer-modal-header')).toHaveCSS('border-bottom-color', 'rgba(29, 31, 32, 0.16)');
         await expect(page.locator('.transfer-modal-header h2')).toHaveCSS('font-size', '19.2px');
         await expect(page.locator('.transfer-modal-body')).toHaveCSS('flex-direction', 'column');
         await expect(page.locator('.transfer-modal-body p').first()).toHaveCSS('line-height', '24.8px');
@@ -450,7 +450,7 @@ test.describe('settings.css harness coverage', () => {
         await expect(page.locator('.system-admin-list')).toHaveCSS('display', 'grid');
         await expect(page.locator('.system-admin-row.is-self')).toHaveCSS('background-color', 'rgb(244, 251, 255)');
         await expect(page.locator('.system-admin-badge')).toHaveCSS('border-radius', '999px');
-        await expect(page.locator('.system-admin-email').first()).toHaveCSS('color', 'rgb(102, 102, 102)');
+        await expect(page.locator('.system-admin-email').first()).toHaveCSS('color', 'rgba(29, 31, 32, 0.7)');
         await expect(page.locator('.system-admin-row').first()).toHaveCSS('flex-direction', 'column');
         await expect(page.locator('.system-admin-row').first()).toHaveCSS('align-items', 'stretch');
         await expect(page.locator('.system-admin-revoke-btn').first()).toBeVisible();
