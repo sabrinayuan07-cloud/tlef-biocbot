@@ -380,6 +380,42 @@ describe('main chat pipeline', () => {
         expect(qdrant.searchDocumentsByLecture.mock.calls[0][2]).toEqual(['Unit 1', 'Unit 2', 'Unit 3', 'Unit 4', 'Unit 5']);
     });
 
+    test.each(['chapter', 'week', 'lecture', 'slides', 'module', 'lesson'])(
+        '"%s 4" is recognized the same as "unit 4"',
+        async (word) => {
+            // Narrows to exactly one unit, so this takes the plain
+            // searchDocuments path (no need to fan out across a single unit).
+            const { qdrant } = aiWith();
+            const db = chatDb({
+                isAdditiveRetrieval: true,
+                lectures: ['Unit 1', 'Unit 2', 'Unit 3', 'Unit 4', 'Unit 5'].map(name => ({ name, isPublished: true })),
+            });
+            await request(app({ db })).post('/').send({
+                message: `Explain ${word} 4 for me.`, courseId: 'C1', unitName: 'Unit 5',
+            });
+            expect(qdrant.searchDocuments.mock.calls[0][1]).toMatchObject({ lectureNames: ['Unit 4'] });
+        }
+    );
+
+    test('a number resolves by position in the published order, even when the lecture title has no digit at all', async () => {
+        // The instructor titled their 4th upload "Gene expression and
+        // regulation" with no unit number anywhere in it - "unit 4" (or
+        // "chapter 4", "week 4", ...) must still resolve to that document
+        // by its position in course order, not by scanning its name for a digit.
+        const { qdrant } = aiWith();
+        const db = chatDb({
+            isAdditiveRetrieval: true,
+            lectures: [
+                'High School Review', 'Atomic Structure', 'Periodic Trends',
+                'Gene expression and regulation', 'Polymers',
+            ].map(name => ({ name, isPublished: true })),
+        });
+        await request(app({ db })).post('/').send({
+            message: 'what was chapter 4 about?', courseId: 'C1', unitName: 'Polymers',
+        });
+        expect(qdrant.searchDocuments.mock.calls[0][1]).toMatchObject({ lectureNames: ['Gene expression and regulation'] });
+    });
+
     test('a vague request with no unit reference searches the full additive scope, not a narrowed one', async () => {
         // This is the real issue #594 incident's condition: additive mode
         // spans many units, and the message carries no topic or unit words

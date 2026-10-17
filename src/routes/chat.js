@@ -35,22 +35,27 @@ function normalizeQdrantSearchResults(results) {
     return Array.isArray(results) ? results : [];
 }
 
-const UNIT_WORD_PATTERN = /\bunits?\b/gi;
+// Instructors and students refer to the same unit by whatever word their
+// course culture uses - "unit," "chapter," "week," "lecture," "slides,"
+// "module," "lesson." All of these are treated as equivalent ordinal
+// references when followed by a number.
+const UNIT_WORD_PATTERN = /\b(?:units?|chapters?|weeks?|lectures?|slides?|modules?|lessons?)\b/gi;
 const RANGE_PATTERN = /(\d+)\s*(?:-|–|to|through)\s*(\d+)/gi;
-// How far past "unit(s)" to look for number(s) - long enough for a short
-// list/range ("1, 2, and 3" or "1 through 10"), short enough to stay clear of
-// an unrelated clause later in the same sentence.
+// How far past the reference word to look for number(s) - long enough for a
+// short list/range ("1, 2, and 3" or "1 through 10"), short enough to stay
+// clear of an unrelated clause later in the same sentence.
 const UNIT_NUMBER_WINDOW = 40;
 
 /**
  * Pull every number that appears to be a unit reference out of a message:
- * "unit 3", "units 1-5", "units 1 to 5", "units 1, 2, and 3", "unit 6 or 7".
- * Scans a short window of text after each "unit(s)" mention (cut off at the
- * next sentence boundary) rather than trying to parse the exact connector
- * grammar between numbers, since English list phrasing ("5, 6, and 7") mixes
- * commas and words too inconsistently for a single alternation to cover
- * reliably. Numbers elsewhere in the message (not following "unit(s)") are
- * ignored, so "I got 3/5 right" or "that took 10 minutes" aren't misread.
+ * "unit 3", "chapter 1", "week 4", "slides 1-5", "lecture 1 to 5",
+ * "units 1, 2, and 3", "unit 6 or 7". Scans a short window of text after
+ * each reference-word mention (cut off at the next sentence boundary)
+ * rather than trying to parse the exact connector grammar between numbers,
+ * since English list phrasing ("5, 6, and 7") mixes commas and words too
+ * inconsistently for a single alternation to cover reliably. Numbers
+ * elsewhere in the message (not following a reference word) are ignored, so
+ * "I got 3/5 right" or "that took 10 minutes" aren't misread.
  */
 function extractUnitNumbers(message) {
     const numbers = new Set();
@@ -80,27 +85,47 @@ function extractUnitNumbers(message) {
  * Detect which in-scope units a message is actually asking about, so retrieval
  * can be narrowed to them instead of pooling across the entire allowed scope.
  *
- * Only ever narrows: the result is always a subset of allowedLectures, so this
- * can never surface a unit the student isn't authorized to see. Returns null
- * (meaning "use the full allowed scope, unchanged") when the message doesn't
- * clearly reference any specific unit - most single-unit and vague questions.
+ * A number in the message is matched against a unit's POSITION in the
+ * course's published order (the 4th thing the instructor posted is "unit 4"
+ * / "chapter 4" / "week 4" / "slides 4", regardless of what it's titled),
+ * not against a digit found inside its name - an instructor might title
+ * their 4th upload "Gene expression and regulation" with no number in it at
+ * all, and that should still resolve correctly. A literal digit in the
+ * lecture's own name and a display-name substring match are also checked,
+ * as additional (not exclusive) ways to match.
+ *
+ * Only ever narrows: the result is always a subset of allowedLectureNames,
+ * so this can never surface a unit the student isn't authorized to see -
+ * matches are found against the full published order first (so "unit 4"
+ * resolves correctly even if the student's current scope doesn't start at
+ * unit 1), then filtered down to what's actually allowed. Returns null
+ * (meaning "use the full allowed scope, unchanged") when the message
+ * doesn't clearly reference any specific unit, or references one outside
+ * the allowed scope - most single-unit and vague questions.
  *
  * @param {string} message - The student's latest message
- * @param {Array<{name: string, displayName?: string}>} allowedLectures - Lectures already restricted to the allowed scope, in order
- * @returns {string[]|null} Narrowed lecture names (subset of allowedLectures), or null if nothing detected
+ * @param {Array<{name: string, displayName?: string}>} publishedLectures - Every published lecture, in course order
+ * @param {string[]} allowedLectureNames - The names already authorized for this request (the scope boundary)
+ * @returns {string[]|null} Narrowed lecture names (subset of allowedLectureNames, in order), or null if nothing detected
  */
-function detectRequestedUnits(message, allowedLectures) {
-    if (!message || !Array.isArray(allowedLectures) || allowedLectures.length === 0) return null;
+function detectRequestedUnits(message, publishedLectures, allowedLectureNames) {
+    if (!message || !Array.isArray(publishedLectures) || publishedLectures.length === 0) return null;
+    if (!Array.isArray(allowedLectureNames) || allowedLectureNames.length === 0) return null;
 
     const requestedNumbers = extractUnitNumbers(message);
     const lowerMessage = message.toLowerCase();
     const matched = new Set();
 
-    for (const lecture of allowedLectures) {
+    publishedLectures.forEach((lecture, index) => {
+        const position = index + 1; // 1-based: the Nth published document, in course order
+        if (requestedNumbers.has(position)) {
+            matched.add(lecture.name);
+            return;
+        }
         const numMatch = lecture.name && lecture.name.match(/\d+/);
         if (numMatch && requestedNumbers.has(parseInt(numMatch[0], 10))) {
             matched.add(lecture.name);
-            continue;
+            return;
         }
         // Display-name matching: e.g. a student writing "the Mendelian
         // inheritance unit" when that unit's displayName is "Mendelian
@@ -110,10 +135,11 @@ function detectRequestedUnits(message, allowedLectures) {
             && lowerMessage.includes(lecture.displayName.trim().toLowerCase())) {
             matched.add(lecture.name);
         }
-    }
+    });
 
     if (matched.size === 0) return null;
-    return allowedLectures.map(l => l.name).filter(name => matched.has(name));
+    const narrowed = allowedLectureNames.filter(name => matched.has(name));
+    return narrowed.length > 0 ? narrowed : null;
 }
 
 /**
@@ -1323,13 +1349,13 @@ router.post('/', async (req, res) => {
         }
 
         // Narrow to explicitly-requested units when the message names them
-        // (numbers, ranges, or a unit's display name). This can only shrink
-        // the scope already computed above, never expand it, so it can't
-        // surface a unit the student isn't authorized to see.
-        const allowedLectureObjs = lectureNames.map(
-            name => publishedLectureObjs.find(l => l.name === name) || { name }
-        );
-        const requestedUnits = detectRequestedUnits(message, allowedLectureObjs);
+        // (numbers/positions, ranges, or a unit's display name). Matched
+        // against the full published order (so "unit 4" resolves correctly
+        // regardless of where the student's scope starts), then filtered to
+        // the scope already computed above - this can only shrink that
+        // scope, never expand it, so it can't surface a unit the student
+        // isn't authorized to see.
+        const requestedUnits = detectRequestedUnits(message, publishedLectureObjs, lectureNames);
         const searchScope = requestedUnits || lectureNames;
 
         // Debug logging to verify retrieval mode and scope
