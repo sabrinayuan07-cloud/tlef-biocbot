@@ -262,7 +262,12 @@ describe('main chat pipeline', () => {
     }
 
     function aiWith({ results = [], responses = [{ content: 'A grounded answer.', model: 'model', usage: { tokens: 9 } }] } = {}) {
-        const qdrant = { searchDocuments: jest.fn(async () => results) };
+        const qdrant = {
+            searchDocuments: jest.fn(async () => results),
+            // Fan-out path (searchScope.length > 1): defaults to no hits for
+            // any lecture unless a test overrides it with mockResolvedValueOnce.
+            searchDocumentsByLecture: jest.fn(async () => new Map()),
+        };
         const llm = {
             sendMessage: jest.fn(),
             analyzeMentalHealth: jest.fn(async () => ({ concernLevel: 'no concern', reason: '' })),
@@ -303,10 +308,12 @@ describe('main chat pipeline', () => {
         expect(llm.sendMessage.mock.calls[0][0]).toContain('ATP powers cells');
     });
 
-    test('additive secondary retrieval falls back and preserves conversation context', async () => {
+    test('additive scope with >1 unit fans out per lecture, falls back, and preserves conversation context', async () => {
         const results = [{ score: 0.05, lectureName: 'Unit 2', fileName: 'extra.txt', type: 'additional', chunkText: 'extra' }];
-        const { qdrant } = aiWith({ results });
-        qdrant.searchDocuments.mockResolvedValueOnce([]).mockResolvedValueOnce(results);
+        const { qdrant, llm } = aiWith();
+        qdrant.searchDocumentsByLecture
+            .mockResolvedValueOnce(new Map()) // main-materials pass: nothing found
+            .mockResolvedValueOnce(new Map([['Unit 2', results]])); // additional-materials pass
         const db = chatDb({
             isAdditiveRetrieval: true,
             additionalMaterialSecondarySearch: true,
@@ -317,10 +324,111 @@ describe('main chat pipeline', () => {
             conversationContext: { conversationMessages: [{ role: 'user', content: 'Earlier' }, { role: 'assistant', content: 'Reply' }] },
         });
         expect(res.status).toBe(200);
-        expect(res.body.retrieval).toEqual({ mode: 'additive', lectureNames: ['Unit 1', 'Unit 2'] });
-        expect(qdrant.searchDocuments.mock.calls[0][1]).toMatchObject({ excludeAdditionalMaterials: true });
-        expect(qdrant.searchDocuments.mock.calls[1][1]).toMatchObject({ additionalMaterialsOnly: true });
+        expect(res.body.retrieval).toEqual({ mode: 'additive', lectureNames: ['Unit 1', 'Unit 2'], searchScope: ['Unit 1', 'Unit 2'] });
+        // Plain pooled searchDocuments must NOT be used once the scope spans
+        // more than one unit - that's exactly the "one unit crowds out the
+        // rest" bug (issue #594) this fan-out replaces.
+        expect(qdrant.searchDocuments).not.toHaveBeenCalled();
+        expect(qdrant.searchDocumentsByLecture.mock.calls[0]).toEqual(['continue', 'C1', ['Unit 1', 'Unit 2'], 5, { excludeAdditionalMaterials: true }]);
+        expect(qdrant.searchDocumentsByLecture.mock.calls[1]).toEqual(['continue', 'C1', ['Unit 1', 'Unit 2'], 5, { additionalMaterialsOnly: true }]);
         expect(res.body.sourceAttribution.source).toBe('GPT');
+        // Protege mode's own instructions must survive a conversationContext
+        // turn instead of being replaced by the tutor-mode wrapper (the
+        // "related bug" flagged alongside issue #594's main findings).
+        expect(llm.sendMessage.mock.calls[0][0]).toContain('Do not explain the context to the user');
+        expect(llm.sendMessage.mock.calls[0][0]).toContain('Previous conversation:');
+        expect(llm.sendMessage.mock.calls[0][0]).toContain('Student: continue');
+    });
+
+    test('an explicit multi-unit request narrows the search scope and guarantees each named unit a slot', async () => {
+        const unit5 = [{ id: '5a', score: 0.6, lectureName: 'Unit 5', fileName: 'u5.pdf', documentId: 'd5', chunkText: 'mutation content' }];
+        const unit6 = [{ id: '6a', score: 0.4, lectureName: 'Unit 6', fileName: 'u6.pdf', documentId: 'd6', chunkText: 'population genetics content' }];
+        const unit7 = [{ id: '7a', score: 0.9, lectureName: 'Unit 7', fileName: 'u7.pdf', documentId: 'd7', chunkText: 'natural selection content' }];
+        const { qdrant, llm } = aiWith();
+        qdrant.searchDocumentsByLecture.mockResolvedValueOnce(new Map([
+            ['Unit 5', unit5], ['Unit 6', unit6], ['Unit 7', unit7],
+        ]));
+        const db = chatDb({
+            isAdditiveRetrieval: true,
+            lectures: ['Unit 1', 'Unit 2', 'Unit 3', 'Unit 4', 'Unit 5', 'Unit 6', 'Unit 7'].map(name => ({ name, isPublished: true })),
+        });
+        const res = await request(app({ db })).post('/').send({
+            message: 'Quiz me on units 5, 6, and 7.', courseId: 'C1', unitName: 'Unit 7',
+        });
+        expect(res.status).toBe(200);
+        // Full allowed scope is still every published unit up to the current
+        // one; only the *search* narrows to what was explicitly asked for.
+        expect(res.body.retrieval.lectureNames).toHaveLength(7);
+        expect(res.body.retrieval.searchScope).toEqual(['Unit 5', 'Unit 6', 'Unit 7']);
+        expect(qdrant.searchDocumentsByLecture).toHaveBeenCalledWith(
+            'Quiz me on units 5, 6, and 7.', 'C1', ['Unit 5', 'Unit 6', 'Unit 7'], 5, {}
+        );
+        const lecturesCited = res.body.citations.map(c => c.lectureName).sort();
+        expect(lecturesCited).toEqual(['Unit 5', 'Unit 6', 'Unit 7']);
+    });
+
+    test('a "through" range narrows to every unit in the range', async () => {
+        const { qdrant } = aiWith();
+        qdrant.searchDocumentsByLecture.mockResolvedValueOnce(new Map());
+        const db = chatDb({
+            isAdditiveRetrieval: true,
+            lectures: ['Unit 1', 'Unit 2', 'Unit 3', 'Unit 4', 'Unit 5'].map(name => ({ name, isPublished: true })),
+        });
+        await request(app({ db })).post('/').send({
+            message: 'Quiz me on the content of units 1 through 5.', courseId: 'C1', unitName: 'Unit 5',
+        });
+        expect(qdrant.searchDocumentsByLecture.mock.calls[0][2]).toEqual(['Unit 1', 'Unit 2', 'Unit 3', 'Unit 4', 'Unit 5']);
+    });
+
+    test('a vague request with no unit reference searches the full additive scope, not a narrowed one', async () => {
+        // This is the real issue #594 incident's condition: additive mode
+        // spans many units, and the message carries no topic or unit words
+        // at all ("give me a quiz on the content of each unit..."). Fix A
+        // can't narrow this (nothing to detect), so fix B's fan-out must
+        // still cover every in-scope unit, not just whichever the message
+        // happens to mention.
+        const { qdrant } = aiWith();
+        qdrant.searchDocumentsByLecture.mockResolvedValueOnce(new Map());
+        const db = chatDb({
+            isAdditiveRetrieval: true,
+            lectures: ['Unit 1', 'Unit 2', 'Unit 3'].map(name => ({ name, isPublished: true })),
+        });
+        const res = await request(app({ db })).post('/').send({
+            message: 'give me a quiz on the content of each unit', courseId: 'C1', unitName: 'Unit 3',
+        });
+        expect(res.body.retrieval.searchScope).toEqual(['Unit 1', 'Unit 2', 'Unit 3']);
+        expect(qdrant.searchDocumentsByLecture.mock.calls[0][2]).toEqual(['Unit 1', 'Unit 2', 'Unit 3']);
+    });
+
+    test('messageToSend names which units have content and which are missing, and never tells the student to upload material', async () => {
+        const results = [{ score: 0.6, lectureName: 'Unit 2', fileName: 'u2.pdf', documentId: 'd2', chunkText: 'covered content' }];
+        const { qdrant, llm } = aiWith();
+        qdrant.searchDocumentsByLecture.mockResolvedValueOnce(new Map([['Unit 2', results]])); // Unit 4 comes back empty
+        const db = chatDb({
+            isAdditiveRetrieval: true,
+            lectures: [{ name: 'Unit 1', isPublished: true }, { name: 'Unit 2', isPublished: true }, { name: 'Unit 4', isPublished: true }],
+        });
+        const res = await request(app({ db })).post('/').send({
+            message: 'Summarize units 2 and 4.', courseId: 'C1', unitName: 'Unit 4',
+        });
+        expect(res.status).toBe(200);
+        const sentMessage = llm.sendMessage.mock.calls[0][0];
+        expect(sentMessage).toContain('only includes material from: Unit 2');
+        expect(sentMessage).toContain('No material was retrieved for: Unit 4');
+        expect(sentMessage.toLowerCase()).toContain('never ask the student to upload');
+    });
+
+    test('explain mode keeps its own instructions across a conversation turn', async () => {
+        const { llm } = aiWith();
+        const res = await request(app({ db: chatDb() })).post('/').send({
+            message: 'go deeper', courseId: 'C1', unitName: 'Unit 1', isExplanationRequest: true,
+            conversationContext: { conversationMessages: [{ role: 'user', content: 'what is ATP' }, { role: 'assistant', content: 'ATP is...' }] },
+        });
+        expect(res.status).toBe(200);
+        const sentMessage = llm.sendMessage.mock.calls[0][0];
+        expect(sentMessage).toContain('Use the provided course context to help explain the concept if needed');
+        expect(sentMessage).toContain('Previous conversation:');
+        expect(sentMessage).toContain('Student: go deeper');
     });
 
     test('summary classification can append a re-prompt and truncated output auto-continues', async () => {

@@ -25,6 +25,7 @@ const { resolveCourseAi, sendLlmKeyError } = require('./llmKeyMiddleware');
 const { evaluateObjectiveAnswer } = require('../services/objectiveAnswer');
 const { createId } = require('../services/id');
 const { LANES } = require('../services/llmLanes');
+const QdrantService = require('../services/qdrantService');
 
 function generateChatMessageId() {
     return createId('msg');
@@ -32,6 +33,87 @@ function generateChatMessageId() {
 
 function normalizeQdrantSearchResults(results) {
     return Array.isArray(results) ? results : [];
+}
+
+const UNIT_WORD_PATTERN = /\bunits?\b/gi;
+const RANGE_PATTERN = /(\d+)\s*(?:-|–|to|through)\s*(\d+)/gi;
+// How far past "unit(s)" to look for number(s) - long enough for a short
+// list/range ("1, 2, and 3" or "1 through 10"), short enough to stay clear of
+// an unrelated clause later in the same sentence.
+const UNIT_NUMBER_WINDOW = 40;
+
+/**
+ * Pull every number that appears to be a unit reference out of a message:
+ * "unit 3", "units 1-5", "units 1 to 5", "units 1, 2, and 3", "unit 6 or 7".
+ * Scans a short window of text after each "unit(s)" mention (cut off at the
+ * next sentence boundary) rather than trying to parse the exact connector
+ * grammar between numbers, since English list phrasing ("5, 6, and 7") mixes
+ * commas and words too inconsistently for a single alternation to cover
+ * reliably. Numbers elsewhere in the message (not following "unit(s)") are
+ * ignored, so "I got 3/5 right" or "that took 10 minutes" aren't misread.
+ */
+function extractUnitNumbers(message) {
+    const numbers = new Set();
+    let match;
+    UNIT_WORD_PATTERN.lastIndex = 0;
+    while ((match = UNIT_WORD_PATTERN.exec(message)) !== null) {
+        const windowStart = match.index + match[0].length;
+        const window = message.slice(windowStart, windowStart + UNIT_NUMBER_WINDOW);
+        const sentenceEnd = window.search(/[.!?\n]/);
+        const scoped = sentenceEnd === -1 ? window : window.slice(0, sentenceEnd);
+
+        RANGE_PATTERN.lastIndex = 0;
+        let rangeMatch;
+        while ((rangeMatch = RANGE_PATTERN.exec(scoped)) !== null) {
+            const start = parseInt(rangeMatch[1], 10);
+            const end = parseInt(rangeMatch[2], 10);
+            const [lo, hi] = start <= end ? [start, end] : [end, start];
+            for (let n = lo; n <= hi; n++) numbers.add(n);
+        }
+        const bareNumbers = scoped.match(/\d+/g) || [];
+        for (const n of bareNumbers) numbers.add(parseInt(n, 10));
+    }
+    return numbers;
+}
+
+/**
+ * Detect which in-scope units a message is actually asking about, so retrieval
+ * can be narrowed to them instead of pooling across the entire allowed scope.
+ *
+ * Only ever narrows: the result is always a subset of allowedLectures, so this
+ * can never surface a unit the student isn't authorized to see. Returns null
+ * (meaning "use the full allowed scope, unchanged") when the message doesn't
+ * clearly reference any specific unit - most single-unit and vague questions.
+ *
+ * @param {string} message - The student's latest message
+ * @param {Array<{name: string, displayName?: string}>} allowedLectures - Lectures already restricted to the allowed scope, in order
+ * @returns {string[]|null} Narrowed lecture names (subset of allowedLectures), or null if nothing detected
+ */
+function detectRequestedUnits(message, allowedLectures) {
+    if (!message || !Array.isArray(allowedLectures) || allowedLectures.length === 0) return null;
+
+    const requestedNumbers = extractUnitNumbers(message);
+    const lowerMessage = message.toLowerCase();
+    const matched = new Set();
+
+    for (const lecture of allowedLectures) {
+        const numMatch = lecture.name && lecture.name.match(/\d+/);
+        if (numMatch && requestedNumbers.has(parseInt(numMatch[0], 10))) {
+            matched.add(lecture.name);
+            continue;
+        }
+        // Display-name matching: e.g. a student writing "the Mendelian
+        // inheritance unit" when that unit's displayName is "Mendelian
+        // Inheritance". Length-gated so a 1-2 char displayName can't match
+        // on noise.
+        if (lecture.displayName && lecture.displayName.trim().length >= 4
+            && lowerMessage.includes(lecture.displayName.trim().toLowerCase())) {
+            matched.add(lecture.name);
+        }
+    }
+
+    if (matched.size === 0) return null;
+    return allowedLectures.map(l => l.name).filter(name => matched.has(name));
 }
 
 /**
@@ -1228,36 +1310,62 @@ router.post('/', async (req, res) => {
             : false;
 
         // Build lectureNames filter using published units only, ordered by lectures array
-        const publishedLectures = (course.lectures || []).filter(l => l.isPublished).map(l => l.name);
+        const publishedLectureObjs = (course.lectures || []).filter(l => l.isPublished);
+        const publishedLectures = publishedLectureObjs.map(l => l.name);
         if (!publishedLectures.includes(unitName)) {
             return res.status(400).json({ success: false, message: 'Selected unit is not published or does not exist' });
         }
 
         let lectureNames = [unitName];
         if (isAdditive) {
-            const order = (course.lectures || []).filter(l => l.isPublished).map(l => l.name);
-            const idx = order.indexOf(unitName);
-            lectureNames = idx >= 0 ? order.slice(0, idx + 1) : [unitName];
+            const idx = publishedLectures.indexOf(unitName);
+            lectureNames = idx >= 0 ? publishedLectures.slice(0, idx + 1) : [unitName];
         }
 
+        // Narrow to explicitly-requested units when the message names them
+        // (numbers, ranges, or a unit's display name). This can only shrink
+        // the scope already computed above, never expand it, so it can't
+        // surface a unit the student isn't authorized to see.
+        const allowedLectureObjs = lectureNames.map(
+            name => publishedLectureObjs.find(l => l.name === name) || { name }
+        );
+        const requestedUnits = detectRequestedUnits(message, allowedLectureObjs);
+        const searchScope = requestedUnits || lectureNames;
+
         // Debug logging to verify retrieval mode and scope
-        console.log(`🔎 [CHAT_RAG] RetrievalMode=${isAdditive ? 'additive' : 'single'} | Course=${courseId} | Unit=${unitName} | LectureNames=${JSON.stringify(lectureNames)}`);
+        console.log(`🔎 [CHAT_RAG] RetrievalMode=${isAdditive ? 'additive' : 'single'} | Course=${courseId} | Unit=${unitName} | LectureNames=${JSON.stringify(lectureNames)} | SearchScope=${JSON.stringify(searchScope)}${requestedUnits ? ' (narrowed by detected unit reference)' : ''}`);
 
         const ragSettings = CourseModel.resolveRagSettings(course);
 
         // Retrieve top chunks from Qdrant.
+        // A single pooled search across multiple units lets whichever unit's
+        // chunks score highest take every slot, starving the others even when
+        // several units are equally in scope and equally relevant. When more
+        // than one unit is in the search scope, fan out a bounded search per
+        // unit and merge with a guaranteed per-unit floor instead (same
+        // pattern already used for the Super Course's per-course fan-out).
         // When the course de-prioritizes additional materials, search the main
         // materials (lecture notes, practice questions) first and only fall back
         // to additional materials if nothing was found there.
+        const runSearch = async (filters) => {
+            if (searchScope.length > 1) {
+                const byLecture = await qdrant.searchDocumentsByLecture(
+                    message, courseId, searchScope, ragSettings.student.topK, filters
+                );
+                return QdrantService.mergeBalancedLectureResults(byLecture, ragSettings.student.topK);
+            }
+            return qdrant.searchDocuments(message, { courseId, lectureNames: searchScope, ...filters }, ragSettings.student.topK);
+        };
+
         let searchResults;
         if (course.additionalMaterialSecondarySearch === true) {
-            searchResults = await qdrant.searchDocuments(message, { courseId, lectureNames, excludeAdditionalMaterials: true }, ragSettings.student.topK);
+            searchResults = await runSearch({ excludeAdditionalMaterials: true });
             if (!Array.isArray(searchResults) || searchResults.length === 0) {
                 console.log('🔎 [CHAT_RAG] No chunks found in main materials; falling back to additional materials');
-                searchResults = await qdrant.searchDocuments(message, { courseId, lectureNames, additionalMaterialsOnly: true }, ragSettings.student.topK);
+                searchResults = await runSearch({ additionalMaterialsOnly: true });
             }
         } else {
-            searchResults = await qdrant.searchDocuments(message, { courseId, lectureNames }, ragSettings.student.topK);
+            searchResults = await runSearch({});
         }
 
         searchResults = normalizeQdrantSearchResults(searchResults);
@@ -1329,50 +1437,77 @@ router.post('/', async (req, res) => {
             };
         }
 
-        // Build the message to send to LLM
-        let messageToSend;
-        
-        if (mode === 'protege') {
-            messageToSend = `
-CONTEXT (The correct answers):
-${contextText}
-
-INSTRUCTIONS:
-Based on the Context above, act as the student described in the System Prompt.
-The user just said: "${message}"
-Do not explain the context to the user. Ask the user to explain it to you.`;
-        } else if (req.body.isExplanationRequest) {
-            // Explain mode
-            messageToSend = `Use the provided course context to help explain the concept if needed.
-\n\nCourse context:\n${contextText}\n\nConcept/Text to explain:\n"${message}"`;
-        } else {
-            // Default/Tutor mode
-            messageToSend = `Use only the provided course context to answer. Cite which unit a fact came from.
-\n\nCourse context:\n${contextText}\n\nStudent question: ${message}`;
-        }
-
-        // If we have conversation context (continuing a chat), use structured conversation approach
+        // The prior conversation, pre-formatted as "Speaker: content" lines
+        // ending with the current message - or null on the first turn. Built
+        // once and reused by whichever mode template is active below, so the
+        // current message is never duplicated (once as the question, again
+        // as history) and so continuing a conversation no longer drops
+        // protege/explain mode's instructions back to the plain tutor
+        // wrapper (previously, any conversationContext unconditionally
+        // overwrote messageToSend with the tutor-mode template regardless of
+        // mode - see issue #594's "related bugs found while scoping").
+        let historyText = null;
         if (conversationContext && conversationContext.conversationMessages) {
             console.log('🔄 [CHAT_CONTINUE] Using structured conversation context');
-
-            // Build the conversation history as a single message
             let conversationHistory = '';
             conversationContext.conversationMessages.forEach(msg => {
                 const speaker = msg.role === 'user' ? 'Student' : 'BiocBot';
                 conversationHistory += `${speaker}: ${msg.content}\n\n`;
             });
-
-            // Add the student's new message
             conversationHistory += `Student: ${message}`;
+            historyText = conversationHistory;
+        }
 
-            // Create the full message with conversation context
-            messageToSend = `Use only the provided course context to answer. Cite which unit a fact came from.
+        // Ground the model in exactly which in-scope units actually came
+        // back with content, instead of letting it guess (or contradict a
+        // prior turn where the same unit WAS successfully retrieved - see
+        // issue #594's "within-conversation self-contradiction" finding).
+        const coveredUnits = Array.from(new Set(searchResults.map(r => r.lectureName).filter(Boolean)));
+        const missingUnits = searchScope.filter(u => !coveredUnits.includes(u));
+        const coverageNote = coveredUnits.length > 0
+            ? `The course context below only includes material from: ${coveredUnits.join(', ')}.`
+              + (missingUnits.length > 0
+                  ? ` No material was retrieved for: ${missingUnits.join(', ')} — if the student's question touches these, say so clearly by naming them, and suggest asking about them one at a time or narrowing the request. Never ask the student to upload, share, or provide course materials themselves; only an instructor can add material to the course.`
+                  : '')
+            : `No course material was retrieved for this question. Say so clearly, and suggest the student narrow or rephrase their question. Never ask the student to upload, share, or provide course materials themselves; only an instructor can add material to the course.`;
+
+        // Build the message to send to LLM
+        let messageToSend;
+
+        if (mode === 'protege') {
+            const userTurn = historyText
+                ? `Previous conversation:\n${historyText}`
+                : `The user just said: "${message}"`;
+            messageToSend = `CONTEXT (The correct answers):
+${contextText}
+
+INSTRUCTIONS:
+Based on the Context above, act as the student described in the System Prompt.
+Do not explain the context to the user. Ask the user to explain it to you.
+
+${userTurn}`;
+        } else if (req.body.isExplanationRequest) {
+            // Explain mode
+            const userTurn = historyText
+                ? `Previous conversation:\n${historyText}`
+                : `Concept/Text to explain:\n"${message}"`;
+            messageToSend = `Use the provided course context to help explain the concept if needed. ${coverageNote}
 
 Course context:
 ${contextText}
 
-Previous conversation:
-${conversationHistory}`;
+${userTurn}`;
+        } else {
+            // Default/Tutor mode
+            const userTurn = historyText
+                ? `Previous conversation:\n${historyText}`
+                : `Student question: ${message}`;
+            messageToSend = `Answer using the course context below as your primary source, and cite which unit a fact came from. ${coverageNote}
+
+Course context:
+${contextText}
+
+${userTurn}`;
         }
 
         // Retrieve custom prompts from course object or use defaults
@@ -1548,7 +1683,8 @@ ${conversationHistory}`;
             },
             retrieval: {
                 mode: isAdditive ? 'additive' : 'single',
-                lectureNames
+                lectureNames,
+                searchScope
             },
             struggleState: struggleState,
             struggleDebug: {

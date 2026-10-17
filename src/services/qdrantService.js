@@ -846,6 +846,121 @@ class QdrantService {
     }
 
     /**
+     * Run the same semantic search independently against each lecture/unit and
+     * return the per-lecture top hits, keyed by lectureName. The query is
+     * embedded once and the vector reused for every lecture filter.
+     *
+     * Mirrors searchDocumentsByCourse: a single pooled top-K search across many
+     * units lets whichever unit's chunks score highest take every slot, even
+     * when several units are equally in-scope and equally relevant to the
+     * query. Callers that need guaranteed per-unit representation (e.g. a
+     * student asking about several units at once) should use this instead of
+     * searchDocuments with a multi-value lectureNames filter.
+     *
+     * @param {string} query - Search query text
+     * @param {string} courseId - Course the lectures belong to
+     * @param {string[]} lectureNames - Lecture/unit names to search across
+     * @param {number} perLectureLimit - Max hits to fetch per lecture
+     * @param {Object} [extraFilters] - Additional must/must_not filter pieces,
+     *   e.g. { excludeAdditionalMaterials: true } (same options searchDocuments supports)
+     * @returns {Promise<Map<string, Array<Object>>>} lectureName -> results (score desc)
+     */
+    async searchDocumentsByLecture(query, courseId, lectureNames = [], perLectureLimit = 10, extraFilters = {}) {
+        const resultsByLecture = new Map();
+        if (!courseId || !Array.isArray(lectureNames) || lectureNames.length === 0) {
+            return resultsByLecture;
+        }
+
+        await this.ensureCollectionExists();
+        const queryVector = await this.generateQueryVector(query);
+
+        const baseMust = [
+            { key: 'courseId', match: { value: courseId } }
+        ];
+        let mustNot;
+        if (extraFilters.excludeAdditionalMaterials) {
+            mustNot = [
+                { key: 'documentType', match: { value: 'additional' } },
+                { key: 'type', match: { value: 'additional' } }
+            ];
+        } else if (extraFilters.additionalMaterialsOnly) {
+            baseMust.push({
+                should: [
+                    { key: 'documentType', match: { value: 'additional' } },
+                    { key: 'type', match: { value: 'additional' } }
+                ]
+            });
+        }
+
+        // Fan out across lectures in parallel, reusing the single query vector.
+        const perLecture = await Promise.all(lectureNames.map(async (lectureName) => {
+            const filter = { must: [...baseMust, { key: 'lectureName', match: { value: lectureName } }] };
+            if (mustNot) filter.must_not = mustNot;
+            const { points: searchResults } = await this.client.query(this.collectionName, {
+                query: queryVector,
+                limit: perLectureLimit,
+                with_payload: true,
+                with_vector: false,
+                filter
+            });
+            return [lectureName, searchResults.map(result => this.transformSearchResult(result))];
+        }));
+
+        for (const [lectureName, results] of perLecture) {
+            resultsByLecture.set(lectureName, results);
+        }
+        return resultsByLecture;
+    }
+
+    /**
+     * Merge per-lecture search results into one ranked list that guarantees
+     * every lecture with any hits a floor of representation, instead of a
+     * plain global top-K that lets one unit crowd out the rest.
+     *
+     * Same "round-robin by rank up to a floor, then fill the remainder by
+     * global score" shape as superCourseService.js's mergeBalancedCourseResults
+     * - deliberately duplicated rather than shared, since the two merges
+     * operate over different grouping keys (lectureName vs courseId) from
+     * different call sites, and a shared generic version wasn't worth the
+     * indirection for ~25 lines of plain array logic.
+     *
+     * @param {Map<string, Array<Object>>} resultsByLecture - lectureName -> results (score desc)
+     * @param {number} target - Total number of results to return
+     * @returns {Array<Object>} Merged results, length <= target
+     */
+    static mergeBalancedLectureResults(resultsByLecture, target) {
+        const lists = [...resultsByLecture.values()].filter(list => list.length > 0);
+        if (lists.length === 0) return [];
+
+        const floor = Math.max(1, Math.floor(target / lists.length));
+
+        const taken = new Set();
+        const guaranteed = [];
+        // Round-robin by rank: each lecture's #1 chunk, then each lecture's #2,
+        // ... up to the floor - so the front of the list is balanced across units.
+        for (let rank = 0; rank < floor; rank++) {
+            for (const list of lists) {
+                const item = list[rank];
+                if (item && !taken.has(item.id)) {
+                    taken.add(item.id);
+                    guaranteed.push(item);
+                }
+            }
+        }
+
+        // Everything not already taken, ranked globally by score, fills the remainder.
+        const remainder = [];
+        for (const list of lists) {
+            for (const item of list) {
+                if (!taken.has(item.id)) remainder.push(item);
+            }
+        }
+        remainder.sort((a, b) => (b.score || 0) - (a.score || 0));
+
+        return [...guaranteed, ...remainder].slice(0, target);
+    }
+
+    /**
      * Retrieve all chunks for a specific document, ordered by chunkIndex
      * @param {string} documentId - Document ID to retrieve chunks for
      * @returns {Promise<Array>} Array of chunk texts in order

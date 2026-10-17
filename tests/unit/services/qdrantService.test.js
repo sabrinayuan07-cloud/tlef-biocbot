@@ -347,6 +347,57 @@ describe('QdrantService', () => {
         expect(service.client.query).toHaveBeenCalledTimes(2);
     });
 
+    test('searchDocumentsByLecture embeds once, filters by course + lecture, and maps each lecture result', async () => {
+        const service = makeService({ client: { query: jest.fn(async (_name, params) => ({
+            points: [hit({ lectureName: params.filter.must[1].match.value })]
+        })) } });
+        await expect(service.searchDocumentsByLecture('q', 'C1', [])).resolves.toEqual(new Map());
+        const result = await service.searchDocumentsByLecture('q', 'C1', ['Unit 1', 'Unit 2'], 2);
+        expect([...result.keys()]).toEqual(['Unit 1', 'Unit 2']);
+        expect(service.embeddings.embed).toHaveBeenCalledTimes(1);
+        expect(service.client.query).toHaveBeenCalledTimes(2);
+        expect(service.client.query.mock.calls[0][1].filter.must).toEqual([
+            { key: 'courseId', match: { value: 'C1' } },
+            { key: 'lectureName', match: { value: 'Unit 1' } },
+        ]);
+    });
+
+    test('searchDocumentsByLecture applies excludeAdditionalMaterials and additionalMaterialsOnly like searchDocuments', async () => {
+        const service = makeService({ client: { query: jest.fn(async () => ({ points: [] })) } });
+        await service.searchDocumentsByLecture('q', 'C1', ['Unit 1'], 5, { excludeAdditionalMaterials: true });
+        expect(service.client.query.mock.calls[0][1].filter.must_not).toEqual([
+            { key: 'documentType', match: { value: 'additional' } },
+            { key: 'type', match: { value: 'additional' } },
+        ]);
+        await service.searchDocumentsByLecture('q', 'C1', ['Unit 1'], 5, { additionalMaterialsOnly: true });
+        expect(service.client.query.mock.calls[1][1].filter.must).toHaveLength(3);
+    });
+
+    test('mergeBalancedLectureResults guarantees a floor per lecture before filling the remainder by score', () => {
+        expect(QdrantService.mergeBalancedLectureResults(new Map(), 5)).toEqual([]);
+
+        const byLecture = new Map([
+            ['Unit 7', [{ id: '7a', score: 0.9 }, { id: '7b', score: 0.8 }, { id: '7c', score: 0.7 }]],
+            ['Unit 5', [{ id: '5a', score: 0.85 }]],
+            ['Unit 6', [{ id: '6a', score: 0.6 }]],
+        ]);
+        const merged = QdrantService.mergeBalancedLectureResults(byLecture, 3);
+        // floor = max(1, floor(3/3)) = 1, so each lecture's #1 result is
+        // guaranteed a slot - Unit 6 can't be crowded out by Unit 7 having
+        // more/higher-scoring chunks overall.
+        expect(merged.map(r => r.id).sort()).toEqual(['5a', '6a', '7a']);
+        expect(merged).toHaveLength(3);
+    });
+
+    test('mergeBalancedLectureResults never returns duplicate ids and caps at the target', () => {
+        const byLecture = new Map([
+            ['Unit 1', [{ id: 'x', score: 0.9 }, { id: 'y', score: 0.5 }]],
+            ['Unit 2', [{ id: 'x', score: 0.4 }]], // same id across lectures must not double-count
+        ]);
+        const merged = QdrantService.mergeBalancedLectureResults(byLecture, 10);
+        expect(merged.map(r => r.id)).toEqual(['x', 'y']);
+    });
+
     test('getDocumentChunks scrolls pages and sorts chunks', async () => {
         const scroll = jest.fn()
             .mockResolvedValueOnce({ points: [{ payload: { chunkIndex: 2, chunkText: 'two' } }], next_page_offset: 'next' })
