@@ -12,6 +12,7 @@ jest.mock('../../../src/models/Course', () => ({
     getAssessmentQuestions: jest.fn(),
     normalizeTopicList: jest.fn(value => Array.isArray(value) ? value : []),
     resolveRagSettings: jest.fn(() => ({ student: { topK: 5 } })),
+    MAX_RAG_TOP_K: 20,
 }));
 jest.mock('../../../src/models/Document', () => ({ getDocumentById: jest.fn() }));
 jest.mock('../../../src/models/MessageFeedback', () => ({
@@ -308,12 +309,17 @@ describe('main chat pipeline', () => {
         expect(llm.sendMessage.mock.calls[0][0]).toContain('ATP powers cells');
     });
 
-    test('additive scope with >1 unit fans out per lecture, falls back, and preserves conversation context', async () => {
+    test('a vague message with no unit/broad-phrase reference stays on the plain pooled search, even with >1 unit in scope', async () => {
+        // This is the regression a code reviewer caught: additive scope
+        // naturally contains several units, but an ordinary single-topic
+        // question ("continue") isn't asking about more than one of them.
+        // Fanning it out anyway would spread its one relevant unit's slots
+        // across every other in-scope unit, and could even drop the
+        // current unit's own content - this must keep using the same plain
+        // pooled search it always did pre-fan-out.
         const results = [{ score: 0.05, lectureName: 'Unit 2', fileName: 'extra.txt', type: 'additional', chunkText: 'extra' }];
         const { qdrant, llm } = aiWith();
-        qdrant.searchDocumentsByLecture
-            .mockResolvedValueOnce(new Map()) // main-materials pass: nothing found
-            .mockResolvedValueOnce(new Map([['Unit 2', results]])); // additional-materials pass
+        qdrant.searchDocuments.mockResolvedValueOnce([]).mockResolvedValueOnce(results);
         const db = chatDb({
             isAdditiveRetrieval: true,
             additionalMaterialSecondarySearch: true,
@@ -325,12 +331,9 @@ describe('main chat pipeline', () => {
         });
         expect(res.status).toBe(200);
         expect(res.body.retrieval).toEqual({ mode: 'additive', lectureNames: ['Unit 1', 'Unit 2'], searchScope: ['Unit 1', 'Unit 2'] });
-        // Plain pooled searchDocuments must NOT be used once the scope spans
-        // more than one unit - that's exactly the "one unit crowds out the
-        // rest" bug (issue #594) this fan-out replaces.
-        expect(qdrant.searchDocuments).not.toHaveBeenCalled();
-        expect(qdrant.searchDocumentsByLecture.mock.calls[0]).toEqual(['continue', 'C1', ['Unit 1', 'Unit 2'], 5, { excludeAdditionalMaterials: true }]);
-        expect(qdrant.searchDocumentsByLecture.mock.calls[1]).toEqual(['continue', 'C1', ['Unit 1', 'Unit 2'], 5, { additionalMaterialsOnly: true }]);
+        expect(qdrant.searchDocumentsByLecture).not.toHaveBeenCalled();
+        expect(qdrant.searchDocuments.mock.calls[0][1]).toMatchObject({ lectureNames: ['Unit 1', 'Unit 2'], excludeAdditionalMaterials: true });
+        expect(qdrant.searchDocuments.mock.calls[1][1]).toMatchObject({ lectureNames: ['Unit 1', 'Unit 2'], additionalMaterialsOnly: true });
         expect(res.body.sourceAttribution.source).toBe('GPT');
         // Protege mode's own instructions must survive a conversationContext
         // turn instead of being replaced by the tutor-mode wrapper (the
@@ -380,7 +383,7 @@ describe('main chat pipeline', () => {
         expect(qdrant.searchDocumentsByLecture.mock.calls[0][2]).toEqual(['Unit 1', 'Unit 2', 'Unit 3', 'Unit 4', 'Unit 5']);
     });
 
-    test.each(['chapter', 'week', 'lecture', 'slides', 'module', 'lesson'])(
+    test.each(['chapter', 'week', 'lecture', 'module', 'lesson'])(
         '"%s 4" is recognized the same as "unit 4"',
         async (word) => {
             // Narrows to exactly one unit, so this takes the plain
@@ -416,13 +419,13 @@ describe('main chat pipeline', () => {
         expect(qdrant.searchDocuments.mock.calls[0][1]).toMatchObject({ lectureNames: ['Gene expression and regulation'] });
     });
 
-    test('a vague request with no unit reference searches the full additive scope, not a narrowed one', async () => {
+    test('a broad "each unit"-style request fans out across the full additive scope, not a narrowed one', async () => {
         // This is the real issue #594 incident's condition: additive mode
-        // spans many units, and the message carries no topic or unit words
-        // at all ("give me a quiz on the content of each unit..."). Fix A
-        // can't narrow this (nothing to detect), so fix B's fan-out must
-        // still cover every in-scope unit, not just whichever the message
-        // happens to mention.
+        // spans many units, and the message carries no specific unit number
+        // at all - just "each unit". detectRequestedUnits can't narrow this
+        // (no number to find), but it's caught by the explicit broad-phrase
+        // detector, so fix B's fan-out still covers every in-scope unit
+        // instead of falling back to the old pooled search that caused #594.
         const { qdrant } = aiWith();
         qdrant.searchDocumentsByLecture.mockResolvedValueOnce(new Map());
         const db = chatDb({
@@ -434,6 +437,87 @@ describe('main chat pipeline', () => {
         });
         expect(res.body.retrieval.searchScope).toEqual(['Unit 1', 'Unit 2', 'Unit 3']);
         expect(qdrant.searchDocumentsByLecture.mock.calls[0][2]).toEqual(['Unit 1', 'Unit 2', 'Unit 3']);
+    });
+
+    test('"everything so far" also triggers the broad-phrase fan-out', async () => {
+        const { qdrant } = aiWith();
+        qdrant.searchDocumentsByLecture.mockResolvedValueOnce(new Map());
+        const db = chatDb({
+            isAdditiveRetrieval: true,
+            lectures: ['Unit 1', 'Unit 2', 'Unit 3'].map(name => ({ name, isPublished: true })),
+        });
+        const res = await request(app({ db })).post('/').send({
+            message: 'can you summarize everything so far?', courseId: 'C1', unitName: 'Unit 3',
+        });
+        expect(res.body.retrieval.searchScope).toEqual(['Unit 1', 'Unit 2', 'Unit 3']);
+        expect(qdrant.searchDocumentsByLecture.mock.calls[0][2]).toEqual(['Unit 1', 'Unit 2', 'Unit 3']);
+    });
+
+    test('a huge range is clamped to the course\'s real units instead of hanging or crashing', async () => {
+        const { qdrant } = aiWith();
+        const db = chatDb({
+            isAdditiveRetrieval: true,
+            lectures: ['Unit 1', 'Unit 2', 'Unit 3'].map(name => ({ name, isPublished: true })),
+        });
+        const start = Date.now();
+        const res = await request(app({ db })).post('/').send({
+            message: 'units 1 through 999999999', courseId: 'C1', unitName: 'Unit 3',
+        });
+        expect(Date.now() - start).toBeLessThan(500);
+        expect(res.status).toBe(200);
+        expect(res.body.retrieval.searchScope).toEqual(['Unit 1', 'Unit 2', 'Unit 3']);
+    });
+
+    test('a stray unrelated number in the same sentence is not picked up as another unit', async () => {
+        // "In unit 4, what are the 3 levels of regulation?" - the "3" is not
+        // connected to "unit" by any list/range grammar, so it must not be
+        // read as "unit 3".
+        const { qdrant } = aiWith();
+        const db = chatDb({
+            isAdditiveRetrieval: true,
+            lectures: ['Unit 1', 'Unit 2', 'Unit 3', 'Unit 4'].map(name => ({ name, isPublished: true })),
+        });
+        await request(app({ db })).post('/').send({
+            message: 'In unit 4, what are the 3 levels of regulation?', courseId: 'C1', unitName: 'Unit 4',
+        });
+        expect(qdrant.searchDocuments.mock.calls[0][1]).toMatchObject({ lectureNames: ['Unit 4'] });
+    });
+
+    test('a number resolves by the digit in the unit\'s label, not by position, when an earlier unit is unpublished', async () => {
+        // Unit 1 is unpublished (deleted/hidden), so "Unit 4" sits at array
+        // position 3, not 4. Matching by position would resolve "unit 4" to
+        // the wrong lecture; matching by the digit in its actual name/label
+        // (what the student sees) resolves it correctly regardless.
+        const { qdrant } = aiWith();
+        const db = chatDb({
+            isAdditiveRetrieval: true,
+            lectures: [
+                { name: 'Unit 1', isPublished: false },
+                { name: 'Unit 2', isPublished: true },
+                { name: 'Unit 3', isPublished: true },
+                { name: 'Unit 4', isPublished: true },
+            ],
+        });
+        await request(app({ db })).post('/').send({
+            message: 'what was unit 4 about?', courseId: 'C1', unitName: 'Unit 4',
+        });
+        expect(qdrant.searchDocuments.mock.calls[0][1]).toMatchObject({ lectureNames: ['Unit 4'] });
+    });
+
+    test('explicit requests name more units than the configured Top-K still get every named unit a slot', async () => {
+        const { qdrant } = aiWith();
+        qdrant.searchDocumentsByLecture.mockResolvedValueOnce(new Map());
+        const db = chatDb({
+            isAdditiveRetrieval: true,
+            lectures: ['Unit 1', 'Unit 2', 'Unit 3', 'Unit 4', 'Unit 5', 'Unit 6', 'Unit 7', 'Unit 8']
+                .map(name => ({ name, isPublished: true })),
+        });
+        // Course Top-K is mocked at 5; naming 8 units must raise the
+        // effective K to 8, not truncate back down to 5.
+        await request(app({ db })).post('/').send({
+            message: 'quiz me on units 1, 2, 3, 4, 5, 6, 7, and 8', courseId: 'C1', unitName: 'Unit 8',
+        });
+        expect(qdrant.searchDocumentsByLecture.mock.calls[0][3]).toBe(8);
     });
 
     test('messageToSend names which units have content and which are missing, and never tells the student to upload material', async () => {

@@ -924,12 +924,22 @@ class QdrantService {
      * different call sites, and a shared generic version wasn't worth the
      * indirection for ~25 lines of plain array logic.
      *
+     * When there are more lectures than `target`, not every lecture can get
+     * even its one guaranteed slot, and something has to be cut. Lectures are
+     * ordered by their own best score (descending) before the round-robin
+     * runs, so that cut falls on the lowest-scoring lectures, not on
+     * whichever lecture happens to sort last by name/insertion order - a
+     * student in a later unit asking about that unit's own content must not
+     * lose to earlier units just because they come first in course order.
+     *
      * @param {Map<string, Array<Object>>} resultsByLecture - lectureName -> results (score desc)
      * @param {number} target - Total number of results to return
      * @returns {Array<Object>} Merged results, length <= target
      */
     static mergeBalancedLectureResults(resultsByLecture, target) {
-        const lists = [...resultsByLecture.values()].filter(list => list.length > 0);
+        const lists = [...resultsByLecture.values()]
+            .filter(list => list.length > 0)
+            .sort((a, b) => (b[0].score || 0) - (a[0].score || 0));
         if (lists.length === 0) return [];
 
         const floor = Math.max(1, Math.floor(target / lists.length));

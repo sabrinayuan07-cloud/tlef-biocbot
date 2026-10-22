@@ -36,47 +36,71 @@ function normalizeQdrantSearchResults(results) {
 }
 
 // Instructors and students refer to the same unit by whatever word their
-// course culture uses - "unit," "chapter," "week," "lecture," "slides,"
-// "module," "lesson." All of these are treated as equivalent ordinal
-// references when followed by a number.
-const UNIT_WORD_PATTERN = /\b(?:units?|chapters?|weeks?|lectures?|slides?|modules?|lessons?)\b/gi;
-const RANGE_PATTERN = /(\d+)\s*(?:-|–|to|through)\s*(\d+)/gi;
-// How far past the reference word to look for number(s) - long enough for a
-// short list/range ("1, 2, and 3" or "1 through 10"), short enough to stay
-// clear of an unrelated clause later in the same sentence.
-const UNIT_NUMBER_WINDOW = 40;
+// course culture uses - "unit," "chapter," "week," "lecture," "module,"
+// "lesson." All of these are treated as equivalent ordinal references when
+// followed by a number. ("Slides" deliberately excluded - too easily
+// confused with a literal slide number within a single unit's deck.)
+const UNIT_WORD_PATTERN = /\b(?:units?|chapters?|weeks?|lectures?|modules?|lessons?)\b/gi;
+// A small, explicit set of phrases for "all of them" style requests, so a
+// vague broad question can still fan out across every in-scope unit even
+// though it names no specific number.
+const BROAD_REQUEST_PATTERN = /\b(?:each|every|all(?:\s+the)?)\s+(?:units?|chapters?|weeks?|lectures?|modules?|lessons?)\b|everything\s+(?:so\s+far|(?:we\s*(?:'|')?ve\s+)?covered)/i;
 
 /**
- * Pull every number that appears to be a unit reference out of a message:
- * "unit 3", "chapter 1", "week 4", "slides 1-5", "lecture 1 to 5",
- * "units 1, 2, and 3", "unit 6 or 7". Scans a short window of text after
- * each reference-word mention (cut off at the next sentence boundary)
- * rather than trying to parse the exact connector grammar between numbers,
- * since English list phrasing ("5, 6, and 7") mixes commas and words too
- * inconsistently for a single alternation to cover reliably. Numbers
- * elsewhere in the message (not following a reference word) are ignored, so
- * "I got 3/5 right" or "that took 10 minutes" aren't misread.
+ * Pull every number that's connected to a "unit(s)"-style reference word by
+ * actual list/range grammar - commas, "and," "or," hyphens, "to," "through" -
+ * out of a message: "unit 3", "units 1-5", "units 1 to 5",
+ * "units 1, 2, and 3", "unit 6 or 7". Only numbers reachable this way from
+ * the reference word are collected; an unrelated number later in the same
+ * sentence ("unit 4, which covers 10 topics") is not, since nothing connects
+ * it grammatically to the reference word.
+ *
+ * Range expansion is clamped to maxUnitNumber so a message like
+ * "units 1 through 999999999" can't blow up memory/CPU trying to enumerate
+ * a near-infinite range - no real course will ever have that many units.
+ *
+ * @param {string} message
+ * @param {number} maxUnitNumber - Highest unit number that could possibly be real for this course
+ * @returns {Set<number>}
  */
-function extractUnitNumbers(message) {
+function extractUnitNumbers(message, maxUnitNumber) {
     const numbers = new Set();
+    const addNumber = (n) => { if (n >= 1 && n <= maxUnitNumber) numbers.add(n); };
+
     let match;
     UNIT_WORD_PATTERN.lastIndex = 0;
     while ((match = UNIT_WORD_PATTERN.exec(message)) !== null) {
-        const windowStart = match.index + match[0].length;
-        const window = message.slice(windowStart, windowStart + UNIT_NUMBER_WINDOW);
-        const sentenceEnd = window.search(/[.!?\n]/);
-        const scoped = sentenceEnd === -1 ? window : window.slice(0, sentenceEnd);
+        const afterWord = message.slice(match.index + match[0].length);
+        const firstNumMatch = afterWord.match(/^\s*(\d+)/);
+        if (!firstNumMatch) continue;
 
-        RANGE_PATTERN.lastIndex = 0;
-        let rangeMatch;
-        while ((rangeMatch = RANGE_PATTERN.exec(scoped)) !== null) {
-            const start = parseInt(rangeMatch[1], 10);
-            const end = parseInt(rangeMatch[2], 10);
-            const [lo, hi] = start <= end ? [start, end] : [end, start];
-            for (let n = lo; n <= hi; n++) numbers.add(n);
+        let cursor = firstNumMatch[0].length;
+        let prevNum = parseInt(firstNumMatch[1], 10);
+        addNumber(prevNum);
+
+        // Keep consuming "<connector><number>" pairs for as long as they're
+        // there, so "5, 6, and 7" (mixed comma + word connectors) resolves
+        // fully instead of stopping after the first connector type.
+        for (;;) {
+            const rest = afterWord.slice(cursor);
+            const rangeConn = rest.match(/^\s*(?:-|–|to|through)\s*(\d+)/i);
+            if (rangeConn) {
+                const end = parseInt(rangeConn[1], 10);
+                const [lo, hi] = prevNum <= end ? [prevNum, end] : [end, prevNum];
+                for (let n = lo; n <= Math.min(hi, maxUnitNumber); n++) numbers.add(n);
+                cursor += rangeConn[0].length;
+                prevNum = end;
+                continue;
+            }
+            const listConn = rest.match(/^\s*(?:,\s*(?:and|or)?|and|or)\s*(\d+)/i);
+            if (listConn) {
+                prevNum = parseInt(listConn[1], 10);
+                addNumber(prevNum);
+                cursor += listConn[0].length;
+                continue;
+            }
+            break;
         }
-        const bareNumbers = scoped.match(/\d+/g) || [];
-        for (const n of bareNumbers) numbers.add(parseInt(n, 10));
     }
     return numbers;
 }
@@ -85,14 +109,15 @@ function extractUnitNumbers(message) {
  * Detect which in-scope units a message is actually asking about, so retrieval
  * can be narrowed to them instead of pooling across the entire allowed scope.
  *
- * A number in the message is matched against a unit's POSITION in the
- * course's published order (the 4th thing the instructor posted is "unit 4"
- * / "chapter 4" / "week 4" / "slides 4", regardless of what it's titled),
- * not against a digit found inside its name - an instructor might title
- * their 4th upload "Gene expression and regulation" with no number in it at
- * all, and that should still resolve correctly. A literal digit in the
- * lecture's own name and a display-name substring match are also checked,
- * as additional (not exclusive) ways to match.
+ * A number is matched primarily against the digit in the unit's own name -
+ * unit names in this app are always auto-generated as "Unit N" (see
+ * courses.units.js), and that's the number students actually see (see
+ * student-calibration.js), so it's the authoritative label. Position in the
+ * published order is only used as a fallback for the rare lecture whose name
+ * has no digit at all - it must not be tried first, since deleting an early
+ * unit shifts later units' positions without changing their labels. A
+ * display-name substring match (word-boundary gated) is also checked, as an
+ * additional, non-exclusive way to match a unit named by topic.
  *
  * Only ever narrows: the result is always a subset of allowedLectureNames,
  * so this can never surface a unit the student isn't authorized to see -
@@ -112,28 +137,39 @@ function detectRequestedUnits(message, publishedLectures, allowedLectureNames) {
     if (!message || !Array.isArray(publishedLectures) || publishedLectures.length === 0) return null;
     if (!Array.isArray(allowedLectureNames) || allowedLectureNames.length === 0) return null;
 
-    const requestedNumbers = extractUnitNumbers(message);
+    // The real upper bound a "unit N" reference could ever need: the
+    // highest digit actually used in any published lecture's name (covers
+    // courses with gaps from deleted units), falling back to the count.
+    const maxUnitNumber = publishedLectures.reduce((max, lecture) => {
+        const m = lecture.name && lecture.name.match(/\d+/);
+        return m ? Math.max(max, parseInt(m[0], 10)) : max;
+    }, publishedLectures.length) || publishedLectures.length;
+
+    const requestedNumbers = extractUnitNumbers(message, maxUnitNumber);
     const lowerMessage = message.toLowerCase();
     const matched = new Set();
 
     publishedLectures.forEach((lecture, index) => {
-        const position = index + 1; // 1-based: the Nth published document, in course order
-        if (requestedNumbers.has(position)) {
-            matched.add(lecture.name);
-            return;
-        }
         const numMatch = lecture.name && lecture.name.match(/\d+/);
-        if (numMatch && requestedNumbers.has(parseInt(numMatch[0], 10))) {
-            matched.add(lecture.name);
-            return;
+        if (numMatch) {
+            if (requestedNumbers.has(parseInt(numMatch[0], 10))) matched.add(lecture.name);
+        } else {
+            // No digit in this lecture's own name - fall back to its
+            // position in the published order.
+            const position = index + 1;
+            if (requestedNumbers.has(position)) matched.add(lecture.name);
         }
         // Display-name matching: e.g. a student writing "the Mendelian
         // inheritance unit" when that unit's displayName is "Mendelian
-        // Inheritance". Length-gated so a 1-2 char displayName can't match
-        // on noise.
-        if (lecture.displayName && lecture.displayName.trim().length >= 4
-            && lowerMessage.includes(lecture.displayName.trim().toLowerCase())) {
-            matched.add(lecture.name);
+        // Inheritance". Word-boundary gated (not a bare substring) so a
+        // short/common displayName like "Cells" doesn't match any message
+        // that happens to mention the word in passing, and length-gated so
+        // a 1-2 char displayName can't match on noise.
+        if (lecture.displayName && lecture.displayName.trim().length >= 4) {
+            const escaped = lecture.displayName.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            if (new RegExp(`\\b${escaped}\\b`, 'i').test(lowerMessage)) {
+                matched.add(lecture.name);
+            }
         }
     });
 
@@ -1349,38 +1385,74 @@ router.post('/', async (req, res) => {
         }
 
         // Narrow to explicitly-requested units when the message names them
-        // (numbers/positions, ranges, or a unit's display name). Matched
-        // against the full published order (so "unit 4" resolves correctly
-        // regardless of where the student's scope starts), then filtered to
-        // the scope already computed above - this can only shrink that
-        // scope, never expand it, so it can't surface a unit the student
-        // isn't authorized to see.
+        // (numbers, ranges, or a unit's display name). Matched against the
+        // full published order (so "unit 4" resolves correctly regardless of
+        // where the student's scope starts), then filtered to the scope
+        // already computed above - this can only shrink that scope, never
+        // expand it, so it can't surface a unit the student isn't authorized
+        // to see.
         const requestedUnits = detectRequestedUnits(message, publishedLectureObjs, lectureNames);
-        const searchScope = requestedUnits || lectureNames;
-
-        // Debug logging to verify retrieval mode and scope
-        console.log(`🔎 [CHAT_RAG] RetrievalMode=${isAdditive ? 'additive' : 'single'} | Course=${courseId} | Unit=${unitName} | LectureNames=${JSON.stringify(lectureNames)} | SearchScope=${JSON.stringify(searchScope)}${requestedUnits ? ' (narrowed by detected unit reference)' : ''}`);
+        // A small set of explicit "all of them" phrases ("quiz me on every
+        // unit", "summarize everything so far") also fan out, since that's
+        // the shape of the original #594 incident - a vague request with no
+        // specific unit named, but clearly asking about more than the
+        // current one.
+        const isBroadRequest = !requestedUnits && lectureNames.length > 1 && BROAD_REQUEST_PATTERN.test(message);
 
         const ragSettings = CourseModel.resolveRagSettings(course);
+
+        // Fan out only when the student actually asked about more than one
+        // unit (explicitly, or via a broad phrase) - NOT just because the
+        // current scope happens to contain several units. An ordinary
+        // single-topic question asked in a later unit under additive mode
+        // must keep using the plain pooled search across its normal scope;
+        // fanning that out too would spread its one relevant unit's slots
+        // across every other in-scope unit for no reason, and could even
+        // drop the current unit's own content if enough earlier units are
+        // also in scope.
+        let searchScope;
+        let searchTopK;
+        let fanOut;
+        if (requestedUnits) {
+            searchScope = requestedUnits;
+            // Raise K to cover every named unit (capped at the app max) so
+            // an explicit "units 1, 2, 3, 4, 5" request doesn't get
+            // truncated back down to whatever the course's configured
+            // Top-K allows.
+            searchTopK = Math.min(CourseModel.MAX_RAG_TOP_K, Math.max(ragSettings.student.topK, requestedUnits.length));
+            fanOut = searchScope.length > 1;
+        } else if (isBroadRequest) {
+            searchScope = lectureNames;
+            searchTopK = ragSettings.student.topK;
+            fanOut = true;
+        } else {
+            searchScope = lectureNames;
+            searchTopK = ragSettings.student.topK;
+            fanOut = false;
+        }
+
+        // Debug logging to verify retrieval mode and scope
+        console.log(`🔎 [CHAT_RAG] RetrievalMode=${isAdditive ? 'additive' : 'single'} | Course=${courseId} | Unit=${unitName} | LectureNames=${JSON.stringify(lectureNames)} | SearchScope=${JSON.stringify(searchScope)} | FanOut=${fanOut} | TopK=${searchTopK}${requestedUnits ? ' (narrowed by detected unit reference)' : isBroadRequest ? ' (broad request phrase)' : ''}`);
 
         // Retrieve top chunks from Qdrant.
         // A single pooled search across multiple units lets whichever unit's
         // chunks score highest take every slot, starving the others even when
-        // several units are equally in scope and equally relevant. When more
-        // than one unit is in the search scope, fan out a bounded search per
+        // several units are equally relevant. Fan out a bounded search per
         // unit and merge with a guaranteed per-unit floor instead (same
-        // pattern already used for the Super Course's per-course fan-out).
+        // pattern already used for the Super Course's per-course fan-out) -
+        // but only when fanOut is true (see above); otherwise this is the
+        // same plain pooled search it always was.
         // When the course de-prioritizes additional materials, search the main
         // materials (lecture notes, practice questions) first and only fall back
         // to additional materials if nothing was found there.
         const runSearch = async (filters) => {
-            if (searchScope.length > 1) {
+            if (fanOut) {
                 const byLecture = await qdrant.searchDocumentsByLecture(
-                    message, courseId, searchScope, ragSettings.student.topK, filters
+                    message, courseId, searchScope, searchTopK, filters
                 );
-                return QdrantService.mergeBalancedLectureResults(byLecture, ragSettings.student.topK);
+                return QdrantService.mergeBalancedLectureResults(byLecture, searchTopK);
             }
-            return qdrant.searchDocuments(message, { courseId, lectureNames: searchScope, ...filters }, ragSettings.student.topK);
+            return qdrant.searchDocuments(message, { courseId, lectureNames: searchScope, ...filters }, searchTopK);
         };
 
         let searchResults;

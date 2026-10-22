@@ -389,6 +389,26 @@ describe('QdrantService', () => {
         expect(merged).toHaveLength(3);
     });
 
+    test('mergeBalancedLectureResults keeps the best-scoring unit when more units are in scope than the target (regression: course-order truncation used to drop it)', () => {
+        // Reproduces the PR review scenario: 10 units in scope, Unit 10 has
+        // the best chunk (0.80) and every other unit scores ~0.30. Cutting
+        // by course order (lowest index first) would keep Units 1-N and
+        // drop Unit 10 every time, regardless of K - exactly the regression
+        // a code reviewer caught (a student in Unit 10 asking about Unit
+        // 10's own content would never get it back).
+        const byLecture = new Map();
+        for (let i = 1; i <= 9; i++) {
+            byLecture.set(`Unit ${i}`, [{ id: `u${i}a`, score: 0.3 - i * 0.001 }]);
+        }
+        byLecture.set('Unit 10', [{ id: 'u10a', score: 0.8 }, { id: 'u10b', score: 0.75 }]);
+
+        for (const target of [3, 5, 8]) {
+            const merged = QdrantService.mergeBalancedLectureResults(byLecture, target);
+            expect(merged.some(r => r.id.startsWith('u10'))).toBe(true);
+            expect(merged).toHaveLength(target);
+        }
+    });
+
     test('mergeBalancedLectureResults never returns duplicate ids and caps at the target', () => {
         const byLecture = new Map([
             ['Unit 1', [{ id: 'x', score: 0.9 }, { id: 'y', score: 0.5 }]],
