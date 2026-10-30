@@ -35,16 +35,20 @@ function normalizeQdrantSearchResults(results) {
     return Array.isArray(results) ? results : [];
 }
 
-// Instructors and students refer to the same unit by whatever word their
-// course culture uses - "unit," "chapter," "week," "lecture," "module,"
-// "lesson." All of these are treated as equivalent ordinal references when
-// followed by a number. ("Slides" deliberately excluded - too easily
-// confused with a literal slide number within a single unit's deck.)
-const UNIT_WORD_PATTERN = /\b(?:units?|chapters?|weeks?|lectures?|modules?|lessons?)\b/gi;
+// A number is only treated as a unit reference when it's connected to a word
+// that actually names the same granularity as a unit. Unit names in this app
+// are always auto-generated as "Unit N" (see courses.units.js), so "unit 3"
+// is a safe 1:1 mapping - but "week 3" or "lecture 2" are not: a course can
+// have several lectures per week, so those words don't reliably correspond
+// to a single unit number even though students use them colloquially. Only
+// widen this if/when unit naming stops being hardcoded to "Unit N".
+const UNIT_WORD_PATTERN = /\bunits?\b/gi;
 // A small, explicit set of phrases for "all of them" style requests, so a
 // vague broad question can still fan out across every in-scope unit even
-// though it names no specific number.
-const BROAD_REQUEST_PATTERN = /\b(?:each|every|all(?:\s+the)?)\s+(?:units?|chapters?|weeks?|lectures?|modules?|lessons?)\b|everything\s+(?:so\s+far|(?:we\s*(?:'|')?ve\s+)?covered)/i;
+// though it names no specific number. Broader here than UNIT_WORD_PATTERN is
+// fine - fanning out across the already-allowed scope is a weaker, safer
+// action than narrowing to one specific (possibly wrong) unit number.
+const BROAD_REQUEST_PATTERN = /\b(?:each|every|all(?:\s+the)?)\s+(?:units?|chapters?|weeks?|lectures?|modules?|lessons?)\b|everything\s+(?:so\s+far|(?:we\s*(?:'|’)?ve\s+)?covered)/i;
 
 /**
  * Pull every number that's connected to a "unit(s)"-style reference word by
@@ -164,11 +168,23 @@ function detectRequestedUnits(message, publishedLectures, allowedLectureNames) {
         // Inheritance". Word-boundary gated (not a bare substring) so a
         // short/common displayName like "Cells" doesn't match any message
         // that happens to mention the word in passing, and length-gated so
-        // a 1-2 char displayName can't match on noise.
+        // a 1-2 char displayName can't match on noise. A bare mention of the
+        // display name alone is still too easy to false-positive on even
+        // with word boundaries - a unit titled "Cells" would otherwise match
+        // "How do immune cells recognize antigens?" and wrongly narrow the
+        // scope away from the student's actual current unit. Require "unit"
+        // or "chapter" to appear near the match too, so only a genuine unit
+        // reference ("the Cells unit") counts, not an incidental mention.
         if (lecture.displayName && lecture.displayName.trim().length >= 4) {
             const escaped = lecture.displayName.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-            if (new RegExp(`\\b${escaped}\\b`, 'i').test(lowerMessage)) {
-                matched.add(lecture.name);
+            const nameMatch = new RegExp(`\\b${escaped}\\b`, 'i').exec(message);
+            if (nameMatch) {
+                const windowStart = Math.max(0, nameMatch.index - 15);
+                const windowEnd = Math.min(message.length, nameMatch.index + nameMatch[0].length + 15);
+                const nearby = message.slice(windowStart, windowEnd);
+                if (/\b(?:units?|chapters?)\b/i.test(nearby)) {
+                    matched.add(lecture.name);
+                }
             }
         }
     });
@@ -1423,7 +1439,11 @@ router.post('/', async (req, res) => {
             fanOut = searchScope.length > 1;
         } else if (isBroadRequest) {
             searchScope = lectureNames;
-            searchTopK = ragSettings.student.topK;
+            // Same reasoning as the explicit-request branch above: a broad
+            // "quiz me on every unit" request fans out across every unit in
+            // scope, so K needs to cover all of them too, or most units get
+            // cut by the course's (often much smaller) default Top-K.
+            searchTopK = Math.min(CourseModel.MAX_RAG_TOP_K, Math.max(ragSettings.student.topK, searchScope.length));
             fanOut = true;
         } else {
             searchScope = lectureNames;
@@ -1560,13 +1580,31 @@ router.post('/', async (req, res) => {
         // back with content, instead of letting it guess (or contradict a
         // prior turn where the same unit WAS successfully retrieved - see
         // issue #594's "within-conversation self-contradiction" finding).
+        //
+        // missingUnits is only computed for requestedUnits/isBroadRequest:
+        // on the ordinary pooled path, searchScope is just the student's
+        // normal additive scope (e.g. every unit up to their current one),
+        // most of which was never asked about and was always going to lose
+        // out to the current unit's own content at a small Top-K. Reporting
+        // all of that as "no material" (e.g. "additive mode, student in
+        // Unit 8, K=3" reporting Units 1-7 as having no content) is actively
+        // misleading - those units simply weren't part of this question.
         const coveredUnits = Array.from(new Set(searchResults.map(r => r.lectureName).filter(Boolean)));
-        const missingUnits = searchScope.filter(u => !coveredUnits.includes(u));
+        const missingUnits = (requestedUnits || isBroadRequest)
+            ? searchScope.filter(u => !coveredUnits.includes(u))
+            : [];
+        const missingUnitsSentence = missingUnits.length === 0
+            ? ''
+            : requestedUnits
+                // The student named these units directly, so a genuine gap is
+                // worth surfacing plainly.
+                ? ` No material was retrieved for: ${missingUnits.join(', ')} — if the student's question touches these, say so clearly by naming them, and suggest asking about them one at a time or narrowing the request. Never ask the student to upload, share, or provide course materials themselves; only an instructor can add material to the course.`
+                // Broad requests already raise Top-K to cover the whole scope,
+                // so anything still missing is a capacity cut, not a real
+                // content gap - phrase it that way rather than "no material".
+                : ` ${missingUnits.join(', ')} were not included in this answer due to space — if the student's question touches these, say so clearly by naming them, and suggest asking about them one at a time or narrowing the request. Never ask the student to upload, share, or provide course materials themselves; only an instructor can add material to the course.`;
         const coverageNote = coveredUnits.length > 0
-            ? `The course context below only includes material from: ${coveredUnits.join(', ')}.`
-              + (missingUnits.length > 0
-                  ? ` No material was retrieved for: ${missingUnits.join(', ')} — if the student's question touches these, say so clearly by naming them, and suggest asking about them one at a time or narrowing the request. Never ask the student to upload, share, or provide course materials themselves; only an instructor can add material to the course.`
-                  : '')
+            ? `The course context below only includes material from: ${coveredUnits.join(', ')}.` + missingUnitsSentence
             : `No course material was retrieved for this question. Say so clearly, and suggest the student narrow or rephrase their question. Never ask the student to upload, share, or provide course materials themselves; only an instructor can add material to the course.`;
 
         // Build the message to send to LLM

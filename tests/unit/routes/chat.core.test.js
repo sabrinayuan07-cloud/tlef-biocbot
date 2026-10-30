@@ -383,11 +383,27 @@ describe('main chat pipeline', () => {
         expect(qdrant.searchDocumentsByLecture.mock.calls[0][2]).toEqual(['Unit 1', 'Unit 2', 'Unit 3', 'Unit 4', 'Unit 5']);
     });
 
+    test('"unit 4" narrows to exactly one unit', async () => {
+        // Narrows to exactly one unit, so this takes the plain
+        // searchDocuments path (no need to fan out across a single unit).
+        const { qdrant } = aiWith();
+        const db = chatDb({
+            isAdditiveRetrieval: true,
+            lectures: ['Unit 1', 'Unit 2', 'Unit 3', 'Unit 4', 'Unit 5'].map(name => ({ name, isPublished: true })),
+        });
+        await request(app({ db })).post('/').send({
+            message: 'Explain unit 4 for me.', courseId: 'C1', unitName: 'Unit 5',
+        });
+        expect(qdrant.searchDocuments.mock.calls[0][1]).toMatchObject({ lectureNames: ['Unit 4'] });
+    });
+
     test.each(['chapter', 'week', 'lecture', 'module', 'lesson'])(
-        '"%s 4" is recognized the same as "unit 4"',
+        '"%s 4" is no longer treated as a unit reference (only "unit" is, since real unit names are always "Unit N")',
         async (word) => {
-            // Narrows to exactly one unit, so this takes the plain
-            // searchDocuments path (no need to fan out across a single unit).
+            // A course can have several lectures per week, so "week 3" or
+            // "lecture 2" don't reliably correspond to a single unit number
+            // the way "unit 3"/"unit 2" always does - these must fall
+            // through to the full normal scope, not narrow to a guess.
             const { qdrant } = aiWith();
             const db = chatDb({
                 isAdditiveRetrieval: true,
@@ -396,15 +412,17 @@ describe('main chat pipeline', () => {
             await request(app({ db })).post('/').send({
                 message: `Explain ${word} 4 for me.`, courseId: 'C1', unitName: 'Unit 5',
             });
-            expect(qdrant.searchDocuments.mock.calls[0][1]).toMatchObject({ lectureNames: ['Unit 4'] });
+            expect(qdrant.searchDocuments.mock.calls[0][1]).toMatchObject({
+                lectureNames: ['Unit 1', 'Unit 2', 'Unit 3', 'Unit 4', 'Unit 5'],
+            });
         }
     );
 
     test('a number resolves by position in the published order, even when the lecture title has no digit at all', async () => {
         // The instructor titled their 4th upload "Gene expression and
-        // regulation" with no unit number anywhere in it - "unit 4" (or
-        // "chapter 4", "week 4", ...) must still resolve to that document
-        // by its position in course order, not by scanning its name for a digit.
+        // regulation" with no unit number anywhere in it - "unit 4" must
+        // still resolve to that document by its position in course order,
+        // not by scanning its name for a digit.
         const { qdrant } = aiWith();
         const db = chatDb({
             isAdditiveRetrieval: true,
@@ -414,7 +432,7 @@ describe('main chat pipeline', () => {
             ].map(name => ({ name, isPublished: true })),
         });
         await request(app({ db })).post('/').send({
-            message: 'what was chapter 4 about?', courseId: 'C1', unitName: 'Polymers',
+            message: 'what was unit 4 about?', courseId: 'C1', unitName: 'Polymers',
         });
         expect(qdrant.searchDocuments.mock.calls[0][1]).toMatchObject({ lectureNames: ['Gene expression and regulation'] });
     });
@@ -437,6 +455,46 @@ describe('main chat pipeline', () => {
         });
         expect(res.body.retrieval.searchScope).toEqual(['Unit 1', 'Unit 2', 'Unit 3']);
         expect(qdrant.searchDocumentsByLecture.mock.calls[0][2]).toEqual(['Unit 1', 'Unit 2', 'Unit 3']);
+    });
+
+    test('a broad request raises K to cover the whole scope, up to the app max', async () => {
+        const { qdrant } = aiWith();
+        qdrant.searchDocumentsByLecture.mockResolvedValueOnce(new Map());
+        const db = chatDb({
+            isAdditiveRetrieval: true,
+            lectures: Array.from({ length: 8 }, (_, i) => ({ name: `Unit ${i + 1}`, isPublished: true })),
+        });
+        // Course Top-K is mocked at 5; 8 units in scope must raise K to 8.
+        await request(app({ db })).post('/').send({
+            message: 'give me a quiz on the content of each unit', courseId: 'C1', unitName: 'Unit 8',
+        });
+        expect(qdrant.searchDocumentsByLecture.mock.calls[0][3]).toBe(8);
+    });
+
+    test('a broad request that still can\'t cover every unit even at the app max uses softer "not included" wording, not "no material"', async () => {
+        // More units in scope (25) than the app's max Top-K (20) - raising K
+        // for the broad request still can't guarantee every unit a slot.
+        // Whatever's left out at that point is a capacity cut, not a
+        // genuine content gap, so the coverage note must say so rather than
+        // claiming "no material" the way an explicit per-unit request does.
+        const lectureNames = Array.from({ length: 25 }, (_, i) => `Unit ${i + 1}`);
+        const byLecture = new Map(lectureNames.slice(0, 20).map(name => [name, [
+            { score: 0.5, lectureName: name, fileName: `${name}.pdf`, documentId: `d-${name}`, chunkText: `${name} content` },
+        ]]));
+        const { qdrant, llm } = aiWith();
+        qdrant.searchDocumentsByLecture.mockResolvedValueOnce(byLecture);
+        const db = chatDb({
+            isAdditiveRetrieval: true,
+            lectures: lectureNames.map(name => ({ name, isPublished: true })),
+        });
+        const res = await request(app({ db })).post('/').send({
+            message: 'quiz me on every unit', courseId: 'C1', unitName: 'Unit 25',
+        });
+        expect(res.status).toBe(200);
+        expect(qdrant.searchDocumentsByLecture.mock.calls[0][3]).toBe(20); // capped at MAX_RAG_TOP_K
+        const sentMessage = llm.sendMessage.mock.calls[0][0];
+        expect(sentMessage).toContain('were not included in this answer');
+        expect(sentMessage).not.toContain('No material was retrieved for');
     });
 
     test('"everything so far" also triggers the broad-phrase fan-out', async () => {
@@ -483,6 +541,35 @@ describe('main chat pipeline', () => {
         expect(qdrant.searchDocuments.mock.calls[0][1]).toMatchObject({ lectureNames: ['Unit 4'] });
     });
 
+    test('a number directly connected to "unit" narrows correctly even with an unrelated number right after it', async () => {
+        // "unit 5 has 2 types of mutation" - the "2" immediately follows
+        // "unit 5" in the sentence but isn't connected to "unit" by any
+        // list/range grammar, so it must not be read as "unit 2" too.
+        const { qdrant } = aiWith();
+        const db = chatDb({
+            isAdditiveRetrieval: true,
+            lectures: ['Unit 1', 'Unit 2', 'Unit 3', 'Unit 4', 'Unit 5'].map(name => ({ name, isPublished: true })),
+        });
+        await request(app({ db })).post('/').send({
+            message: 'unit 5 has 2 types of mutation right?', courseId: 'C1', unitName: 'Unit 5',
+        });
+        expect(qdrant.searchDocuments.mock.calls[0][1]).toMatchObject({ lectureNames: ['Unit 5'] });
+    });
+
+    test('a slide number does not get mistaken for a second unit reference', async () => {
+        // "On slide 7 of unit 2" - "slide" is deliberately not a recognized
+        // unit word, so "7" must never be read as another unit number.
+        const { qdrant } = aiWith();
+        const db = chatDb({
+            isAdditiveRetrieval: true,
+            lectures: ['Unit 1', 'Unit 2', 'Unit 3', 'Unit 4', 'Unit 5', 'Unit 6', 'Unit 7'].map(name => ({ name, isPublished: true })),
+        });
+        await request(app({ db })).post('/').send({
+            message: 'On slide 7 of unit 2 what does the graph show?', courseId: 'C1', unitName: 'Unit 7',
+        });
+        expect(qdrant.searchDocuments.mock.calls[0][1]).toMatchObject({ lectureNames: ['Unit 2'] });
+    });
+
     test('a number resolves by the digit in the unit\'s label, not by position, when an earlier unit is unpublished', async () => {
         // Unit 1 is unpublished (deleted/hidden), so "Unit 4" sits at array
         // position 3, not 4. Matching by position would resolve "unit 4" to
@@ -502,6 +589,68 @@ describe('main chat pipeline', () => {
             message: 'what was unit 4 about?', courseId: 'C1', unitName: 'Unit 4',
         });
         expect(qdrant.searchDocuments.mock.calls[0][1]).toMatchObject({ lectureNames: ['Unit 4'] });
+    });
+
+    test('a number resolves by the digit in the unit\'s label even when units are reordered', async () => {
+        // Published order here is Unit 1, Unit 3, Unit 2 - Unit 2 sits at
+        // array position 3. Matching by position would resolve "unit 2" to
+        // whatever is at position 2 (Unit 3, the wrong lecture); matching by
+        // the digit in the name resolves it correctly regardless of order.
+        const { qdrant } = aiWith();
+        const db = chatDb({
+            isAdditiveRetrieval: true,
+            lectures: [
+                { name: 'Unit 1', isPublished: true },
+                { name: 'Unit 3', isPublished: true },
+                { name: 'Unit 2', isPublished: true },
+            ],
+        });
+        await request(app({ db })).post('/').send({
+            message: 'what was unit 2 about?', courseId: 'C1', unitName: 'Unit 2',
+        });
+        expect(qdrant.searchDocuments.mock.calls[0][1]).toMatchObject({ lectureNames: ['Unit 2'] });
+    });
+
+    test('a unit\'s display name mentioned in passing does not narrow the scope away from the student\'s current unit', async () => {
+        // A unit titled "Cells" must not act as a keyword filter on any
+        // message that happens to contain the word "cells" - that would
+        // wrongly narrow the scope to just that unit and drop the student's
+        // actual current unit (Unit 5) from the search entirely.
+        const { qdrant } = aiWith();
+        const db = chatDb({
+            isAdditiveRetrieval: true,
+            lectures: [
+                { name: 'Unit 1', isPublished: true },
+                { name: 'Unit 2', isPublished: true, displayName: 'Cells' },
+                { name: 'Unit 3', isPublished: true },
+                { name: 'Unit 4', isPublished: true },
+                { name: 'Unit 5', isPublished: true },
+            ],
+        });
+        await request(app({ db })).post('/').send({
+            message: 'How do immune cells recognize antigens?', courseId: 'C1', unitName: 'Unit 5',
+        });
+        expect(qdrant.searchDocuments.mock.calls[0][1]).toMatchObject({
+            lectureNames: ['Unit 1', 'Unit 2', 'Unit 3', 'Unit 4', 'Unit 5'],
+        });
+    });
+
+    test('a unit\'s display name does narrow the scope when "unit" appears next to it', async () => {
+        // "the Cells unit" is a genuine, deliberate unit reference, unlike
+        // an incidental mention of the same word - this must still narrow.
+        const { qdrant } = aiWith();
+        const db = chatDb({
+            isAdditiveRetrieval: true,
+            lectures: [
+                { name: 'Unit 1', isPublished: true },
+                { name: 'Unit 2', isPublished: true, displayName: 'Cells' },
+                { name: 'Unit 3', isPublished: true },
+            ],
+        });
+        await request(app({ db })).post('/').send({
+            message: 'Can you quiz me on the Cells unit?', courseId: 'C1', unitName: 'Unit 3',
+        });
+        expect(qdrant.searchDocuments.mock.calls[0][1]).toMatchObject({ lectureNames: ['Unit 2'] });
     });
 
     test('explicit requests name more units than the configured Top-K still get every named unit a slot', async () => {
@@ -538,6 +687,29 @@ describe('main chat pipeline', () => {
         expect(sentMessage.toLowerCase()).toContain('never ask the student to upload');
     });
 
+    test('an ordinary additive question with no unit named never claims other in-scope units have "no material"', async () => {
+        // Additive mode, student in Unit 3, no specific unit referenced and
+        // no broad phrase - this is the plain pooled-search path. Units 1
+        // and 2 simply didn't make the top results for this ordinary
+        // question; that must not be reported as "no material" for them,
+        // since the student never asked about them in the first place.
+        const results = [{ score: 0.7, lectureName: 'Unit 3', fileName: 'u3.pdf', documentId: 'd3', chunkText: 'current unit content' }];
+        const { qdrant, llm } = aiWith({ results });
+        const db = chatDb({
+            isAdditiveRetrieval: true,
+            lectures: ['Unit 1', 'Unit 2', 'Unit 3'].map(name => ({ name, isPublished: true })),
+        });
+        const res = await request(app({ db })).post('/').send({
+            message: 'Can you give me an example of this concept?', courseId: 'C1', unitName: 'Unit 3',
+        });
+        expect(res.status).toBe(200);
+        expect(qdrant.searchDocumentsByLecture).not.toHaveBeenCalled();
+        const sentMessage = llm.sendMessage.mock.calls[0][0];
+        expect(sentMessage).toContain('only includes material from: Unit 3');
+        expect(sentMessage).not.toContain('No material was retrieved for');
+        expect(sentMessage).not.toContain('not included in this answer');
+    });
+
     test('explain mode keeps its own instructions across a conversation turn', async () => {
         const { llm } = aiWith();
         const res = await request(app({ db: chatDb() })).post('/').send({
@@ -547,6 +719,19 @@ describe('main chat pipeline', () => {
         expect(res.status).toBe(200);
         const sentMessage = llm.sendMessage.mock.calls[0][0];
         expect(sentMessage).toContain('Use the provided course context to help explain the concept if needed');
+        expect(sentMessage).toContain('Previous conversation:');
+        expect(sentMessage).toContain('Student: go deeper');
+    });
+
+    test('protege mode keeps its own instructions across a conversation turn', async () => {
+        const { llm } = aiWith();
+        const res = await request(app({ db: chatDb() })).post('/').send({
+            message: 'go deeper', courseId: 'C1', unitName: 'Unit 1', mode: 'protege',
+            conversationContext: { conversationMessages: [{ role: 'user', content: 'what is ATP' }, { role: 'assistant', content: 'ATP is...' }] },
+        });
+        expect(res.status).toBe(200);
+        const sentMessage = llm.sendMessage.mock.calls[0][0];
+        expect(sentMessage).toContain('Do not explain the context to the user');
         expect(sentMessage).toContain('Previous conversation:');
         expect(sentMessage).toContain('Student: go deeper');
     });
