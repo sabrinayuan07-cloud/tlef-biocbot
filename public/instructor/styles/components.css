@@ -53,6 +53,26 @@
   border-radius: 4px;
 }
 
+/* Student Hub enrollment Save button - the app's primary blue instead of
+   the generic .btn-secondary gray, so an actionable "you have an unsaved
+   enrollment change" state reads clearly. Disabled state is a flat light
+   gray (not just dimmed blue) to match the disabled-button convention used
+   elsewhere (e.g. Settings' dirty-gated Save buttons). */
+.enroll-save-btn {
+  background: var(--primary-color);
+  color: white;
+}
+
+.enroll-save-btn:hover:not(:disabled) {
+  background: var(--accent-color);
+}
+
+.enroll-save-btn:disabled {
+  background: #ccc;
+  color: #888;
+  opacity: 1;
+}
+
 /* ─── Cards ────────────────────────────────────────────────────────────── */
 /* These five card classes are relocated here as-is (not unified) - each
    has its own radius/padding/background tuned to its page, so merging

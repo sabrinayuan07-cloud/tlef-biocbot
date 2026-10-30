@@ -1260,7 +1260,7 @@ function renderStudents(courseId) {
                         </span>
                         <span>Enrolled</span>
                     </label>
-                    <button class="btn-small btn-secondary" id="save-${s.userId}" disabled
+                    <button class="btn-small btn-secondary enroll-save-btn" id="save-${s.userId}" disabled
                             onclick="saveEnrollment('${courseId}','${s.userId}')">Save</button>
                     
                     ${isTA ? `
@@ -1374,7 +1374,13 @@ window.demoteFromTA = async function(studentId, studentName, courseId) {
 window.toggleEnrollment = function(courseId, studentId, value) {
     dirtyEnrollment.set(studentId, !!value);
     const btn = document.getElementById(`save-${studentId}`);
-    if (btn) btn.disabled = false;
+    if (!btn) return;
+    // Only enable Save when the toggle actually differs from the
+    // last-persisted value - toggling off and back on (or vice versa)
+    // lands back on the original state, so there's nothing to save.
+    const original = currentStudents.find(s => s.userId === studentId);
+    const isDirty = !!value !== !!(original && original.enrolled);
+    btn.disabled = !isDirty;
 };
 
 window.saveEnrollment = async function(courseId, studentId) {
@@ -1387,6 +1393,11 @@ window.saveEnrollment = async function(courseId, studentId) {
         });
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         showNotification(`Enrollment ${value ? 'enabled' : 'disabled'} for ${studentId}`, 'success');
+        // Update the cached original so a later toggle's dirty-check compares
+        // against the value that's now actually persisted, not the pre-save one.
+        const original = currentStudents.find(s => s.userId === studentId);
+        if (original) original.enrolled = value;
+        dirtyEnrollment.delete(studentId);
         const btn = document.getElementById(`save-${studentId}`);
         if (btn) btn.disabled = true;
     } catch (err) {
