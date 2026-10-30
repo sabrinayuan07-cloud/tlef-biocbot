@@ -10,7 +10,8 @@ const {
 const {
     loadEncryptionToolkit,
     ENCRYPTED_COLLECTIONS,
-    ENCRYPTED_FIELDS
+    ENCRYPTED_FIELDS,
+    resolveEncryptedFields
 } = require('../../../src/config/chatEncryption');
 const { encryptedMemoryDb } = require('../helpers/encrypted-memory-db');
 const MentalHealthFlag = require('../../../src/models/MentalHealthFlag');
@@ -177,15 +178,34 @@ describeWithToolkit('chat transcript collections share one encryption policy', (
             'flaggedQuestions',
             'messageFeedback',
             'chatSurveyResponses',
-            'quizAttempts'
+            'quizAttempts',
+            'lms_canvas_tokens',
+            'lms_moodle_tokens'
         ]);
         for (const name of ENCRYPTED_COLLECTIONS) {
             expect(protectedDb.isProtected(name)).toBe(true);
         }
         // Collections deliberately left out of this rollout.
-        for (const name of ['users', 'courses', 'documents', 'superchats', 'struggleActivity']) {
+        for (const name of [
+            'users', 'courses', 'documents', 'superchats', 'struggleActivity',
+            'lms_identity_mappings', 'lms_grade_snapshots'
+        ]) {
             expect(protectedDb.isProtected(name)).toBe(false);
         }
+    });
+
+    test('the LMS token collections stay protected when a deployment renames them', async () => {
+        const renames = {
+            CANVAS_TOKEN_COLLECTION_NAME: 'renamed_canvas_tokens',
+            MOODLE_TOKEN_COLLECTION_NAME: 'renamed_moodle_tokens'
+        };
+        const { protectedDb } = await wrap({}, renames);
+
+        expect(Object.keys(resolveEncryptedFields(renames)).slice(-2))
+            .toEqual(['renamed_canvas_tokens', 'renamed_moodle_tokens']);
+        expect(protectedDb.isProtected('renamed_canvas_tokens')).toBe(true);
+        expect(protectedDb.isProtected('renamed_moodle_tokens')).toBe(true);
+        expect(protectedDb.isProtected('lms_canvas_tokens')).toBe(false);
     });
 
     test.each(NEW_COLLECTIONS)('%s stores an envelope and returns the original chatData', async (name) => {

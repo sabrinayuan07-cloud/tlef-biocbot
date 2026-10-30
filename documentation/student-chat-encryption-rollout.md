@@ -1,7 +1,7 @@
 # Student chat encryption rollout
 
-BiocBot uses `@ubc/genai-toolkit-encryption` to encrypt chat transcripts and
-other student- or instructor-written text in MongoDB. Application code continues
+BiocBot uses `@ubc/genai-toolkit-encryption` to encrypt chat transcripts, other
+student- or instructor-written text, and stored LMS tokens in MongoDB. Application code continues
 to read and write normal JavaScript objects; MongoDB stores an authenticated
 AES-256-GCM envelope in place of each configured field.
 
@@ -19,9 +19,19 @@ One policy, one key, one namespace covers all of them:
 | `messageFeedback` | `messageContentPreview` | thumbs up/down on a bot reply |
 | `chatSurveyResponses` | `comment` | end-of-chat survey |
 | `quizAttempts` | `studentAnswer`, `feedback` | quiz answers and their AI feedback |
+| `lms_canvas_tokens` | `tokens` | instructor connecting Canvas (OAuth access and refresh tokens) |
+| `lms_moodle_tokens` | `tokens` | instructor connecting Moodle (web-service token) |
 
 Chat titles are encrypted because the app builds them from the first 50
 characters of the student's first question.
+
+The LMS tokens are credentials: a Moodle web-service token, or a Canvas refresh
+token together with the Canvas client secret, acts as that instructor in the
+LMS. The LMS toolkit's token store only looks them up by `userKey`, so they need
+no blind index. A deployment that renames these collections with
+`CANVAS_TOKEN_COLLECTION_NAME` or `MOODLE_TOKEN_COLLECTION_NAME` keeps them
+protected under the new name; use that name wherever this guide says
+`lms_canvas_tokens` or `lms_moodle_tokens`.
 
 The map lives in `ENCRYPTED_FIELDS` in `src/config/chatEncryption.js` and is
 the single source the config, the synthetic canary, and the tests all read. Add
@@ -32,8 +42,10 @@ anywhere on a protected collection; that is why the flag, mental-health, and
 quiz statistics count in code instead of with an aggregation.
 
 Nothing else is encrypted. `users`, `courses` (including `studentEnrollment`),
-`student_pseudonyms`, LMS identity mappings and tokens, `documents`, Qdrant
-payloads, and `struggleActivity` are out of scope for this rollout.
+`student_pseudonyms`, `lms_identity_mappings`, `lms_grade_snapshots`,
+`documents`, Qdrant payloads, and `struggleActivity` are out of scope for this
+rollout. AI provider API keys are encrypted separately, with
+`BIOCBOT_KEY_ENCRYPTION_SECRET`, not by this policy.
 
 The rollout deliberately leaves ids (`courseId`, `studentId`, `instructorId`,
 `superchatId`, `sessionId`, `flagId`), names (`studentName`, `instructorName`),
@@ -61,6 +73,12 @@ The assessment-summary repair script now uses the protected database wrapper,
 but its pre-change JSON backup is still an intentional plaintext export. The
 file is created with owner-only permissions and must be handled under the
 applicable data-retention and transfer policy.
+
+Only writes through the protected wrapper are encrypted. Anything that writes a
+configured collection on the raw `Db` stores plaintext, and the canary cannot
+see that because it writes through the wrapper itself. This is why the server
+builds the wrapper before the LMS integration and hands it to the token stores,
+and why `scripts/seed-local-lms-grades.js` opens the database the same way.
 
 The chat encryption key must be independent from
 `BIOCBOT_KEY_ENCRYPTION_SECRET`, MongoDB credentials, and any future blind-index
@@ -217,6 +235,24 @@ npm run encryption:verify -- --collection mentalHealthFlags
 Run each collection's canary, review it, and only then remove `--max-documents`.
 Migrate one collection at a time so a failure is scoped to one dataset.
 
+### LMS token collections
+
+`lms_canvas_tokens` and `lms_moodle_tokens` follow the same sequence. Tokens
+stored before encryption was turned on keep working under mixed reads, so
+instructors stay connected while the migration runs.
+
+```bash
+npm run encryption:plan -- --collection lms_canvas_tokens
+npm run encryption:migrate:dry-run -- --collection lms_canvas_tokens
+npm run encryption:migrate -- --collection lms_canvas_tokens --max-documents 25 --backup-confirmed --verify
+npm run encryption:migrate -- --collection lms_canvas_tokens --backup-confirmed --verify
+npm run encryption:verify -- --collection lms_canvas_tokens
+```
+
+Then the same commands with `--collection lms_moodle_tokens`. A database
+backup taken before this migration still holds the tokens in plaintext, so
+handle it as a credential store until it expires.
+
 The toolkit migration is idempotent, resumable, lease-protected, and checks for
 concurrent changes before updating a document. Its checkpoint collection is
 `_ubc_encryption_migrations` and contains operational metadata, not chat data or
@@ -225,8 +261,9 @@ keys.
 ### Schema fingerprint changes
 
 Every change to `ENCRYPTED_FIELDS` changes the configuration's schema
-fingerprint — adding the two Super Course chat collections did, and adding the
-titles and free-text collections did again. Two consequences:
+fingerprint — adding the two Super Course chat collections did, adding the
+titles and free-text collections did again, and so did adding the LMS token
+collections. Two consequences:
 
 - The default migration id derives from the fingerprint, so it changes too. Any
   checkpoint from an earlier migration is not resumed by default, and
@@ -258,9 +295,27 @@ Restart and exercise save, history, continue-chat, instructor download, student
 analytics, deletion, title update, and pseudonym flows — for the course chat,
 the student Super Course chat, and the instructor Super Course chat — then the
 mental-health flag list and stats, flagged questions and their stats, message
-feedback, the chat survey, and quiz attempts and stats. Strict reads fail closed
+feedback, the chat survey, and quiz attempts and stats, then connecting,
+importing from, and disconnecting Canvas and Moodle. Strict reads fail closed
 if any configured value is plaintext, malformed, tampered with, or encrypted
 under an unavailable key.
+
+### Adding a collection to an environment that is already strict
+
+A collection newly added to `ENCRYPTED_FIELDS` still holds plaintext when the
+release that adds it is deployed. Under strict reads every one of those rows
+fails with `PLAINTEXT_VALUE_REJECTED`. For the LMS token collections that means
+every instructor who connected Canvas or Moodle earlier gets an error on each
+LMS request, not a "not connected" prompt. So, in a strict environment:
+
+1. Set the environment back to `mixed` / `mixed`, then deploy the release.
+2. Migrate and verify the new collections as described above.
+3. Run `npm run encryption:plan:all` to confirm nothing plaintext is left, then
+   switch back to `strict` / `encrypted`.
+
+An environment that is still on mixed reads needs no change; deploy, then
+migrate. The new collections use the existing `BIOCBOT_CHAT_ENCRYPTION_KEY`, so
+no new secret is needed.
 
 ## Staging gate
 

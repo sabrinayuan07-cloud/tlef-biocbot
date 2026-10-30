@@ -205,8 +205,8 @@ async function initializeAuth() {
     }
 }
 
-async function initializeLms() {
-    lmsIntegration = createLmsIntegration(db);
+async function initializeLms(runtimeDb) {
+    lmsIntegration = createLmsIntegration(runtimeDb);
     app.locals.lmsIntegration = lmsIntegration;
 
     const diagnostics = getLmsDiagnostics(lmsIntegration);
@@ -733,7 +733,12 @@ async function startServer() {
         // Initialize other services
         await initializeLLM();
         await initializeAuth();
-        await initializeLms();
+
+        // Built before the LMS integration so its token stores write through
+        // the encrypted wrapper; routes still receive it only after the
+        // startup migrations below.
+        const runtimeDb = await initializeChatEncryption(db);
+        await initializeLms(runtimeDb);
 
         // Run migrations
         await ensureCourseCodes(db);
@@ -754,7 +759,7 @@ async function startServer() {
         // Keep startup migrations and connect-mongo on the driver's raw Db.
         // Routes receive the protected wrapper only after startup work is done;
         // unconfigured collections continue to pass through unchanged.
-        app.locals.db = await initializeChatEncryption(db);
+        app.locals.db = runtimeDb;
 
         // Set up routes after authentication is initialized
         setupProtectedRoutes();

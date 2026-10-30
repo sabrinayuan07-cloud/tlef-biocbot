@@ -55,16 +55,21 @@ const ACTIVE_CHAT_KEY_ID = 'student-chat-2026-01';
  * Every protected collection and the fields encrypted in it, in the order an
  * operator should migrate them.
  *
- * Each field holds student- or instructor-written text, or text copied from a
+ * Most fields hold student- or instructor-written text, or text copied from a
  * chat: transcripts, chat titles (the app derives them from the first
  * question), mental-health flag excerpts, flagged responses, feedback previews,
- * survey comments, and quiz answers. None of them is ever filtered, sorted,
- * regex-searched, grouped, or indexed, which is what makes encrypting them safe;
- * a field that is must not be added here without a query review.
+ * survey comments, and quiz answers. The two LMS token collections hold each
+ * instructor's Canvas OAuth tokens and Moodle web-service token, which the LMS
+ * toolkit's token store only ever looks up by `userKey`. None of them is ever
+ * filtered, sorted, regex-searched, grouped, or indexed, which is what makes
+ * encrypting them safe; a field that is must not be added here without a query
+ * review.
  *
  * One key and one namespace cover them all. The migration CLI, the synthetic
  * canary, and the rollout runbook all read this map, so a field can never be
- * encrypted in one place and forgotten in another.
+ * encrypted in one place and forgotten in another. The token collections are
+ * listed under their default names; resolveEncryptedFields follows a
+ * deployment that renames them.
  *
  * Note that the AAD binds each envelope to its own collection and field, so a
  * ciphertext cannot be moved between them even though they share a key.
@@ -79,19 +84,62 @@ const ENCRYPTED_FIELDS = Object.freeze({
     flaggedQuestions: Object.freeze(['questionContent', 'flagDescription', 'instructorResponse']),
     messageFeedback: Object.freeze(['messageContentPreview']),
     chatSurveyResponses: Object.freeze(['comment']),
-    quizAttempts: Object.freeze(['studentAnswer', 'feedback'])
+    quizAttempts: Object.freeze(['studentAnswer', 'feedback']),
+    lms_canvas_tokens: Object.freeze(['tokens']),
+    lms_moodle_tokens: Object.freeze(['tokens'])
 });
 
 /** @type {readonly string[]} */
 const ENCRYPTED_COLLECTIONS = Object.freeze(Object.keys(ENCRYPTED_FIELDS));
 
 /**
+ * The LMS token collections' default names and the variables that rename them.
+ * The token stores and the encryption policy both resolve names through
+ * getLmsTokenCollectionName, so a renamed collection cannot slip out of the
+ * policy and keep its tokens in plaintext.
+ */
+const LMS_TOKEN_COLLECTIONS = Object.freeze({
+    canvas: Object.freeze({ defaultName: 'lms_canvas_tokens', env: 'CANVAS_TOKEN_COLLECTION_NAME' }),
+    moodle: Object.freeze({ defaultName: 'lms_moodle_tokens', env: 'MOODLE_TOKEN_COLLECTION_NAME' })
+});
+
+/**
+ * @param {'canvas' | 'moodle'} provider
+ * @param {NodeJS.ProcessEnv | Record<string, string | undefined>} env
+ * @returns {string}
+ */
+function getLmsTokenCollectionName(provider, env = process.env) {
+    const { defaultName, env: envName } = LMS_TOKEN_COLLECTIONS[provider];
+    return env[envName] || defaultName;
+}
+
+/**
+ * ENCRYPTED_FIELDS with the LMS token collections under the names this
+ * deployment actually uses.
+ *
+ * @param {NodeJS.ProcessEnv | Record<string, string | undefined>} env
+ * @returns {Record<string, readonly string[]>}
+ */
+function resolveEncryptedFields(env = process.env) {
+    /** @type {Record<string, string>} */
+    const renamed = Object.fromEntries(
+        Object.entries(LMS_TOKEN_COLLECTIONS).map(([provider, { defaultName }]) => [
+            defaultName,
+            getLmsTokenCollectionName(/** @type {'canvas' | 'moodle'} */ (provider), env)
+        ])
+    );
+    return Object.fromEntries(
+        Object.entries(ENCRYPTED_FIELDS).map(([name, fields]) => [renamed[name] || name, fields])
+    );
+}
+
+/**
  * Build BiocBot's application-owned encryption policy.
  *
- * The rollout intentionally protects only the free-text fields listed in
- * ENCRYPTED_FIELDS. Operational fields (ids, names, statuses, timestamps) stay
- * plaintext so existing filters, sorts, retention, pseudonymization, and
- * dashboard queries keep their current semantics.
+ * The rollout intentionally protects only the free-text and LMS token fields
+ * listed in ENCRYPTED_FIELDS. Operational fields (ids, names, statuses,
+ * timestamps) stay plaintext so existing filters, sorts, retention,
+ * pseudonymization, and dashboard queries keep their current semantics.
  *
  * @param {NodeJS.ProcessEnv | Record<string, string | undefined>} env
  * @returns {import('@ubc/genai-toolkit-encryption').EncryptionConfig}
@@ -121,7 +169,7 @@ function buildChatEncryptionConfig(env = process.env) {
         queryPolicy,
         writePolicy: 'encrypted',
         collections: Object.fromEntries(
-            Object.entries(ENCRYPTED_FIELDS).map(([name, fields]) => [
+            Object.entries(resolveEncryptedFields(env)).map(([name, fields]) => [
                 name,
                 { fields: Object.fromEntries(fields.map((field) => [field, { encrypt: true }])) }
             ])
@@ -139,6 +187,8 @@ module.exports = {
     ENCRYPTED_FIELDS,
     TOOLKIT_PACKAGE,
     buildChatEncryptionConfig,
+    getLmsTokenCollectionName,
     loadEncryptionToolkit,
-    requireEncryptionToolkit
+    requireEncryptionToolkit,
+    resolveEncryptedFields
 };

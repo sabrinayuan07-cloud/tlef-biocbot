@@ -89,13 +89,32 @@ class EnvelopeSafeCollection {
         return { matchedCount: 0, modifiedCount: 0, upsertedCount: 0 };
     }
 
-    async updateOne(query, update) {
+    async updateOne(query, update, options = {}) {
         const target = this.docs.find((doc) => matchesQuery(doc, query || {}));
-        if (!target) return { matchedCount: 0, modifiedCount: 0, upsertedCount: 0 };
+        if (!target) {
+            if (!options.upsert) return { matchedCount: 0, modifiedCount: 0, upsertedCount: 0 };
+            // Like MongoDB, an upsert starts from the filter's plain equality fields.
+            const inserted = Object.fromEntries(Object.entries(query || {})
+                .filter(([key, value]) => !key.startsWith('$') && (value === null || typeof value !== 'object')));
+            Object.assign(inserted, update.$setOnInsert, update.$set);
+            this.docs.push(inserted);
+            return { matchedCount: 0, modifiedCount: 0, upsertedCount: 1, upsertedId: 'mem-upsert' };
+        }
         for (const [key, value] of Object.entries(update.$set || {})) {
             target[key] = value;
         }
         return { matchedCount: 1, modifiedCount: 1, upsertedCount: 0 };
+    }
+
+    async deleteOne(query) {
+        const index = this.docs.findIndex((doc) => matchesQuery(doc, query || {}));
+        if (index === -1) return { deletedCount: 0 };
+        this.docs.splice(index, 1);
+        return { deletedCount: 1 };
+    }
+
+    async createIndex(keys) {
+        return Object.keys(keys).map((key) => `${key}_${keys[key]}`).join('_');
     }
 
     async distinct(field, query = {}) {

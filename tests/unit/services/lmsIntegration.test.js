@@ -5,10 +5,18 @@ const {
     getBiocBotUserKey,
     getCanvasConfigurationStatus,
     getLmsDiagnostics,
+    loadLmsToolkit,
     parseCanvasScopes,
     revokeCanvasGrant,
     withCanvasScopeStamp
 } = require('../../../src/services/lmsIntegration');
+const { loadEncryptionToolkit } = require('../../../src/config/chatEncryption');
+const { initializeChatEncryption } = require('../../../src/services/chatEncryption');
+const { encryptedMemoryDb } = require('../helpers/encrypted-memory-db');
+
+// Both toolkits are optional GitHub Packages dependencies. The token-store
+// cases below run the real ones end to end, so they need both installed.
+const describeWithToolkits = loadLmsToolkit() && loadEncryptionToolkit() ? describe : describe.skip;
 
 describe('lmsIntegration configuration', () => {
     test('Canvas is enabled only when all required variables are present', () => {
@@ -236,5 +244,72 @@ describe('lmsIntegration configuration', () => {
                 partialFilterExpression: { 'metadata.lms.provider': { $exists: true } }
             }
         );
+    });
+});
+
+describeWithToolkits('LMS token stores on the encrypted database', () => {
+    const SYNTHETIC_KEY = Buffer.alloc(32, 7).toString('base64');
+    /** @type {NodeJS.ProcessEnv} */
+    let previous;
+
+    beforeEach(() => {
+        previous = { ...process.env };
+        Object.assign(process.env, Object.fromEntries(CANVAS_ENV_KEYS.map((key) => [key, `${key}-value`])));
+        process.env.MOODLE_DOMAIN = 'http://moodle.test';
+        for (const key of ['CANVAS_SCOPES', 'CANVAS_TOKEN_COLLECTION_NAME', 'MOODLE_TOKEN_COLLECTION_NAME']) {
+            delete process.env[key];
+        }
+    });
+
+    afterEach(() => {
+        for (const key of Object.keys(process.env)) if (!(key in previous)) delete process.env[key];
+        Object.assign(process.env, previous);
+    });
+
+    async function integrationOnEncryptedDb() {
+        const rawDb = encryptedMemoryDb();
+        const protectedDb = await initializeChatEncryption(/** @type {any} */ (rawDb), {
+            ...process.env,
+            BIOCBOT_CHAT_ENCRYPTION_ENABLED: 'true',
+            BIOCBOT_CHAT_ENCRYPTION_KEY: SYNTHETIC_KEY
+        });
+        return { rawDb, integration: createLmsIntegration(protectedDb) };
+    }
+
+    test('stores Canvas and Moodle tokens as envelopes and reads them back intact', async () => {
+        const { rawDb, integration } = await integrationOnEncryptedDb();
+        const canvasStore = integration.canvas.config.tokenStore;
+        const moodleStore = integration.moodle.config.tokenStore;
+
+        await canvasStore.set('user-1', { accessToken: 'secret-access', refreshToken: 'secret-refresh', expiresAt: 1 });
+        await moodleStore.set('user-1', { token: 'secret-moodle', moodleUserId: 2 });
+
+        for (const name of ['lms_canvas_tokens', 'lms_moodle_tokens']) {
+            expect(rawDb.stored(name)).toEqual([
+                { userKey: 'user-1', tokens: expect.objectContaining({ __ubc_enc: 1, alg: 'A256GCM' }) }
+            ]);
+            expect(JSON.stringify(rawDb.stored(name))).not.toContain('secret');
+        }
+        expect(await canvasStore.get('user-1')).toMatchObject({
+            accessToken: 'secret-access',
+            refreshToken: 'secret-refresh',
+            expiresAt: 1
+        });
+        expect(await moodleStore.get('user-1')).toEqual({ token: 'secret-moodle', moodleUserId: 2 });
+
+        await moodleStore.delete('user-1');
+        expect(rawDb.stored('lms_moodle_tokens')).toEqual([]);
+    });
+
+    test('still encrypts tokens in a renamed collection', async () => {
+        process.env.CANVAS_TOKEN_COLLECTION_NAME = 'renamed_canvas_tokens';
+        const { rawDb, integration } = await integrationOnEncryptedDb();
+
+        await integration.canvas.config.tokenStore.set('user-1', { accessToken: 'secret-access' });
+
+        expect(rawDb.stored('lms_canvas_tokens')).toEqual([]);
+        expect(rawDb.stored('renamed_canvas_tokens')).toEqual([
+            { userKey: 'user-1', tokens: expect.objectContaining({ __ubc_enc: 1 }) }
+        ]);
     });
 });

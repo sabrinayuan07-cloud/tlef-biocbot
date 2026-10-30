@@ -1,3 +1,5 @@
+const { getLmsTokenCollectionName } = require('../config/chatEncryption');
+
 let lmsToolkit;
 let lmsToolkitLoadError;
 
@@ -172,6 +174,12 @@ function getBiocBotUserKey(req) {
     return String(req.user.userId);
 }
 
+/**
+ * @param {Object} db The runtime database: the encrypted wrapper when chat
+ * encryption is on. The token stores write through it, and the token
+ * collections are in the encryption policy, so handing this the raw Db would
+ * store every LMS token in plaintext.
+ */
 function createLmsIntegration(db) {
     const env = process.env;
     const canvasStatus = getCanvasConfigurationStatus(env);
@@ -210,7 +218,7 @@ function createLmsIntegration(db) {
         canvasConfig = canvas.loadConfigFromEnv({
             tokenStore: withCanvasScopeStamp(
                 createMongoTokenStore(() => db, {
-                    collectionName: env.CANVAS_TOKEN_COLLECTION_NAME || 'lms_canvas_tokens'
+                    collectionName: getLmsTokenCollectionName('canvas', env)
                 }),
                 canvasStatus.scopes,
                 { revokeStaleGrant: (tokens) => revokeCanvasGrant(canvas, canvasConfig, tokens) }
@@ -229,7 +237,7 @@ function createLmsIntegration(db) {
             api: moodle,
             config: moodle.loadConfigFromEnv({
                 tokenStore: createMongoTokenStore(() => db, {
-                    collectionName: env.MOODLE_TOKEN_COLLECTION_NAME || 'lms_moodle_tokens'
+                    collectionName: getLmsTokenCollectionName('moodle', env)
                 }),
                 getUserKey: getBiocBotUserKey,
                 basePath: '/api/lms/moodle/auth'

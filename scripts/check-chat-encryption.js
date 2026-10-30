@@ -8,7 +8,7 @@ const { MongoClient } = require('mongodb');
 const {
     buildChatEncryptionConfig,
     requireEncryptionToolkit,
-    ENCRYPTED_FIELDS
+    resolveEncryptedFields
 } = require('../src/config/chatEncryption');
 
 /** Every configured value carries this, so stored plaintext is easy to spot. */
@@ -72,7 +72,7 @@ async function main() {
             collections: {}
         };
 
-        for (const [collectionName, fields] of Object.entries(ENCRYPTED_FIELDS)) {
+        for (const [collectionName, fields] of Object.entries(resolveEncryptedFields(process.env))) {
             const protectedCollection = protectedDb.collection(collectionName);
             const rawCollection = canaryDb.collection(collectionName);
             const document = syntheticDocument(collectionName, fields);
