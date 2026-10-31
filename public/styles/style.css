@@ -158,6 +158,15 @@ textarea {
     margin: 0;
 }
 
+/* Scrolls independently when the nav list is taller than a short window,
+   so .account-block (pinned below via margin-top: auto) never gets pushed
+   out of the viewport and clipped by .app-container's overflow: hidden. */
+.main-nav {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
 .main-nav ul li {
     margin-bottom: 10px;
 }
