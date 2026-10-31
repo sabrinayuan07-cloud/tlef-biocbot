@@ -117,6 +117,21 @@ textarea {
     width: 100%;
 }
 
+/* Native select arrows sit flush against the border in some browsers -
+   swap in a custom chevron with deliberate spacing from the edge instead,
+   app-wide (#643). A page with its own more specific select styling (e.g.
+   a narrower .select-input) can still override padding-right/background-size
+   as needed; this just sets a sane default everywhere else. */
+select {
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23666666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 16px;
+    padding-right: 34px;
+}
+
 /* Layout */
 .app-container {
     display: flex;

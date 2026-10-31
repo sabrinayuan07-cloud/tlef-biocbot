@@ -21,6 +21,8 @@
     min-width: 300px;
     cursor: pointer;
     transition: border-color 0.2s ease;
+    /* Shared padding above is too tight for the global select chevron (#643). */
+    padding-right: 2.5rem;
 }
 
 .course-selector select:focus {

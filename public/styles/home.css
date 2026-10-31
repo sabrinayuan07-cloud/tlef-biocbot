@@ -78,6 +78,8 @@
   color: var(--bb-ink);
   cursor: pointer;
   transition: border-color 0.3s ease;
+  /* Shared padding above is too tight for the global select chevron (#643). */
+  padding-right: 34px;
 }
 
 .course-select-dropdown:hover {
@@ -1447,9 +1449,18 @@
     padding: 8px 12px;
     border: 1px solid #d0d5dd;
     border-radius: 8px;
-    background: #fff;
+    /* background-color, not the background shorthand - the latter resets
+       background-image too, silently dropping the global select chevron
+       (#643). Same reasoning for the explicit padding-right below instead
+       of folding it back into the padding shorthand. */
+    background-color: #fff;
     font-size: 0.9em;
     font-family: inherit;
+}
+
+.approved-topic-unit-select,
+.topic-unit-select {
+    padding-right: 34px;
 }
 
 .approved-topic-input:focus {

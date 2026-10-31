@@ -54,6 +54,11 @@
     transition: border-color 0.2s;
 }
 
+/* Shared padding above is too tight for the global select chevron (#643). */
+.form-group select {
+    padding-right: 34px;
+}
+
 .form-group input:focus,
 .form-group select:focus {
     outline: none;
@@ -176,11 +181,11 @@
 }
 
 .role-preset-picker select {
-    padding: 4px 8px;
+    padding: 4px 30px 4px 8px;
     border: 1px solid #ced4da;
     border-radius: 4px;
     font-size: 0.85rem;
-    background: #fff;
+    background-color: #fff;
 }
 
 /* Section Description */

@@ -1500,6 +1500,9 @@
 .flashcard-generation-controls select {
     width: auto;
     padding: 0.45rem 0.65rem;
+    /* The shorthand above reset padding-right below what the global select
+       chevron (#643) needs - give it room back. */
+    padding-right: 2rem;
 }
 
 /* Opt-out for the LaTeX/SMILES rules added to the generation prompt. */
@@ -2490,10 +2493,16 @@ fieldset.radio-group-fieldset {
     padding: 0.55rem 0.65rem;
     border: 1px solid #b7c4d0;
     border-radius: 6px;
-    background: #fff;
+    background-color: #fff;
     color: #222;
     font: inherit;
     font-weight: 400;
+}
+
+/* The shared padding shorthand above is too tight for the chevron added by
+   the global select rule (#643) - give selects (not inputs) more room. */
+.lms-field select {
+    padding-right: 34px;
 }
 
 .optional-label {

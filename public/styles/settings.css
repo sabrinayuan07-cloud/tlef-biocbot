@@ -601,6 +601,11 @@
     min-width: 180px;
 }
 
+/* Shared padding above is too tight for the global select chevron (#643). */
+.select-input {
+    padding-right: 34px;
+}
+
 .text-input:disabled,
 .select-input:disabled {
     opacity: 0.6;
