@@ -269,10 +269,6 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="settings-section-actions">
-                                    <span class="settings-dirty-note" hidden>Unsaved changes</span>
-                                    <button id="save-course-basics" class="primary-button">Save course basics</button>
-                                </div>
                             </section>
 
                             <section class="settings-section" id="course-llm-key-section">
@@ -426,9 +422,7 @@
                                     </div>
                                 </div>
                                 <div class="settings-section-actions">
-                                    <span class="settings-dirty-note" hidden>Unsaved changes</span>
                                     <button id="reset-student-chat" class="secondary-button">Reset to defaults</button>
-                                    <button id="save-student-chat" class="primary-button">Save student chat settings</button>
                                 </div>
                             </section>
                         </div>
@@ -531,9 +525,7 @@
                                     </div>
                                 </div>
                                 <div class="settings-section-actions">
-                                    <span class="settings-dirty-note" hidden>Unsaved changes</span>
                                     <button id="reset-prompts" class="secondary-button">Reset prompts to defaults</button>
-                                    <button id="save-prompts" class="primary-button">Save prompts</button>
                                 </div>
                             </section>
                         </div>
@@ -581,9 +573,7 @@
                                     </div>
                                 </div>
                                 <div class="settings-section-actions">
-                                    <span class="settings-dirty-note" hidden>Unsaved changes</span>
                                     <button id="reset-quiz-settings" class="secondary-button">Reset to defaults</button>
-                                    <button id="save-quiz-settings" class="primary-button">Save quiz settings</button>
                                 </div>
                             </section>
                         </div>
@@ -628,9 +618,7 @@
                                     </div>
                                 </div>
                                 <div class="settings-section-actions">
-                                    <span class="settings-dirty-note" hidden>Unsaved changes</span>
                                     <button id="reset-privacy-settings" class="secondary-button">Reset to defaults</button>
-                                    <button id="save-privacy-settings" class="primary-button">Save privacy settings</button>
                                 </div>
                             </section>
                         </div>
@@ -662,9 +650,7 @@
                                     </div>
                                 </div>
                                 <div class="settings-section-actions">
-                                    <span class="settings-dirty-note" hidden>Unsaved changes</span>
                                     <button id="reset-course-superchats" class="secondary-button">Remove from all buckets</button>
-                                    <button id="save-course-superchats" class="primary-button">Save bucket membership</button>
                                 </div>
                             </section>
 
@@ -842,9 +828,7 @@
                                     </details>
                                 </div>
                                 <div class="settings-section-actions">
-                                    <span class="settings-dirty-note" hidden>Unsaved changes</span>
                                     <button id="reset-superchat-bucket" class="secondary-button">Reset chat settings to defaults</button>
-                                    <button id="save-superchat-bucket" class="primary-button">Save bucket settings</button>
                                 </div>
                             </section>
                         </div>
@@ -1277,10 +1261,6 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="settings-section-actions">
-                                    <span class="settings-dirty-note" hidden>Unsaved changes</span>
-                                    <button id="save-access-settings" class="primary-button">Save login settings</button>
-                                </div>
                             </section>
 
                             <section class="settings-section" id="academic-api-section" style="display: none;">
@@ -1298,10 +1278,6 @@
                                             </label>
                                         </div>
                                     </div>
-                                </div>
-                                <div class="settings-section-actions">
-                                    <span class="settings-dirty-note" hidden>Unsaved changes</span>
-                                    <button id="save-academic-api-settings" class="primary-button">Save academic API settings</button>
                                 </div>
                             </section>
 
@@ -1392,9 +1368,7 @@
                                     </div>
                                 </div>
                                 <div class="settings-section-actions">
-                                    <span class="settings-dirty-note" hidden>Unsaved changes</span>
                                     <button id="reset-question-prompts" class="secondary-button">Reset Question Prompts to Default</button>
-                                    <button id="save-question-prompts" class="primary-button">Save question prompts</button>
                                 </div>
                             </section>
 
@@ -1413,9 +1387,7 @@
                                     </div>
                                 </div>
                                 <div class="settings-section-actions">
-                                    <span class="settings-dirty-note" hidden>Unsaved changes</span>
                                     <button id="reset-mh-prompt" class="secondary-button">Reset Detection Prompt to Default</button>
-                                    <button id="save-mh-prompt" class="primary-button">Save detection prompt</button>
                                 </div>
                             </section>
                         </div>
@@ -1481,6 +1453,24 @@
             <div class="transfer-modal-footer">
                 <button id="transfer-modal-cancel" class="secondary-button" type="button">Cancel</button>
                 <button id="transfer-modal-confirm" class="primary-button" type="button">Start Course Copy</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Design-system replacement for window.confirm() - reuses the
+         transfer-modal card styling so every confirmation on this page looks
+         like part of the app instead of a bare browser dialog. -->
+    <div id="confirm-dialog-modal" class="transfer-modal-overlay" aria-hidden="true">
+        <div class="transfer-modal confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-dialog-title">
+            <div class="transfer-modal-header">
+                <h2 id="confirm-dialog-title">Are you sure?</h2>
+            </div>
+            <div class="transfer-modal-body">
+                <p id="confirm-dialog-message"></p>
+            </div>
+            <div class="transfer-modal-footer">
+                <button id="confirm-dialog-cancel" class="secondary-button" type="button">Cancel</button>
+                <button id="confirm-dialog-confirm" class="primary-button" type="button">Confirm</button>
             </div>
         </div>
     </div>

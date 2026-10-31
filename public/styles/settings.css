@@ -512,6 +512,37 @@
     font-size: 11px;
 }
 
+/* Per-field autosave indicator (pilot: Student chat section, #605). Sits
+   right next to the field that changed - a loading spinner while that
+   field's (shared, composite) save is in flight, then a checkmark that
+   fades. Toggles never get one (their own flip is feedback enough); only
+   text/number/textarea fields do. Both states use the same blue as the
+   rest of the design system (--primary-color), not green, so a "saved"
+   checkmark doesn't visually compete with the app's success-toast green. */
+.field-autosave-indicator {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 8px;
+    color: var(--primary-color);
+    font-size: 14px;
+    font-weight: 700;
+    vertical-align: middle;
+}
+
+.field-autosave-spinner {
+    width: 13px;
+    height: 13px;
+    border: 2px solid var(--primary-color);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: field-autosave-spin 0.6s linear infinite;
+}
+
+@keyframes field-autosave-spin {
+    to { transform: rotate(360deg); }
+}
+
 /* Collapsible advanced group (native details/summary) */
 .settings-advanced {
     border: 1px solid var(--bb-ink-16);
@@ -1430,6 +1461,14 @@ input.is-invalid {
 .transfer-modal-footer button[disabled] {
     opacity: 0.7;
     cursor: not-allowed;
+}
+
+.confirm-dialog {
+    width: min(100%, 440px);
+}
+
+#confirm-dialog-message {
+    white-space: pre-line;
 }
 
 .system-admin-grant-row {

@@ -64,6 +64,12 @@ test.describe('Instructor settings UI — Quiz Practice section', () => {
         // The quiz section is far down the long settings page; scroll it into
         // view so subsequent toggle/checkbox clicks aren't off-viewport.
         await page.locator('#quiz-settings-section').scrollIntoViewIfNeeded();
+        // Testable units rendering (above) is an early marker inside the
+        // broader loadSettings() sequence - wireAutosaveSection() for this
+        // section is wired once that whole sequence resolves, slightly
+        // later. A toggle flipped before it's attached would fire a 'change'
+        // event nobody is listening for yet (autosave #632).
+        await page.waitForTimeout(300);
     }
 
     // The toggle <input> elements are visually hidden behind a styled slider,
@@ -106,25 +112,24 @@ test.describe('Instructor settings UI — Quiz Practice section', () => {
         await expect(container).not.toContainText('Unit 2');
     });
 
-    test('toggling Enable Quiz on and saving persists enabled:true', async ({ page }) => {
+    test('toggling Enable Quiz on autosaves enabled:true', async ({ page }) => {
         await loginAsInstructor(page);
         await gotoSettingsPage(page);
 
+        // Quiz practice autosaves on every toggle/field change - no Save
+        // button to click. Assert on DB truth directly since the debounced
+        // save round-trips in the background.
         await setToggle(page, 'quiz-enabled-toggle', true);
-        await page.locator('#save-quiz-settings').click();
 
-        // Wait for the save to round-trip. The button briefly reads "Saving..."
-        // and resets afterwards — easier to assert on DB truth directly.
         await expect.poll(readQuizSettings, { timeout: 10_000 })
             .toMatchObject({ enabled: true });
     });
 
-    test('toggling Allow Lecture Material Access off and saving persists the change', async ({ page }) => {
+    test('toggling Allow Lecture Material Access off autosaves the change', async ({ page }) => {
         await loginAsInstructor(page);
         await gotoSettingsPage(page);
 
         await setToggle(page, 'quiz-material-access-toggle', false);
-        await page.locator('#save-quiz-settings').click();
 
         await expect.poll(readQuizSettings, { timeout: 10_000 })
             .toMatchObject({ allowLectureMaterialAccess: false });
@@ -155,7 +160,6 @@ test.describe('Instructor settings UI — Quiz Practice section', () => {
             cb.dispatchEvent(new Event('change', { bubbles: true }));
         });
         await setToggle(page, 'quiz-enabled-toggle', true);
-        await page.locator('#save-quiz-settings').click();
 
         await expect.poll(readQuizSettings, { timeout: 10_000 })
             .toMatchObject({ enabled: true, testableUnits: ['Unit 1'] });
@@ -172,9 +176,12 @@ test.describe('Instructor settings UI — Quiz Practice section', () => {
         await loginAsInstructor(page);
         await gotoSettingsPage(page);
 
-        // Both boxes start checked because the seeded testableUnits is "all"
+        // Both boxes start checked because the seeded testableUnits is "all".
+        // Nothing here actually needs to change - flip an unrelated toggle
+        // just to trigger the composite autosave, which reads the testable
+        // unit checkboxes fresh off the DOM regardless of what fired it.
         await expect(page.locator('.testable-unit-checkbox')).toHaveCount(2);
-        await page.locator('#save-quiz-settings').click();
+        await setToggle(page, 'quiz-material-access-toggle', false);
 
         await expect.poll(readQuizSettings, { timeout: 10_000 })
             .toMatchObject({ testableUnits: 'all' });

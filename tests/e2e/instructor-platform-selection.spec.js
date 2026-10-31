@@ -342,18 +342,17 @@ test.describe('Instructor platform selection', () => {
         await expect(page.locator('#course-llm-prepare')).toBeEnabled();
         await expect(page.locator('#course-llm-prepare')).toHaveText('Switch to UBC On-Premise LLM');
 
-        const dialogs = [];
-        page.on('dialog', async (dialog) => {
-            dialogs.push(dialog.message());
-            await dialog.accept();
-        });
+        // The switch/prepare confirmation goes through the in-page
+        // #confirm-dialog-modal instead of window.confirm() (#632).
         await page.locator('#course-llm-prepare').click();
+        await expect(page.locator('#confirm-dialog-modal')).toHaveClass(/show/, { timeout: 10_000 });
+        await expect(page.locator('#confirm-dialog-message')).toHaveText(
+            'Switch this AI surface to UBC On-Premise LLM? Existing embeddings are reused, '
+                + 'and only missing or changed items are indexed before the switch completes.'
+        );
+        await page.locator('#confirm-dialog-confirm').click();
 
         await expect.poll(() => switchRequest).toEqual({ llmProvider: 'ubc-llm-sandbox' });
-        expect(dialogs).toEqual([
-            'Switch this AI surface to UBC On-Premise LLM? Existing embeddings are reused, '
-                + 'and only missing or changed items are indexed before the switch completes.',
-        ]);
         // Progress replaces the button state; no key was ever re-entered.
         await expect(page.locator('#course-llm-migration')).toBeVisible();
         await expect(page.locator('#course-llm-key-input')).toHaveValue('');

@@ -41,6 +41,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const systemAdminList = document.getElementById('system-admin-list');
     const systemAdminEmailInput = document.getElementById('system-admin-email-input');
     const grantSystemAdminBtn = document.getElementById('grant-system-admin-btn');
+    const confirmDialogModal = document.getElementById('confirm-dialog-modal');
+    const confirmDialogTitle = document.getElementById('confirm-dialog-title');
+    const confirmDialogMessage = document.getElementById('confirm-dialog-message');
+    const confirmDialogCancelBtn = document.getElementById('confirm-dialog-cancel');
+    const confirmDialogConfirmBtn = document.getElementById('confirm-dialog-confirm');
     let lifecycleCourseData = null;
     let pendingTransferPayload = null;
     let isTransferInProgress = false;
@@ -49,6 +54,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Cached bucket summaries so the per-course checklist can re-render without a
     // page refresh whenever buckets are created/renamed/deleted.
     let availableSuperchats = [];
+    // Set below, near the rest of the per-section save wiring - declared here
+    // so initSuperchatManagement()'s bucket-creation handler can call it too.
+    let courseSuperchatsSave = null;
     // Per-surface platform state (active platform, key status per platform, and
     // any in-flight migration). Declared here because loadSettings() runs before
     // the helper definitions further down would otherwise be evaluated.
@@ -291,9 +299,46 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (note) note.hidden = true;
     }
 
-    function markSectionDirty(sectionId) {
-        const note = document.querySelector(`#${sectionId} .settings-dirty-note`);
-        if (note) note.hidden = false;
+    // Design-system replacement for window.confirm() (#632) - the native
+    // "localhost:8080 says..." dialog doesn't match the app at all. Reuses
+    // the transfer-course-modal card styling and the shared a11yModal
+    // focus-trap contract, and resolves the same way confirm() would (true
+    // = confirmed, false = cancelled/dismissed) so call sites just add
+    // `await` in front of their existing confirm(...) call.
+    function confirmDialog(message, { title = 'Are you sure?', confirmLabel = 'Confirm', danger = false } = {}) {
+        if (!confirmDialogModal || !confirmDialogTitle || !confirmDialogMessage || !confirmDialogCancelBtn || !confirmDialogConfirmBtn) {
+            return Promise.resolve(window.confirm(message));
+        }
+        return new Promise((resolve) => {
+            confirmDialogTitle.textContent = title;
+            confirmDialogMessage.textContent = message;
+            confirmDialogConfirmBtn.textContent = confirmLabel;
+            confirmDialogConfirmBtn.className = danger ? 'danger-button' : 'primary-button';
+
+            let settled = false;
+            const finish = (result) => {
+                if (settled) return;
+                settled = true;
+                confirmDialogConfirmBtn.removeEventListener('click', onConfirm);
+                confirmDialogCancelBtn.removeEventListener('click', onCancel);
+                confirmDialogModal.classList.remove('show');
+                confirmDialogModal.setAttribute('aria-hidden', 'true');
+                window.a11yModal?.close(confirmDialogModal);
+                resolve(result);
+            };
+            const onConfirm = () => finish(true);
+            const onCancel = () => finish(false);
+
+            confirmDialogConfirmBtn.addEventListener('click', onConfirm);
+            confirmDialogCancelBtn.addEventListener('click', onCancel);
+
+            confirmDialogModal.classList.add('show');
+            confirmDialogModal.setAttribute('aria-hidden', 'false');
+            window.a11yModal?.open(confirmDialogModal, {
+                dialogEl: confirmDialogModal.querySelector('.transfer-modal'),
+                onRequestClose: () => finish(false),
+            });
+        });
     }
 
     // Shared wiring for section save/reset buttons: confirm (optional), busy
@@ -302,7 +347,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const btn = document.getElementById(buttonId);
         if (!btn) return;
         btn.addEventListener('click', async () => {
-            if (confirmMessage && !confirm(confirmMessage)) return;
+            if (confirmMessage && !(await confirmDialog(confirmMessage))) return;
             const originalLabel = btn.textContent;
             btn.disabled = true;
             if (busyLabel) btn.textContent = busyLabel;
@@ -317,6 +362,132 @@ document.addEventListener('DOMContentLoaded', async () => {
                 btn.textContent = originalLabel;
             }
         });
+    }
+
+    // Debounced autosave for a section (pilot: Student chat, #605). Reuses
+    // whatever save function the section's old explicit Save button called -
+    // this only changes the trigger (a debounced field listener instead of a
+    // click), not what gets saved or how.
+    //
+    // Status feedback is per-field, not per-section: a toggle autosaves
+    // silently (its own flip is feedback enough), while a text/number/
+    // textarea field gets a small indicator next to it - a loading spinner
+    // while the (shared, composite) save is in flight, then a checkmark that
+    // fades. Pass { showIndicator: false } from a toggle's listener so it
+    // still triggers the save without ever getting an indicator of its own.
+    //
+    // A save already in flight is never joined by a second overlapping
+    // request: if a field changes again while one is pending, that's noted
+    // and a fresh save runs immediately after the first finishes, so the
+    // final request always reflects the latest field values instead of two
+    // requests racing and possibly letting a stale one overwrite a newer edit.
+    function createFieldAutosaveController(saveFn, { debounceMs = 900, savedDisplayMs = 1500 } = {}) {
+        let timer = null;
+        let inFlight = false;
+        let pendingRerun = false;
+        let pendingFields = new Set();
+        let activeFields = new Set();
+
+        function indicatorFor(fieldEl) {
+            const next = fieldEl.nextElementSibling;
+            if (next && next.classList.contains('field-autosave-indicator')) return next;
+            const indicator = document.createElement('span');
+            indicator.className = 'field-autosave-indicator';
+            fieldEl.insertAdjacentElement('afterend', indicator);
+            return indicator;
+        }
+
+        function setFieldState(fieldEl, state) {
+            const indicator = indicatorFor(fieldEl);
+            indicator.dataset.state = state;
+            indicator.innerHTML = '';
+            if (state === 'saving') {
+                const spinner = document.createElement('span');
+                spinner.className = 'field-autosave-spinner';
+                indicator.appendChild(spinner);
+                indicator.setAttribute('title', 'Saving…');
+            } else if (state === 'saved') {
+                indicator.textContent = '✓';
+                indicator.setAttribute('title', 'Saved');
+            } else {
+                indicator.remove();
+            }
+        }
+
+        async function runSave() {
+            clearTimeout(timer);
+            timer = null;
+            if (inFlight) {
+                pendingRerun = true;
+                return;
+            }
+            inFlight = true;
+            activeFields = pendingFields;
+            pendingFields = new Set();
+            activeFields.forEach(field => setFieldState(field, 'saving'));
+            try {
+                await saveFn();
+                activeFields.forEach(field => setFieldState(field, 'saved'));
+                setTimeout(() => activeFields.forEach(field => setFieldState(field, 'idle')), savedDisplayMs);
+            } catch (error) {
+                console.error('Autosave failed:', error);
+                activeFields.forEach(field => setFieldState(field, 'idle'));
+                showNotification(error.message || 'Could not save your change', 'error');
+            } finally {
+                inFlight = false;
+                if (pendingRerun) {
+                    pendingRerun = false;
+                    runSave();
+                }
+            }
+        }
+
+        function schedule(fieldEl, { showIndicator = true } = {}) {
+            if (fieldEl && showIndicator) pendingFields.add(fieldEl);
+            clearTimeout(timer);
+            timer = setTimeout(runSave, debounceMs);
+        }
+
+        // Run a pending debounced save immediately (e.g. the user pressed
+        // Enter to leave the field) instead of waiting out the rest of the
+        // debounce window. A no-op when nothing is scheduled, so it's safe
+        // to call on every Enter press even if the field wasn't touched.
+        function flush() {
+            if (timer === null) return;
+            runSave();
+        }
+
+        return { schedule, flush };
+    }
+
+    // Generic wiring for a section that autosaves every field with
+    // createFieldAutosaveController (#605 pilot, #632 extended to the rest of
+    // Settings). Checkboxes/radios autosave silently on 'change' (their own
+    // flip is feedback enough); every other field type autosaves on 'input'
+    // with the spinner/checkmark indicator. excludeIds skips fields that
+    // aren't really "save this value" inputs - e.g. a bucket picker <select>
+    // that loads different data, or a field with its own dedicated
+    // save/test button (API keys).
+    function wireAutosaveSection(sectionEl, saveFn, { excludeIds = [] } = {}) {
+        if (!sectionEl) return null;
+        const autosave = createFieldAutosaveController(saveFn);
+        // Exposed so the page-wide "Enter flushes the pending save" handler
+        // can skip straight to saving instead of waiting out the debounce.
+        sectionEl.autosaveFlush = autosave.flush;
+        const skip = (field) => !field || field.closest('.settings-section-actions') || excludeIds.includes(field.id);
+        sectionEl.addEventListener('input', (event) => {
+            const field = event.target;
+            if (skip(field) || field.type === 'checkbox' || field.type === 'radio') return;
+            autosave.schedule(field);
+        });
+        sectionEl.addEventListener('change', (event) => {
+            const field = event.target;
+            if (skip(field)) return;
+            if (field.type === 'checkbox' || field.type === 'radio') {
+                autosave.schedule(field, { showIndicator: false });
+            }
+        });
+        return autosave;
     }
 
     function addKeyboardPickerActivation(selectElement) {
@@ -349,6 +520,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         event.preventDefault();
         toggle.click();
+    });
+
+    // Pressing Enter in a text-like field blurs it, so the field doesn't sit
+    // there still selected/in edit mode after the user is done, and flushes
+    // the section's pending autosave immediately instead of waiting out the
+    // rest of the debounce - otherwise the saving spinner/checkmark only
+    // shows up however much of the ~900ms debounce window was left.
+    // Textareas are excluded - Enter there means a new line, not "done".
+    document.addEventListener('keydown', event => {
+        const field = event.target;
+        if (!(field instanceof HTMLInputElement)
+            || !['text', 'number', 'email', 'password', 'search'].includes(field.type)
+            || !field.closest('#settings-panels, #transfer-course-modal')
+            || event.key !== 'Enter') return;
+
+        event.preventDefault();
+        field.blur();
+        field.closest('.settings-section')?.autosaveFlush?.();
     });
 
     // Check if user has system admin access
@@ -561,7 +750,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             ? `Refresh current material for ${label}? Only missing or changed items will be embedded.`
             : `Switch this AI surface to ${label}? Existing embeddings are reused, and only missing `
                 + `or changed items are indexed before the switch completes.`;
-        if (!options.confirmed && !confirm(prompt)) return;
+        if (!options.confirmed && !(await confirmDialog(prompt))) return;
 
         const url = await llmProviderActionUrl(prefix, action);
         const response = await fetch(url, {
@@ -662,9 +851,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 cancel.addEventListener('click', async () => {
                     const panel = document.getElementById(`${surface.prefix}-llm-migration`);
                     const migrationId = panel && panel.dataset.migrationId;
-                    if (!migrationId || !confirm(
+                    if (!migrationId || !(await confirmDialog(
                         'Cancel this preparation and delete the partial vectors created for it?'
-                    )) return;
+                    ))) return;
                     cancel.disabled = true;
                     try {
                         const result = await window.LlmPlatform.cancelMigration(migrationId);
@@ -1431,7 +1620,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             'include-notes-super-course-toggle', 'super-note-ratio-input', 'super-note-min-score-input',
             'super-instructor-prompt', 'super-student-prompt',
             'superchat-llm-key-input', 'test-superchat-llm-key', 'save-superchat-llm-key',
-            'reset-superchat-bucket', 'save-superchat-bucket'
+            'reset-superchat-bucket'
         ];
         for (const id of ids) {
             const el = document.getElementById(id);
@@ -1537,8 +1726,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // this course; saving bucket membership confirms it.
                 await loadSuperchatList(newId);
                 refreshCourseSuperchatChecklist([newId]);
-                markSectionDirty('course-superchats-section');
-                showNotification('Bucket created and checked for this course. Save bucket membership to confirm.', 'success');
+                // Starts pre-checked for this course - persist that membership
+                // immediately rather than waiting for some other field to autosave.
+                await courseSuperchatsSave?.();
+                showNotification('Bucket created and checked for this course', 'success');
             } catch (error) {
                 console.error('Error creating bucket:', error);
                 showNotification(error.message || 'Failed to create bucket', 'error');
@@ -1569,7 +1760,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (deleteBtn) {
             deleteBtn.addEventListener('click', async () => {
                 if (!selectedSuperchatId) return;
-                if (!confirm('Delete this Super Course bucket? It will be removed from every course and hidden from students.')) return;
+                if (!(await confirmDialog(
+                    'Delete this Super Course bucket? It will be removed from every course and hidden from students.',
+                    { title: 'Delete bucket?', confirmLabel: 'Delete bucket', danger: true }
+                ))) return;
                 try {
                     const response = await fetch(`/api/superchats/${encodeURIComponent(selectedSuperchatId)}`, {
                         method: 'DELETE',
@@ -2197,8 +2391,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }, { busyLabel: 'Testing...' });
 
-    // Course basics
-    wireSectionButton('save-course-basics', async () => {
+    // Course basics (autosave, #632)
+    const saveCourseBasics = async () => {
         const courseId = await getCurrentCourseId();
         const yearLevelSelect = document.getElementById('course-year-level-select');
         if (!courseId || !yearLevelSelect) {
@@ -2216,19 +2410,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!response.ok || !result.success) {
             throw new Error(result.message || 'Failed to save course level');
         }
-        showNotification('Course basics saved', 'success');
-    }, { busyLabel: 'Saving...' });
+    };
+    wireAutosaveSection(document.getElementById('course-level-section'), saveCourseBasics);
 
-    // Student chat combines settings owned by several backend documents:
-    // Top-K in ai-settings, retrieval behavior in prompts, source downloads in
-    // quiz settings, and usefulness prompts in chat-survey settings.
-    wireSectionButton('save-student-chat', async () => {
+    // Student chat (autosave pilot, #605): combines settings owned by
+    // several backend documents - Top-K in ai-settings, retrieval behavior
+    // in prompts, source downloads in quiz settings, and usefulness prompts
+    // in chat-survey settings. Same composite save a click used to trigger;
+    // only the trigger itself changed, from a button click to a debounced
+    // field listener.
+    const studentChatSave = async () => {
         await saveAiSettingsToServer();
         await savePromptsConfigToServer();
         await saveQuizConfigToServer();
         await saveChatSurveySettingsToServer();
-        showNotification('Student chat settings saved', 'success');
-    }, { busyLabel: 'Saving...' });
+    };
+    wireAutosaveSection(document.getElementById('student-chat-section'), studentChatSave);
 
     wireSectionButton('reset-student-chat', async () => {
         const topKInput = document.getElementById('student-chat-topk-input');
@@ -2240,21 +2437,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (additionalSecondaryToggle) additionalSecondaryToggle.checked = false;
         if (sourceAttributionToggle) sourceAttributionToggle.checked = false;
         applyChatSurveySettings(DEFAULT_CHAT_SURVEY_SETTINGS, DEFAULT_CHAT_SURVEY_SETTINGS);
-        await saveAiSettingsToServer();
-        await savePromptsConfigToServer();
-        await saveQuizConfigToServer();
-        await saveChatSurveySettingsToServer();
+        await studentChatSave();
         showNotification('Student chat settings reset to defaults', 'success');
     }, {
         confirmMessage: 'Reset student chat settings (Top-K, additive retrieval, additional material search, source downloads, and survey settings) to defaults?',
         busyLabel: 'Resetting...'
     });
 
-    // Course prompts
-    wireSectionButton('save-prompts', async () => {
-        await savePromptsConfigToServer();
-        showNotification('Prompts saved', 'success');
-    }, { busyLabel: 'Saving...' });
+    // Course prompts (autosave, #632)
+    wireAutosaveSection(document.getElementById('ai-persona-section'), savePromptsConfigToServer);
 
     wireSectionButton('reset-prompts', async () => {
         // Fetch the platform defaults (GET without courseId), fill the fields,
@@ -2273,11 +2464,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         busyLabel: 'Resetting...'
     });
 
-    // Quiz practice
-    wireSectionButton('save-quiz-settings', async () => {
-        await saveQuizConfigToServer();
-        showNotification('Quiz settings saved', 'success');
-    }, { busyLabel: 'Saving...' });
+    // Quiz practice (autosave, #632)
+    wireAutosaveSection(document.getElementById('quiz-settings-section'), saveQuizConfigToServer);
 
     wireSectionButton('reset-quiz-settings', async () => {
         const quizEnabledToggle = document.getElementById('quiz-enabled-toggle');
@@ -2292,12 +2480,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         busyLabel: 'Resetting...'
     });
 
-    // Privacy & sessions
-    wireSectionButton('save-privacy-settings', async () => {
+    // Privacy & sessions (autosave, #632 - previously a dirty-gated manual
+    // save, #605)
+    const privacySave = async () => {
         await saveAnonymizeStudentsToServer();
         await savePromptsConfigToServer();
-        showNotification('Privacy settings saved', 'success');
-    }, { busyLabel: 'Saving...' });
+    };
+    wireAutosaveSection(document.getElementById('privacy-settings-section'), privacySave);
 
     wireSectionButton('reset-privacy-settings', async () => {
         const anonymizeToggle = document.getElementById('anonymize-students-toggle');
@@ -2306,21 +2495,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (anonymizeToggle) anonymizeToggle.checked = false;
         if (idleTimeoutInput) idleTimeoutInput.value = 4;
         if (sessionTimeoutInput) sessionTimeoutInput.value = 30;
-        await saveAnonymizeStudentsToServer();
-        await savePromptsConfigToServer();
+        await privacySave();
         showNotification('Privacy settings reset to defaults', 'success');
     }, {
         confirmMessage: 'Reset privacy and session settings to defaults (anonymization off, 4 minute idle timeout, 30 minute chat session timeout)?',
         busyLabel: 'Resetting...'
     });
 
-    // Super course: per-course bucket membership
-    wireSectionButton('save-course-superchats', async () => {
+    // Super course: per-course bucket membership (autosave, #632). The
+    // "Create a new bucket" name/key fields live in this same section but
+    // aren't membership state - excluded so typing a new bucket name doesn't
+    // trigger a membership save. Also called directly from initSuperchatManagement()
+    // when a new bucket is created (it starts pre-checked, so that needs to
+    // persist immediately rather than waiting for some other field to change).
+    courseSuperchatsSave = async () => {
         await saveAiSettingsToServer();
         newlyCreatedSuperchatIds.clear();
         refreshCourseSuperchatChecklist();
-        showNotification('Bucket membership saved', 'success');
-    }, { busyLabel: 'Saving...' });
+    };
+    wireAutosaveSection(document.getElementById('course-superchats-section'), courseSuperchatsSave, {
+        excludeIds: ['new-superchat-name', 'new-superchat-key']
+    });
 
     wireSectionButton('reset-course-superchats', async () => {
         document.querySelectorAll('.course-superchat-checkbox').forEach(cb => { cb.checked = false; });
@@ -2333,14 +2528,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         busyLabel: 'Removing...'
     });
 
-    // Super course: shared bucket settings
-    wireSectionButton('save-superchat-bucket', async () => {
-        await saveSuperchatBucketToServer();
-        // Refresh the select label and checklist (name/course count may have changed).
-        await loadSuperchatList(selectedSuperchatId);
-        refreshCourseSuperchatChecklist();
-        showNotification('Bucket settings saved', 'success');
-    }, { busyLabel: 'Saving...' });
+    // Super course: shared bucket settings (autosave, #632). Excludes the
+    // bucket picker <select> (switching it loads a different bucket's data,
+    // it isn't a field to persist) and the API key input (its own dedicated
+    // save/test buttons, see the LLM key section below). Unlike the manual
+    // Save button this replaced, this doesn't refresh the select/checklist
+    // labels after every save - re-populating the form mid-edit would reset
+    // the cursor in whichever textarea the instructor is still typing in.
+    // Reset still does the full refresh since it's an infrequent, deliberate
+    // action rather than something firing on every pause while typing.
+    wireAutosaveSection(document.getElementById('super-course-chat-section'), saveSuperchatBucketToServer, {
+        excludeIds: ['superchat-select', 'superchat-llm-key-input']
+    });
 
     wireSectionButton('reset-superchat-bucket', async () => {
         if (!selectedSuperchatId) {
@@ -2386,8 +2585,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         await rollbackPlatformEmbeddingModel('ubc-llm-proxy');
     }, { busyLabel: 'Cancelling...' });
 
-    // Admin: login restrictions
-    wireSectionButton('save-access-settings', async () => {
+    // Admin: login restrictions (autosave, #632)
+    wireAutosaveSection(document.getElementById('login-restriction-section'), async () => {
         const allowLocalLogin = document.getElementById('allow-local-login-toggle')?.checked;
         const response = await fetch('/api/settings/global', {
             method: 'POST',
@@ -2398,11 +2597,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!response.ok || !result.success) {
             throw new Error(result.error || 'Failed to save login settings');
         }
-        showNotification('Login settings saved', 'success');
-    }, { busyLabel: 'Saving...' });
+    });
 
-    // Admin: academic API integration gate
-    wireSectionButton('save-academic-api-settings', async () => {
+    // Admin: academic API integration gate (autosave, #632)
+    wireAutosaveSection(document.getElementById('academic-api-section'), async () => {
         const academicApiEnabled = document.getElementById('academic-api-enabled-toggle')?.checked;
         const response = await fetch('/api/settings/global', {
             method: 'POST',
@@ -2413,11 +2611,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!response.ok || !result.success) {
             throw new Error(result.error || 'Failed to save academic API settings');
         }
-        showNotification('Academic API settings saved', 'success');
-    }, { busyLabel: 'Saving...' });
+    });
 
-    // Admin: question generation prompts
-    wireSectionButton('save-question-prompts', async () => {
+    // Admin: question generation prompts (autosave, #632)
+    const saveQuestionPrompts = async () => {
         const courseId = await getCurrentCourseId();
         const systemPrompt = document.getElementById('question-system-prompt')?.value;
         const trueFalse = document.getElementById('question-true-false-prompt')?.value;
@@ -2438,8 +2635,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             throw new Error(result.message || 'Failed to save question prompts');
         }
         if (result.prompts) applyQuestionPromptValues(result.prompts);
-        showNotification('Question prompts saved', 'success');
-    }, { busyLabel: 'Saving...' });
+    };
+    wireAutosaveSection(document.getElementById('question-generation-section'), saveQuestionPrompts);
 
     wireSectionButton('reset-question-prompts', async () => {
         const courseId = await getCurrentCourseId();
@@ -2459,8 +2656,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         busyLabel: 'Resetting...'
     });
 
-    // Admin: mental health detection prompt
-    wireSectionButton('save-mh-prompt', async () => {
+    // Admin: mental health detection prompt (autosave, #632)
+    wireAutosaveSection(document.getElementById('mental-health-detection-section'), async () => {
         const courseId = await getCurrentCourseId();
         const prompt = document.getElementById('mental-health-detection-prompt')?.value;
         if (!prompt) {
@@ -2475,8 +2672,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!response.ok || !result.success) {
             throw new Error(result.message || 'Failed to save detection prompt');
         }
-        showNotification('Detection prompt saved', 'success');
-    }, { busyLabel: 'Saving...' });
+    });
 
     wireSectionButton('reset-mh-prompt', async () => {
         const courseId = await getCurrentCourseId();
@@ -2961,7 +3157,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ? 'Reactivate this course so students can use it again?'
                 : 'Deactivate this course? Students will be blocked until you reactivate it, but instructors and TAs will still be able to manage it.';
 
-            if (!confirm(confirmMessage)) {
+            if (!(await confirmDialog(confirmMessage, { title: isInactive ? 'Reactivate course?' : 'Deactivate course?' }))) {
                 return;
             }
 
@@ -3064,8 +3260,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (deleteCollectionBtn) {
         deleteCollectionBtn.addEventListener('click', async () => {
             // Show confirmation dialog
-            const confirmed = confirm(
-                'WARNING: This will permanently delete ALL BiocBot data!\n\n' +
+            const confirmed = await confirmDialog(
                 'This includes:\n' +
                 '• Vector embeddings (Qdrant)\n' +
                 '• Document metadata (MongoDB)\n' +
@@ -3073,7 +3268,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 '• Questions and assessments\n' +
                 '• Onboarding data\n\n' +
                 'This action cannot be undone and will completely reset the system.\n\n' +
-                'Are you absolutely sure you want to continue?'
+                'Are you absolutely sure you want to continue?',
+                { title: 'Permanently delete ALL BiocBot data?', confirmLabel: 'Delete everything', danger: true }
             );
 
             if (!confirmed) {
@@ -3175,7 +3371,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            if (!confirm(`Revoke system admin access for ${email}?`)) {
+            if (!(await confirmDialog(`Revoke system admin access for ${email}?`, { title: 'Revoke admin access?', danger: true }))) {
                 return;
             }
 
