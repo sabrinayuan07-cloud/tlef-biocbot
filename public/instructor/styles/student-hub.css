@@ -223,6 +223,34 @@
 .survey-section-actions select {
     width: auto;
     min-width: 150px;
+    /* Native select arrows sit flush against the border in some browsers -
+       swap in a custom chevron (matching .account-chevron elsewhere) with
+       deliberate spacing from the edge instead. */
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23666666' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 16px;
+    padding-right: 34px;
+}
+
+/* The app's primary blue instead of the generic .btn-secondary gray, so a
+   deliberate action (vs. a neutral/default one) reads clearly - also gets
+   a flat disabled gray while a load is in flight (#570). */
+#refresh-survey-responses {
+    background: var(--primary-color);
+    color: white;
+}
+
+#refresh-survey-responses:hover:not(:disabled) {
+    background: var(--accent-color);
+}
+
+#refresh-survey-responses:disabled {
+    background: #ccc;
+    color: #888;
+    opacity: 1;
 }
 
 .survey-section-actions button {
