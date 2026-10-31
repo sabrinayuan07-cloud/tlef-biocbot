@@ -1260,7 +1260,7 @@ function renderStudents(courseId) {
                         </span>
                         <span>Enrolled</span>
                     </label>
-                    <button class="btn-small btn-secondary enroll-save-btn" id="save-${s.userId}" disabled
+                    <button class="btn-small btn-secondary btn-accent" id="save-${s.userId}" disabled
                             onclick="saveEnrollment('${courseId}','${s.userId}')">Save</button>
                     
                     ${isTA ? `

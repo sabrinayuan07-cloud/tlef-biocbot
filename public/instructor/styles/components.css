@@ -53,21 +53,22 @@
   border-radius: 4px;
 }
 
-/* Student Hub enrollment Save button - the app's primary blue instead of
-   the generic .btn-secondary gray, so an actionable "you have an unsaved
-   enrollment change" state reads clearly. Disabled state is a flat light
-   gray (not just dimmed blue) to match the disabled-button convention used
-   elsewhere (e.g. Settings' dirty-gated Save buttons). */
-.enroll-save-btn {
+/* Accent-blue button modifier - the app's primary blue instead of the
+   generic .btn-secondary gray, for actions that should read as a clear,
+   deliberate blue affordance (e.g. Student Hub's enrollment Save button,
+   its Refresh button) rather than a neutral/default action. Disabled state
+   is a flat light gray (not just dimmed blue) to match the disabled-button
+   convention used elsewhere (e.g. Settings' dirty-gated Save buttons). */
+.btn-accent {
   background: var(--primary-color);
   color: white;
 }
 
-.enroll-save-btn:hover:not(:disabled) {
+.btn-accent:hover:not(:disabled) {
   background: var(--accent-color);
 }
 
-.enroll-save-btn:disabled {
+.btn-accent:disabled {
   background: #ccc;
   color: #888;
   opacity: 1;
