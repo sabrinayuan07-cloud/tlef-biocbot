@@ -320,6 +320,11 @@ function resetToSelection() {
     document.getElementById('upload-method-selection').style.display = 'flex';
     document.getElementById('file-upload-section').style.display = 'none';
     document.getElementById('text-input-section').style.display = 'none';
+    // showTextInput() reveals this for the "paste content directly" flow -
+    // without hiding it here too, it stayed visible after going back even
+    // though the method-selection screen it reset to has no use for it.
+    const nameInputSection = document.getElementById('name-input-section');
+    if (nameInputSection) nameInputSection.style.display = 'none';
 }
 
 function showInlineTopicReview(courseId, sourceName, existingTopics, suggestedTopics) {
