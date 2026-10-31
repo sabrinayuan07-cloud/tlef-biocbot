@@ -1006,6 +1006,8 @@ async function loadChatSurveyResponses(courseId) {
     const statusEl = document.getElementById('survey-responses-status');
     const container = document.getElementById('survey-responses-container');
     const downloadButton = document.getElementById('download-survey-responses');
+    const statusFilterSelect = document.getElementById('survey-status-filter');
+    const refreshButton = document.getElementById('refresh-survey-responses');
 
     if (statusEl) {
         statusEl.textContent = 'Loading survey responses...';
@@ -1018,6 +1020,11 @@ async function loadChatSurveyResponses(courseId) {
     if (downloadButton) {
         downloadButton.disabled = true;
     }
+    // Disabled while a load is in flight (#570) so changing the filter or
+    // hitting Refresh mid-request can't kick off a second, overlapping fetch
+    // whose response could race the first and show stale data.
+    if (statusFilterSelect) statusFilterSelect.disabled = true;
+    if (refreshButton) refreshButton.disabled = true;
 
     try {
         const statusFilter = document.getElementById('survey-status-filter')?.value || 'all';
@@ -1052,6 +1059,8 @@ async function loadChatSurveyResponses(courseId) {
         if (downloadButton) {
             downloadButton.disabled = !currentSurveyCourseId;
         }
+        if (statusFilterSelect) statusFilterSelect.disabled = false;
+        if (refreshButton) refreshButton.disabled = false;
     }
 }
 
