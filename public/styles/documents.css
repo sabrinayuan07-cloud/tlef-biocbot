@@ -1339,6 +1339,16 @@
     font-size: 20px;
 }
 
+/* The "<- Back" control above the file-upload/paste-content sections
+   (index.html) had no interactive state at all - hovering, focusing, or
+   clicking it looked identical to doing nothing. */
+.btn-text-only:hover,
+.btn-text-only:focus-visible,
+.btn-text-only:active {
+    font-weight: 700;
+    color: var(--text-color, #333);
+}
+
 .input-section {
     display: flex;
     flex-direction: column;
