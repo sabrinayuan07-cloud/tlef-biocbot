@@ -584,7 +584,10 @@ header.sidebar {
 
 .notification {
     padding: 12px 16px;
-    border-radius: 4px;
+    /* 8px matches the card radius used elsewhere (.unit-section,
+       .student-card, etc.) - the old 4px read as flatter/sharper than
+       everything else on the page (#571). */
+    border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     animation: slide-in 0.3s ease-out;
     position: relative;
@@ -597,6 +600,13 @@ header.sidebar {
     word-break: break-word;
 }
 
+/* success/info keep their own darker shade rather than the raw
+   --success-color (#28a745) / --info-color (#17a2b8) tokens used
+   elsewhere (e.g. badges) - with white text those only hit a 3.1:1
+   contrast ratio, below the 4.5:1 WCAG AA minimum (caught by
+   tests/a11y/modals.a11y.spec.js). Same green/teal family as the design
+   tokens, just dark enough to stay readable as a solid white-on-color
+   toast instead of a light badge. */
 .notification.success {
     background-color: #1e7e34;
     color: white;
@@ -623,7 +633,11 @@ header.sidebar {
     right: 8px;
     background: transparent;
     border: none;
-    color: #ff0000;
+    /* Matches each notification's own text color (white on the three dark
+       variants, dark on the light warning background) instead of a fixed
+       red that read as an alarm icon sitting on top of a success/info/
+       warning toast regardless of what the toast was actually saying (#571). */
+    color: inherit;
     font-size: 16px;
     font-weight: bold;
     cursor: pointer;
@@ -633,18 +647,13 @@ header.sidebar {
     display: flex;
     align-items: center;
     justify-content: center;
-    opacity: 0.9;
+    opacity: 0.85;
     text-shadow: 0 1px 2px rgba(0,0,0,0.1);
 }
 
 .notification-close:hover {
     opacity: 1;
     transform: scale(1.1);
-}
-
-/* Ensure close button is white on error notifications */
-.notification.error .notification-close {
-    color: white;
 }
 
 @keyframes slide-in {
