@@ -261,21 +261,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (q.questionType === 'multiple-choice') {
             const selected = document.querySelector('input[name="mc-answer"]:checked');
             if (!selected) {
-                showToast('Please select an answer.');
+                showNotification('Please select an answer.');
                 return;
             }
             studentAnswer = selected.value;
         } else if (q.questionType === 'true-false') {
             const selected = document.querySelector('input[name="tf-answer"]:checked');
             if (!selected) {
-                showToast('Please select True or False.');
+                showNotification('Please select True or False.');
                 return;
             }
             studentAnswer = selected.value;
         } else if (q.questionType === 'short-answer') {
             studentAnswer = document.getElementById('sa-input').value.trim();
             if (!studentAnswer) {
-                showToast('Please type your answer.');
+                showNotification('Please type your answer.');
                 return;
             }
         }
@@ -480,7 +480,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const res = await fetch(`/api/quiz/materials/${documentId}/download?courseId=${courseId}`);
             if (!res.ok) {
-                showToast('Unable to download this document.');
+                showNotification('Unable to download this document.');
                 return;
             }
 
@@ -498,7 +498,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             URL.revokeObjectURL(url);
         } catch (e) {
             console.error('Error downloading material:', e);
-            showToast('Error downloading material.');
+            showNotification('Error downloading material.');
         }
     }
 
@@ -700,29 +700,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadingEl.style.display = 'none';
         disabledEl.querySelector('p').textContent = message;
         disabledEl.style.display = '';
-    }
-
-    function showToast(message) {
-        // Simple toast notification
-        let container = document.querySelector('.notification-container');
-        if (!container) {
-            container = document.createElement('div');
-            container.className = 'notification-container';
-            document.body.appendChild(container);
-        }
-
-        const notification = document.createElement('div');
-        notification.className = 'notification info';
-        notification.textContent = message;
-
-        const closeBtn = document.createElement('button');
-        closeBtn.className = 'notification-close';
-        closeBtn.innerHTML = '&times;';
-        closeBtn.addEventListener('click', () => notification.remove());
-        notification.appendChild(closeBtn);
-
-        container.appendChild(notification);
-        setTimeout(() => notification.remove(), 3000);
     }
 
     // Utility functions

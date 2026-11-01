@@ -338,7 +338,10 @@ test('auto-removes the new-session notification after its timeout', async ({ pag
     });
 
     await expect(page.locator('.notification.info')).toContainText('New chat session started');
-    await expect(page.locator('.notification.info')).toHaveCount(0, { timeout: 4_000 });
+    // showNewSessionNotification() now delegates to the shared showNotification()
+    // (#617), whose auto-dismiss timeout is 5s rather than this function's old
+    // standalone 3s + 300ms fade.
+    await expect(page.locator('.notification.info')).toHaveCount(0, { timeout: 6_000 });
 });
 
 test('formats timestamps across elapsed-time buckets', async ({ page }) => {

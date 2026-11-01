@@ -350,7 +350,7 @@ function showFlagStatusNotification(flag, statusText, responderName) {
         }
     );
     
-    showNotification(notification);
+    showFlagNotificationElement(notification);
 }
 
 /**
@@ -375,7 +375,7 @@ function showFlagResponseNotification(flag, responderName, isUpdate = false) {
         }
     );
     
-    showNotification(notification);
+    showFlagNotificationElement(notification);
 }
 
 /**
@@ -475,10 +475,16 @@ function getNotificationIcon(type) {
 }
 
 /**
- * Show notification on the page
+ * Show a flag notification element on the page (positions it, animates it
+ * in, auto-removes it after 8s). Named distinctly from the shared
+ * showNotification(message, type) in common/scripts/notifications.js -
+ * both are global function declarations, so without a different name
+ * this one, loading after notifications.js, would silently overwrite it
+ * (#617), and every other caller would break on the first `notification`
+ * argument that's a string instead of the HTMLElement this expects.
  * @param {HTMLElement} notification - Notification element to show
  */
-function showNotification(notification) {
+function showFlagNotificationElement(notification) {
     // Add animation styles if not already added
     if (!document.querySelector('#flag-notification-animations')) {
         const style = document.createElement('style');

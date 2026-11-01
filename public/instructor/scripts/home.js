@@ -1640,7 +1640,7 @@ function renderWeeklyStruggleTooltip(context) {
  * @param {string} message - Info message
  */
 function showInfoMessage(message) {
-    showNotificationMessage(message, 'info');
+    showNotification(message, 'info');
 }
 
 /**
@@ -1648,7 +1648,7 @@ function showInfoMessage(message) {
  * @param {string} message - Error message
  */
 function showErrorMessage(message) {
-    showNotificationMessage(message, 'error');
+    showNotification(message, 'error');
 }
 
 /**
@@ -1656,43 +1656,7 @@ function showErrorMessage(message) {
  * @param {string} message - Success message
  */
 function showSuccessMessage(message) {
-    showNotificationMessage(message, 'success');
-}
-
-function getNotificationContainer() {
-    let container = document.querySelector('.notification-container');
-    if (!container) {
-        container = document.createElement('div');
-        container.className = 'notification-container';
-        document.body.appendChild(container);
-    }
-
-    return container;
-}
-
-function showNotificationMessage(message, type) {
-    const notification = document.createElement('div');
-    notification.className = `notification ${type}`;
-
-    const messageSpan = document.createElement('span');
-    messageSpan.textContent = message;
-
-    const closeButton = document.createElement('button');
-    closeButton.className = 'notification-close';
-    closeButton.type = 'button';
-    closeButton.textContent = '×';
-    closeButton.addEventListener('click', () => notification.remove());
-
-    notification.appendChild(messageSpan);
-    notification.appendChild(closeButton);
-
-    getNotificationContainer().appendChild(notification);
-
-    setTimeout(() => {
-        if (notification.parentElement) {
-            notification.remove();
-        }
-    }, 5000);
+    showNotification(message, 'success');
 }
 
 function animateFieldError(input) {

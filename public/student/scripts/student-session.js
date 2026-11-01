@@ -722,51 +722,7 @@ async function loadCurrentSessionIntoInterface() {
  */
 function showAutoContinueNotification() {
     try {
-        // Find or create notification container
-        let container = document.querySelector('.notification-container');
-        if (!container) {
-            container = document.createElement('div');
-            container.className = 'notification-container';
-            document.body.appendChild(container); // Append to body to ensure it's visible
-        }
-
-        // Create notification element
-        const notification = document.createElement('div');
-        notification.className = 'notification success'; // Green for success
-        
-        notification.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 16px;">🔄</span>
-                <span>Chat continued from where you left off</span>
-            </div>
-            <button class="notification-close" aria-label="Close notification">&times;</button>
-        `;
-
-        // Add close functionality
-        const closeBtn = notification.querySelector('.notification-close');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => {
-                notification.remove();
-            });
-        }
-
-        // Add to container
-        container.appendChild(notification);
-
-        // Remove after 3 seconds
-        setTimeout(() => {
-            if (notification.parentNode) {
-                // Add fade out effect if desired, or just remove
-                notification.style.opacity = '0';
-                notification.style.transition = 'opacity 0.3s ease-out';
-                setTimeout(() => {
-                    if (notification.parentNode) {
-                        notification.remove();
-                    }
-                }, 300);
-            }
-        }, 3000);
-
+        showNotification('🔄 Chat continued from where you left off', 'success');
     } catch (error) {
         console.error('Error showing auto-continue notification:', error);
     }
@@ -1134,53 +1090,10 @@ async function handleNewSession(options = {}) {
  */
 function showNewSessionNotification(reason = 'manual') {
     try {
-        // Find or create notification container
-        let container = document.querySelector('.notification-container');
-        if (!container) {
-            container = document.createElement('div');
-            container.className = 'notification-container';
-            document.body.appendChild(container); // Append to body to ensure it's visible
-        }
-
-        // Create notification element
-        const notification = document.createElement('div');
-        notification.className = 'notification info'; // Info color (teal)
-        
-        notification.innerHTML = `
-            <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 16px;">✨</span>
-                <span>${reason === 'inactivity'
-                    ? 'Previous session expired — new chat session started'
-                    : 'New chat session started'}</span>
-            </div>
-            <button class="notification-close" aria-label="Close notification">&times;</button>
-        `;
-
-        // Add close functionality
-        const closeBtn = notification.querySelector('.notification-close');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => {
-                notification.remove();
-            });
-        }
-
-        // Add to container
-        container.appendChild(notification);
-
-        // Remove after 3 seconds
-        setTimeout(() => {
-            if (notification.parentNode) {
-                 // Add fade out effect if desired, or just remove
-                notification.style.opacity = '0';
-                notification.style.transition = 'opacity 0.3s ease-out';
-                setTimeout(() => {
-                    if (notification.parentNode) {
-                        notification.remove();
-                    }
-                }, 300);
-            }
-        }, 3000);
-
+        const message = reason === 'inactivity'
+            ? '✨ Previous session expired — new chat session started'
+            : '✨ New chat session started';
+        showNotification(message, 'info');
     } catch (error) {
         console.error('Error showing new session notification:', error);
     }

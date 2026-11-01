@@ -818,6 +818,13 @@ test.describe('Instructor home dashboard', () => {
 
             testWindow.showInfoMessage('Helper info notice');
             testWindow.showSuccessMessage('Helper success notice');
+            // showInfoMessage/showSuccessMessage now delegate to the shared
+            // showNotification() (#617) instead of a separate inline
+            // implementation, so they go through the mock above like
+            // everything else here - there's no real .notification.info
+            // element to close in this test, hence trivially true. Actual
+            // close-button rendering is covered by the shared
+            // notifications.js's own test coverage.
             /** @type {HTMLButtonElement | null} */ (document.querySelector('.notification.info .notification-close'))?.click();
             const infoClosed = !document.querySelector('.notification.info');
 
@@ -891,6 +898,12 @@ test.describe('Instructor home dashboard', () => {
             'Nov 15, 2026, 1:00 PM',
         ]);
         expect(helperState.notices).toEqual([
+            // showInfoMessage/showSuccessMessage now delegate to the shared
+            // showNotification() (#617), so they're captured by the mock
+            // too - previously they used a separate inline implementation
+            // invisible to it.
+            { message: 'Helper info notice', type: 'info' },
+            { message: 'Helper success notice', type: 'success' },
             { message: 'No course selected', type: 'error' },
             { message: 'No cumulative topics to download', type: 'info' },
         ]);
