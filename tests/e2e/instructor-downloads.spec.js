@@ -491,6 +491,11 @@ test.describe('Instructor downloads page — system admin UI', () => {
                 content: 'Legacy session should stay visible.',
                 timestamp: '2026-01-17T10:00:00.000Z',
             },
+            {
+                type: 'bot',
+                content: 'It should.',
+                timestamp: '2026-01-17T10:00:05.000Z',
+            },
         ]);
     });
 

@@ -112,7 +112,12 @@ function calculateDurationFromSessionData(session) {
 router.get('/:courseId', async (req, res) => {
     try {
         const { courseId } = req.params;
-        
+        // Default excludes 0s-duration sessions (#519) - a session where the
+        // student never sent a message still gets saved as soon as the
+        // auto-welcome bot message lands, so without this every login would
+        // count as "a chat" even though nothing was actually asked.
+        const includeZeroDuration = req.query.includeZeroDuration === 'true';
+
         // Get authenticated user information
         const user = req.user;
         if (!user) {
@@ -158,28 +163,36 @@ router.get('/:courseId', async (req, res) => {
                 { isDeleted: false } // Non-deleted sessions
             ]
         }).sort({ savedAt: -1 }).toArray();
-        
+
+        // Recalculate duration from actual message timestamps, then drop
+        // 0s-duration sessions unless explicitly included (#519) - a student
+        // who only ever got the auto-welcome message shouldn't count as "a
+        // student with saved chats" by default.
+        const sessionsWithDuration = chatSessions
+            .map(session => ({ session, duration: calculateDurationFromSessionData(session) }))
+            .filter(({ duration }) => includeZeroDuration || duration !== '0s');
+
         // Group chat sessions by student
         const studentsMap = new Map();
-        
-        chatSessions.forEach(session => {
-            
+
+        sessionsWithDuration.forEach(({ session, duration }) => {
+
             const studentId = session.studentId;
             let studentName = session.studentName || 'Unknown Student';
-            
+
             // If studentName is an object, try to extract the actual name
             if (typeof studentName === 'object' && studentName !== null) {
-                studentName = studentName.displayName || 
-                             studentName.name || 
-                             studentName.studentName || 
+                studentName = studentName.displayName ||
+                             studentName.name ||
+                             studentName.studentName ||
                              'Unknown Student';
             }
-            
+
             // Ensure studentName is a string
             if (typeof studentName !== 'string') {
                 studentName = 'Unknown Student';
             }
-            
+
             if (!studentsMap.has(studentId)) {
                 studentsMap.set(studentId, {
                     studentId: studentId,
@@ -191,34 +204,32 @@ router.get('/:courseId', async (req, res) => {
                     sessions: []
                 });
             }
-            
+
             const student = studentsMap.get(studentId);
             student.totalSessions++;
-            // Recalculate duration from actual message timestamps
-            const calculatedDuration = calculateDurationFromSessionData(session);
-            
+
             student.sessions.push({
                 sessionId: session.sessionId,
                 title: session.title || `Chat Session ${student.totalSessions}`,
                 unitName: session.unitName,
                 savedAt: session.savedAt,
                 messageCount: session.messageCount || 0,
-                duration: calculatedDuration
+                duration: duration
             });
-            
+
             // Update last activity
             if (!student.lastActivity || new Date(session.savedAt) > new Date(student.lastActivity)) {
                 student.lastActivity = session.savedAt;
             }
         });
-        
+
         // Convert map to array and sort by last activity
-        const students = Array.from(studentsMap.values()).sort((a, b) => 
+        const students = Array.from(studentsMap.values()).sort((a, b) =>
             new Date(b.lastActivity) - new Date(a.lastActivity)
         );
-        
+
         console.log(`Retrieved ${students.length} students with saved chats for course ${courseId}`);
-        
+
         res.json({
             success: true,
             data: {
@@ -226,7 +237,7 @@ router.get('/:courseId', async (req, res) => {
                 courseName: course.courseName,
                 students: students,
                 totalStudents: students.length,
-                totalSessions: chatSessions.length
+                totalSessions: sessionsWithDuration.length
             }
         });
         
@@ -387,7 +398,9 @@ router.get('/:courseId/:studentId/sessions/own', async (req, res) => {
 router.get('/:courseId/:studentId/sessions', async (req, res) => {
     try {
         const { courseId, studentId } = req.params;
-        
+        // Default excludes 0s-duration sessions (#519) - see GET /:courseId above.
+        const includeZeroDuration = req.query.includeZeroDuration === 'true';
+
         // Get authenticated user information
         const user = req.user;
         if (!user) {
@@ -432,15 +445,18 @@ router.get('/:courseId/:studentId/sessions', async (req, res) => {
                 { isDeleted: false } // Non-deleted sessions
             ]
         }).sort({ savedAt: -1 }).toArray();
-        
+
         console.log(`Retrieved ${sessions.length} sessions for student ${studentId} in course ${courseId}`);
-        
-        // Recalculate duration for each session
-        const sessionsWithCalculatedDuration = sessions.map(session => ({
-            ...session,
-            duration: calculateDurationFromSessionData(session)
-        }));
-        
+
+        // Recalculate duration for each session, then drop 0s-duration
+        // sessions unless explicitly included (#519).
+        const sessionsWithCalculatedDuration = sessions
+            .map(session => ({
+                ...session,
+                duration: calculateDurationFromSessionData(session)
+            }))
+            .filter(session => includeZeroDuration || session.duration !== '0s');
+
         res.json({
             success: true,
             data: {
@@ -450,7 +466,7 @@ router.get('/:courseId/:studentId/sessions', async (req, res) => {
                 sessions: sessionsWithCalculatedDuration
             }
         });
-        
+
     } catch (error) {
         console.error('Error fetching student sessions:', error);
         res.status(500).json({

@@ -214,11 +214,20 @@ async function resetDownloadData({ instructorId }) {
                 studentName: DOWNLOAD_SECOND_STUDENT_NAME,
                 title: 'Legacy Session Without Delete Flag',
                 savedAt: '2026-01-17T10:00:00.000Z',
+                // A real bot reply, not just the lone user message - otherwise
+                // this is 0s-duration and gets excluded by default (#519),
+                // which isn't what this fixture is testing (the missing
+                // isDeleted field).
                 messages: [
                     {
                         type: 'user',
                         content: 'Legacy session should stay visible.',
                         timestamp: '2026-01-17T10:00:00.000Z',
+                    },
+                    {
+                        type: 'bot',
+                        content: 'It should.',
+                        timestamp: '2026-01-17T10:00:05.000Z',
                     },
                 ],
                 omitIsDeleted: true,
@@ -241,11 +250,18 @@ async function resetDownloadData({ instructorId }) {
                 courseId: DOWNLOAD_OTHER_COURSE_ID,
                 title: 'Other Course Chat',
                 savedAt: '2026-01-19T10:00:00.000Z',
+                // A bot reply, not just the lone user message - otherwise
+                // this is 0s-duration and gets excluded by default (#519).
                 messages: [
                     {
                         type: 'user',
                         content: 'Other course content.',
                         timestamp: '2026-01-19T10:00:00.000Z',
+                    },
+                    {
+                        type: 'bot',
+                        content: 'Other course reply.',
+                        timestamp: '2026-01-19T10:00:05.000Z',
                     },
                 ],
             }),
@@ -254,11 +270,18 @@ async function resetDownloadData({ instructorId }) {
                 courseId: DOWNLOAD_UNRELATED_COURSE_ID,
                 title: 'Unrelated Instructor Chat',
                 savedAt: '2026-01-20T10:00:00.000Z',
+                // A bot reply, not just the lone user message - otherwise
+                // this is 0s-duration and gets excluded by default (#519).
                 messages: [
                     {
                         type: 'user',
                         content: 'Unrelated instructor content.',
                         timestamp: '2026-01-20T10:00:00.000Z',
+                    },
+                    {
+                        type: 'bot',
+                        content: 'Unrelated instructor reply.',
+                        timestamp: '2026-01-20T10:00:05.000Z',
                     },
                 ],
             }),

@@ -58,7 +58,10 @@ describe('GET /:courseId — instructor-admin student list', () => {
                 { sessionId: 'c', courseId: 'C1', studentId: 's2', studentName: { displayName: 'Bob' }, savedAt: new Date('2026-01-15') },
             ],
         });
-        const res = await request(makeRouteApp(studentsRouter, { db, user: adminInstructor })).get('/C1');
+        // 'b' and 'c' have no chatData, so they'd otherwise be 0s-duration and
+        // excluded by default (#519) - include them here since this test is
+        // about grouping/name-extraction, not the duration filter itself.
+        const res = await request(makeRouteApp(studentsRouter, { db, user: adminInstructor })).get('/C1?includeZeroDuration=true');
         expect(res.status).toBe(200);
         expect(res.body.data).toMatchObject({ courseName: 'Bio 101', totalStudents: 2, totalSessions: 3 });
 
@@ -83,7 +86,10 @@ describe('GET /:courseId — instructor-admin student list', () => {
                 { sessionId: 'fallback-hours', courseId: 'C1', studentId: 'e', savedAt: 5, chatData: { messages: [{ type: 'user', timestamp: '2026-01-01T00:00:00Z' }, { type: 'note', timestamp: '2026-01-01T01:02:03Z' }] } },
             ],
         });
-        const res = await request(makeRouteApp(studentsRouter, { db, user: adminInstructor })).get('/C1');
+        // 'a' and 'b' are 0s-duration and would otherwise be excluded by
+        // default (#519) - include them since this test is about duration
+        // calculation itself, not the filter.
+        const res = await request(makeRouteApp(studentsRouter, { db, user: adminInstructor })).get('/C1?includeZeroDuration=true');
         const byId = Object.fromEntries(res.body.data.students.map(s => [s.studentId, s]));
         expect(byId.a.studentName).toBe('Unknown Student');
         expect(byId.a.sessions[0].duration).toBe('0s');
@@ -91,6 +97,31 @@ describe('GET /:courseId — instructor-admin student list', () => {
         expect(byId.c.sessions[0].duration).toBe('8s');
         expect(byId.d.sessions[0].duration).toBe('1m 2s');
         expect(byId.e.sessions[0].duration).toBe('1h 2m 3s');
+    });
+
+    test('0s-duration sessions are excluded by default, and students with only 0s sessions disappear entirely (#519)', async () => {
+        const db = memoryDb({
+            courses: [{ courseId: 'C1', instructorId: 'i1' }],
+            chat_sessions: [
+                // Only the auto-welcome bot message - no user message ever sent.
+                { sessionId: 'welcome-only', courseId: 'C1', studentId: 'silent', savedAt: new Date('2026-03-01'), chatData: { messages: [
+                    { type: 'bot', content: 'Welcome to BiocBot! I can see you have access to published units.', timestamp: '2026-03-01T00:00:00Z' },
+                ] } },
+                // A real conversation, for a different student.
+                { sessionId: 'real', courseId: 'C1', studentId: 'chatty', savedAt: new Date('2026-03-02'), chatData: { messages: [
+                    { type: 'user', timestamp: '2026-03-02T00:00:00Z' },
+                    { type: 'bot', timestamp: '2026-03-02T00:01:00Z' },
+                ] } },
+            ],
+        });
+
+        const defaultRes = await request(makeRouteApp(studentsRouter, { db, user: adminInstructor })).get('/C1');
+        expect(defaultRes.body.data).toMatchObject({ totalStudents: 1, totalSessions: 1 });
+        expect(defaultRes.body.data.students.map(s => s.studentId)).toEqual(['chatty']);
+
+        const includedRes = await request(makeRouteApp(studentsRouter, { db, user: adminInstructor })).get('/C1?includeZeroDuration=true');
+        expect(includedRes.body.data).toMatchObject({ totalStudents: 2, totalSessions: 2 });
+        expect(includedRes.body.data.students.map(s => s.studentId).sort()).toEqual(['chatty', 'silent']);
     });
 
     test('does not count a startup welcome appended during a later visit', async () => {

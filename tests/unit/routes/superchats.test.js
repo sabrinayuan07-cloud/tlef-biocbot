@@ -365,9 +365,46 @@ describe('coverage: multi-student session grouping', () => {
                 { sessionId: 'a2', studentId: 'sA', studentName: 'Alice', superchatId: 'sc1', savedAt: '2026-06-19T10:00:00Z', chatData: { messages: [] } },
             ],
         });
-        const res = await request(makeRouteApp(superchatsRouter, { db, user: downloadAdmin })).get('/sc1/chat-sessions');
+        // All three sessions are 0s-duration (a single/no message, no bot
+        // reply), so they'd otherwise be excluded by default (#519) - include
+        // them since this test is about ordering/grouping, not the filter.
+        const res = await request(makeRouteApp(superchatsRouter, { db, user: downloadAdmin })).get('/sc1/chat-sessions?includeZeroDuration=true');
         expect(res.status).toBe(200);
         expect(res.body.data.students.map(s => s.studentId)).toEqual(['sB', 'sA']);
         expect(res.body.data.students[1].totalSessions).toBe(2);
+    });
+});
+
+describe('0s-duration filter on bucket session downloads (#519)', () => {
+    const bucketWithMixedSessions = () => memoryDb({
+        superchats: [{ superchatId: 'sc1', name: 'Bucket' }],
+        student_super_course_chat_sessions: [
+            // No student message at all - the auto-welcome-only case.
+            { sessionId: 'welcome-only', superchatId: 'sc1', studentId: 'silent', savedAt: '2026-01-01T00:00:00Z', chatData: { messages: [
+                { type: 'bot', content: 'Welcome to BiocBot! I can see you have access to published units.', timestamp: '2026-01-01T00:00:00Z' },
+            ] } },
+            { sessionId: 'real', superchatId: 'sc1', studentId: 'chatty', savedAt: '2026-01-02T00:00:00Z', chatData: { messages: [
+                { type: 'user', timestamp: '2026-01-02T00:00:00Z' },
+                { type: 'bot', timestamp: '2026-01-02T00:01:00Z' },
+            ] } },
+        ],
+    });
+
+    test('GET /:id/chat-sessions excludes 0s-duration sessions by default', async () => {
+        const defaultRes = await request(makeRouteApp(superchatsRouter, { db: bucketWithMixedSessions(), user: downloadAdmin })).get('/sc1/chat-sessions');
+        expect(defaultRes.body.data).toMatchObject({ totalStudents: 1, totalSessions: 1 });
+        expect(defaultRes.body.data.students.map(s => s.studentId)).toEqual(['chatty']);
+
+        const includedRes = await request(makeRouteApp(superchatsRouter, { db: bucketWithMixedSessions(), user: downloadAdmin })).get('/sc1/chat-sessions?includeZeroDuration=true');
+        expect(includedRes.body.data).toMatchObject({ totalStudents: 2, totalSessions: 2 });
+        expect(includedRes.body.data.students.map(s => s.studentId).sort()).toEqual(['chatty', 'silent']);
+    });
+
+    test('GET /:id/chat-sessions/export excludes 0s-duration sessions by default', async () => {
+        const defaultRes = await request(makeRouteApp(superchatsRouter, { db: bucketWithMixedSessions(), user: downloadAdmin })).get('/sc1/chat-sessions/export');
+        expect(defaultRes.body.data).toMatchObject({ totalStudents: 1, totalSessions: 1 });
+
+        const includedRes = await request(makeRouteApp(superchatsRouter, { db: bucketWithMixedSessions(), user: downloadAdmin })).get('/sc1/chat-sessions/export?includeZeroDuration=true');
+        expect(includedRes.body.data).toMatchObject({ totalStudents: 2, totalSessions: 2 });
     });
 });

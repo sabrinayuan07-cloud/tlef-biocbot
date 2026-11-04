@@ -455,7 +455,14 @@ router.get('/:id/chat-sessions', async (req, res) => {
             .sort({ savedAt: -1 })
             .toArray();
 
-        const students = groupSessionsByStudent(sessions, session => ({
+        // Default excludes 0s-duration sessions (#519) - see routes/students.js's
+        // equivalent course-scope endpoint for the full reasoning.
+        const includeZeroDuration = req.query.includeZeroDuration === 'true';
+        const includedSessions = includeZeroDuration
+            ? sessions
+            : sessions.filter(session => calculateSessionDuration(session) !== '0s');
+
+        const students = groupSessionsByStudent(includedSessions, session => ({
             sessionId: session.sessionId,
             studentId: session.studentId,
             title: session.title || 'Super Course Chat',
@@ -471,7 +478,7 @@ router.get('/:id/chat-sessions', async (req, res) => {
                 superchatName: doc.name,
                 students,
                 totalStudents: students.length,
-                totalSessions: sessions.length
+                totalSessions: includedSessions.length
             }
         });
     } catch (error) {
@@ -500,7 +507,14 @@ router.get('/:id/chat-sessions/export', async (req, res) => {
             .sort({ savedAt: -1 })
             .toArray();
 
-        const students = groupSessionsByStudent(sessions, session => ({
+        // Default excludes 0s-duration sessions (#519) - see routes/students.js's
+        // equivalent course-scope endpoint for the full reasoning.
+        const includeZeroDuration = req.query.includeZeroDuration === 'true';
+        const includedSessions = includeZeroDuration
+            ? sessions
+            : sessions.filter(session => calculateSessionDuration(session) !== '0s');
+
+        const students = groupSessionsByStudent(includedSessions, session => ({
             ...session,
             duration: calculateSessionDuration(session)
         }));
@@ -513,7 +527,7 @@ router.get('/:id/chat-sessions/export', async (req, res) => {
                 exportDate: new Date().toISOString(),
                 students,
                 totalStudents: students.length,
-                totalSessions: sessions.length
+                totalSessions: includedSessions.length
             }
         });
     } catch (error) {

@@ -39,6 +39,24 @@
     margin: 0;
 }
 
+/* 0s-duration filter (#519) */
+.downloads-filter-row {
+    margin-bottom: 1.5rem;
+}
+
+.downloads-filter-checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #5f666d;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.downloads-filter-checkbox input[type="checkbox"] {
+    cursor: pointer;
+}
+
 /* Loading State */
 .loading-container {
     text-align: center;

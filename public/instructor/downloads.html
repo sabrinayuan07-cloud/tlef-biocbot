@@ -81,6 +81,18 @@
                 <p id="scope-subtitle">Student Chat Downloads</p>
             </div>
 
+            <!-- 0s-duration filter: a session gets saved as soon as the
+                 auto-welcome bot message lands, even if the student never
+                 sends a message, so by default those "0s" chats are hidden
+                 from both the list and every download below. Checking this
+                 includes them instead (#519). -->
+            <div class="downloads-filter-row">
+                <label class="downloads-filter-checkbox" for="include-zero-duration-toggle">
+                    <input type="checkbox" id="include-zero-duration-toggle">
+                    Include chats with 0s duration (student never sent a message)
+                </label>
+            </div>
+
             <!-- Loading State -->
             <div id="loading-state" class="loading-container" role="status">
                 <div class="loading-spinner"></div>
