@@ -293,11 +293,11 @@ function setupEventListeners() {
         logoutBtn.addEventListener('click', handleLogout);
     }
 
-    // 0s-duration filter toggle (#519)
-    const zeroDurationToggle = document.getElementById('include-zero-duration-toggle');
-    if (zeroDurationToggle) {
-        zeroDurationToggle.addEventListener('change', async () => {
-            includeZeroDurationChats = zeroDurationToggle.checked;
+    // 0s-duration filter (#519)
+    const zeroDurationFilter = document.getElementById('zero-duration-filter');
+    if (zeroDurationFilter) {
+        zeroDurationFilter.addEventListener('change', async () => {
+            includeZeroDurationChats = zeroDurationFilter.value === 'include';
             closeStudentModal();
             await loadStudentData();
         });

@@ -84,13 +84,14 @@
             <!-- 0s-duration filter: a session gets saved as soon as the
                  auto-welcome bot message lands, even if the student never
                  sends a message, so by default those "0s" chats are hidden
-                 from both the list and every download below. Checking this
-                 includes them instead (#519). -->
+                 from both the list and every download below. Switching to
+                 "Include all chats" brings them back (#519). -->
             <div class="downloads-filter-row">
-                <label class="downloads-filter-checkbox" for="include-zero-duration-toggle">
-                    <input type="checkbox" id="include-zero-duration-toggle">
-                    Include chats with 0s duration (student never sent a message)
-                </label>
+                <label class="downloads-filter-label" for="zero-duration-filter">Chats to show</label>
+                <select id="zero-duration-filter" class="downloads-filter-select">
+                    <option value="exclude">Exclude chats with 0s duration (default)</option>
+                    <option value="include">Include all chats (including 0s duration)</option>
+                </select>
             </div>
 
             <!-- Loading State -->

@@ -41,26 +41,35 @@
 
 /* 0s-duration filter (#519) */
 .downloads-filter-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
     margin-bottom: 1.5rem;
 }
 
-.downloads-filter-checkbox {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
+.downloads-filter-label {
+    font-weight: 600;
     color: #5f666d;
+    font-size: 0.9rem;
+}
+
+.downloads-filter-select {
+    /* width: auto, not the global input rule's 100% - this sits in a row
+       next to its label, not stretched across the page. */
+    width: auto;
+    min-width: 280px;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background-color: white;
     font-size: 0.9rem;
     cursor: pointer;
 }
 
-.downloads-filter-checkbox input[type="checkbox"] {
-    /* The global input rule in style.css sets width: 100% - reset it here,
-       same as .filter-checkbox in home.css, or the checkbox stretches to
-       fill the row instead of rendering as a normal small checkbox. */
-    cursor: pointer;
-    width: 18px;
-    height: 18px;
-    flex-shrink: 0;
+.downloads-filter-select:focus {
+    outline: none;
+    border-color: #2476a8;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
 }
 
 /* Loading State */
