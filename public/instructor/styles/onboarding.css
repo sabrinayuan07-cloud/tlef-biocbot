@@ -1093,6 +1093,28 @@ fieldset.radio-group-fieldset {
   padding: 0;
 }
 
+/* Remove button for a dynamically-added option row. Hidden (not removed)
+   below the minimum option count, via JS, so the row's layout stays put
+   instead of the input jumping wider when there's nothing to remove. */
+.mcq-option-remove {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--bb-ink-70);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.mcq-option-remove:hover {
+  background: var(--bb-ink-16);
+  color: #b91c1c;
+}
+
 .correct-label {
   font-weight: 500;
   color: #28a745;

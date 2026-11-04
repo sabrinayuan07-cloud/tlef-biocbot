@@ -549,36 +549,9 @@
                     <div class="form-section" id="mcq-answer-section" style="display: none;">
                         <fieldset class="radio-group-fieldset">
                             <legend class="form-label-legend">Answer Options</legend>
-                            <div class="mcq-options">
-                            <div class="mcq-option">
-                                <input type="text" placeholder="Option A" class="mcq-input" data-option="A" aria-label="Option A text">
-                                <label class="radio-option">
-                                    <input type="radio" name="mcq-correct" value="A">
-                                    <span class="correct-label">Correct</span>
-                                </label>
-                            </div>
-                            <div class="mcq-option">
-                                <input type="text" placeholder="Option B" class="mcq-input" data-option="B" aria-label="Option B text">
-                                <label class="radio-option">
-                                    <input type="radio" name="mcq-correct" value="B">
-                                    <span class="correct-label">Correct</span>
-                                </label>
-                            </div>
-                            <div class="mcq-option">
-                                <input type="text" placeholder="Option C" class="mcq-input" data-option="C" aria-label="Option C text">
-                                <label class="radio-option">
-                                    <input type="radio" name="mcq-correct" value="C">
-                                    <span class="correct-label">Correct</span>
-                                </label>
-                            </div>
-                            <div class="mcq-option">
-                                <input type="text" placeholder="Option D" class="mcq-input" data-option="D" aria-label="Option D text">
-                                <label class="radio-option">
-                                    <input type="radio" name="mcq-correct" value="D">
-                                    <span class="correct-label">Correct</span>
-                                </label>
-                            </div>
-                            </div>
+                            <!-- Populated dynamically by mcq-options-editor.js: starts at one
+                                 option (A), Enter inserts the next one, up to 6. -->
+                            <div class="mcq-options" id="mcq-options-list"></div>
                         </fieldset>
                     </div>
                     
@@ -704,6 +677,7 @@
     <script src="../common/scripts/notifications.js"></script>
     <script src="../common/scripts/ui-utils.js"></script>
     <script src="../common/scripts/topic-review.js"></script>
+    <script src="../common/scripts/mcq-options-editor.js"></script>
     <script src="./scripts/course-join.js"></script>
     <!-- Onboarding modules: state must load first, boot (onboarding.js) last -->
     <script src="./scripts/onboarding-state.js"></script>

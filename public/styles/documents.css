@@ -2155,6 +2155,28 @@ fieldset.radio-group-fieldset {
     gap: 0.5rem;
 }
 
+/* Remove button for a dynamically-added option row. Hidden (not removed)
+   below the minimum option count, via JS, so the row's layout stays put
+   instead of the input jumping wider when there's nothing to remove. */
+.mcq-option-remove {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: #6f7780;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.mcq-option-remove:hover {
+    background: #e1e5e9;
+    color: #b91c1c;
+}
+
 /* AI Generation Modal Styling */
 .ai-question-types {
     display: flex;

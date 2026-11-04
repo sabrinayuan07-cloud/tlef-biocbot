@@ -184,9 +184,14 @@ test.describe('instructor course management', () => {
 
         await page.locator('#question-type').selectOption('multiple-choice');
         await page.locator('#question-text').fill('Which is NOT a biomolecule class?');
+        // The option list starts at just A - Enter inserts the next lettered
+        // row (#524) before each can be filled.
         await page.locator('.mcq-input[data-option="A"]').fill('Carbohydrates');
+        await page.locator('.mcq-input[data-option="A"]').press('Enter');
         await page.locator('.mcq-input[data-option="B"]').fill('Lipids');
+        await page.locator('.mcq-input[data-option="B"]').press('Enter');
         await page.locator('.mcq-input[data-option="C"]').fill('Minerals');
+        await page.locator('.mcq-input[data-option="C"]').press('Enter');
         await page.locator('.mcq-input[data-option="D"]').fill('Nucleic acids');
         await page.locator('input[name="mcq-correct"][value="C"]').check();
         await page.locator('#question-modal button.btn-primary', { hasText: 'Save Question' }).click();

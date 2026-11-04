@@ -257,7 +257,15 @@ async function addQuestion(page, spec) {
     if (spec.type === 'true-false') {
         await page.locator(`input[name="tf-answer"][value="${spec.answer}"]`).check();
     } else if (spec.type === 'multiple-choice') {
-        for (const [letter, value] of Object.entries(spec.options)) {
+        // The option list starts at just A - Enter inserts the next lettered
+        // row right before it can be filled (#524).
+        const entries = Object.entries(spec.options);
+        for (let i = 0; i < entries.length; i++) {
+            if (i > 0) {
+                const [prevLetter] = entries[i - 1];
+                await page.locator(`.mcq-input[data-option="${prevLetter}"]`).press('Enter');
+            }
+            const [letter, value] = entries[i];
             await page.locator(`.mcq-input[data-option="${letter}"]`).fill(value);
         }
         await page.locator(`input[name="mcq-correct"][value="${spec.correct}"]`).check();
@@ -834,7 +842,9 @@ test.describe('instructor onboarding', () => {
         await expectInvalidQuestionSubmission(async () => {
             await page.locator('#question-type').selectOption('multiple-choice');
             await page.locator('#question-text').fill(QUESTIONS.multipleChoice.text);
+            // The option list starts at just A - Enter inserts option B (#524).
             await page.locator('.mcq-input[data-option="A"]').fill('Carbohydrates');
+            await page.locator('.mcq-input[data-option="A"]').press('Enter');
             await page.locator('.mcq-input[data-option="B"]').fill('Lipids');
         }, 'Please select the correct answer.');
 
