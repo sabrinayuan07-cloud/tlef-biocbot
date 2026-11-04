@@ -54,7 +54,13 @@
 }
 
 .downloads-filter-checkbox input[type="checkbox"] {
+    /* The global input rule in style.css sets width: 100% - reset it here,
+       same as .filter-checkbox in home.css, or the checkbox stretches to
+       fill the row instead of rendering as a normal small checkbox. */
     cursor: pointer;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
 }
 
 /* Loading State */
