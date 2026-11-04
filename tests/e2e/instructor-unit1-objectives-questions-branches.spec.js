@@ -102,7 +102,9 @@ test.describe('onboarding Unit 1 objectives and questions branches', () => {
         await page.locator('.add-question-btn').click();
         await page.locator('#question-type').selectOption('multiple-choice');
         await page.locator('#question-text').fill('Which option is correct?');
+        // The option list starts at just A - Enter inserts option B (#524).
         await page.locator('.mcq-input[data-option="A"]').fill('Alpha');
+        await page.locator('.mcq-input[data-option="A"]').press('Enter');
         await page.locator('.mcq-input[data-option="B"]').fill('Beta');
         await page.locator('#question-modal button.btn-primary', { hasText: 'Save Question' }).click();
 

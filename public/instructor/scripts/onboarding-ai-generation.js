@@ -353,7 +353,13 @@ function populateFormWithAIContent(aiContent) {
         // Set MCQ options
         if (aiContent.options) {
             const choices = aiContent.options.choices || aiContent.options;
-            
+
+            // The form starts with a single option row - grow it to fit
+            // however many choices the AI actually returned before writing
+            // into specific lettered inputs below.
+            const choiceCount = Array.isArray(choices) ? choices.length : Object.keys(choices).length;
+            ensureMcqOptionCount(document.getElementById('mcq-options-list'), choiceCount);
+
             if (Array.isArray(choices)) {
                 choices.forEach((choice, index) => {
                     const option = String.fromCharCode(65 + index);

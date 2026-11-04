@@ -435,11 +435,10 @@ function resetQuestionForm() {
     // Clear radio buttons
     const radioButtons = document.querySelectorAll('input[type="radio"]');
     radioButtons.forEach(radio => radio.checked = false);
-    
-    // Clear MCQ inputs
-    const mcqInputs = document.querySelectorAll('.mcq-input');
-    mcqInputs.forEach(input => input.value = '');
-    
+
+    // Collapse multiple-choice options back to a single empty option (A)
+    resetMcqOptions(document.getElementById('mcq-options-list'));
+
     // Clear short answer
     document.getElementById('sa-answer').value = '';
 }
@@ -449,54 +448,26 @@ function resetQuestionForm() {
  */
 function updateQuestionForm() {
     const questionType = document.getElementById('question-type').value;
-    
+
     // Hide all sections first
     document.getElementById('tf-answer-section').style.display = 'none';
     document.getElementById('mcq-answer-section').style.display = 'none';
     document.getElementById('sa-answer-section').style.display = 'none';
-    
+
     // Show relevant section
     if (questionType === 'true-false') {
         document.getElementById('tf-answer-section').style.display = 'block';
     } else if (questionType === 'multiple-choice') {
         document.getElementById('mcq-answer-section').style.display = 'block';
-        // Add event listeners for MCQ inputs
-        setupMCQValidation();
+        // Start fresh at a single empty option (A) whenever multiple-choice
+        // becomes the selected type.
+        resetMcqOptions(document.getElementById('mcq-options-list'));
     } else if (questionType === 'short-answer') {
         document.getElementById('sa-answer-section').style.display = 'block';
     }
-    
+
     // Check if AI generation is available for this question type
     checkAIGenerationInModal();
-}
-
-/**
- * Setup validation for multiple choice inputs
- */
-function setupMCQValidation() {
-    const mcqInputs = document.querySelectorAll('.mcq-input');
-    const radioButtons = document.querySelectorAll('input[name="mcq-correct"]');
-    
-    // Clear all radio buttons initially
-    radioButtons.forEach(radio => {
-        radio.checked = false;
-        radio.disabled = true;
-    });
-    
-    // Add event listeners to inputs
-    mcqInputs.forEach(input => {
-        input.addEventListener('input', function() {
-            const option = this.dataset.option;
-            const radioButton = document.querySelector(`input[name="mcq-correct"][value="${option}"]`);
-            
-            if (this.value.trim()) {
-                radioButton.disabled = false;
-            } else {
-                radioButton.disabled = true;
-                radioButton.checked = false;
-            }
-        });
-    });
 }
 
 /**
