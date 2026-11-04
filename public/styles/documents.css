@@ -1787,12 +1787,24 @@
     border-radius: 50%;
     width: 24px;
     height: 24px;
+    /* The global `button { padding: 8px 16px }` in style.css otherwise wins
+       (nothing here overrode padding specifically), stretching these into
+       32x24 ovals and squeezing the icon's flex box down to 0 width -
+       rendering the edit button as a blank blue oval with no visible icon. */
+    padding: 0;
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
     font-size: 14px;
     transition: background-color 0.2s ease;
+}
+
+.edit-question-btn .icon-inline {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
 }
 
 .edit-question-btn {

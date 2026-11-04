@@ -497,7 +497,10 @@ function createUnitElement(unitName, unitData, isExpanded = false, canDelete = t
                     <div class="threshold-setting">
                         <label for="pass-threshold-${unitId}">Number of correct answers required for BIOCBOT to be in protégé mode:</label>
                         <input type="number" id="pass-threshold-${unitId}" min="0" max="10" value="0" class="threshold-input">
-                        <span class="threshold-help">out of total questions</span>
+                        <!-- Text (not just the input's max attribute) so the cap is
+                             visible without hovering/clicking - updated in
+                             updateQuestionsDisplay() alongside max. -->
+                        <span class="threshold-help" id="threshold-help-${unitId}">out of 0 total questions</span>
                     </div>
                     
                     <!-- Questions List -->

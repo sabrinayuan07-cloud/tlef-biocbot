@@ -118,12 +118,9 @@ async function loadAssessmentQuestions() {
                     // Update the display for this lecture
                     updateQuestionsDisplay(lectureName);
                 } else {
-                    // No questions found - explicitly set threshold to 0 for this unit
-                    const weekId = lectureName.toLowerCase().replace(/\s+/g, '-');
-                    const thresholdInput = document.getElementById(`pass-threshold-${weekId}`);
-                    if (thresholdInput) {
-                        thresholdInput.value = 0;
-                    }
+                    // No questions found - explicitly cap/clear the threshold
+                    // (max, value, and the visible "out of N" text) for this unit.
+                    syncThresholdCap(lectureName, 0);
                 }
             } else {
                 console.warn(`⚠️ [MONGODB] Failed to load assessment questions for ${lectureName}: ${response.status} ${response.statusText}`);
@@ -155,9 +152,9 @@ function forceUpdateThresholdsForZeroQuestions() {
         const domQuestions = questionsContainer ? questionsContainer.querySelectorAll('.question-item').length : 0;
         const objectQuestions = assessmentQuestions[lectureName] ? assessmentQuestions[lectureName].length : 0;
         const totalQuestions = Math.max(domQuestions, objectQuestions);
-        
+
         if (totalQuestions === 0) {
-            thresholdInput.value = 0;
+            syncThresholdCap(lectureName, 0);
         }
     });
 }
@@ -888,69 +885,85 @@ async function reloadQuestionsForUnit(unitName) {
  */
 function updateQuestionsDisplay(week) {
     const containerId = `assessment-questions-${week.toLowerCase().replace(/\s+/g, '-')}`;
-    
+
     const questionsContainer = document.getElementById(containerId);
     if (!questionsContainer) {
         console.error(`Container not found for week: ${week}, ID: ${containerId}`);
         return;
     }
-    
+
     const questions = assessmentQuestions[week] || [];
-    
+
     if (questions.length === 0) {
         questionsContainer.innerHTML = `
             <div class="no-questions-message">
                 <p>No assessment questions created yet. Click "Add Question" to get started.</p>
             </div>
         `;
-        return;
-    }
-    
-    let html = '';
-    questions.forEach((question, index) => {
-        const questionType = question.questionType || question.type;
-        html += `
-            <div class="question-item" data-question-id="${question.questionId || question.id}">
-                <div class="question-header">
-                    <span class="question-type-badge ${questionType}">${getQuestionTypeLabel(questionType)}</span>
-                    <span class="question-number">Question ${index + 1}</span>
-                    <div class="question-action-buttons">
-                        <button class="edit-question-btn" onclick="openQuestionLearningObjectiveModal('${week}', '${question.questionId || question.id}')" title="Edit learning objective">${Icons.pencil}</button>
-                        <button class="delete-question-btn" onclick="deleteQuestion('${week}', '${question.questionId || question.id}')" title="Delete question">×</button>
+    } else {
+        let html = '';
+        questions.forEach((question, index) => {
+            const questionType = question.questionType || question.type;
+            html += `
+                <div class="question-item" data-question-id="${question.questionId || question.id}">
+                    <div class="question-header">
+                        <span class="question-type-badge ${questionType}">${getQuestionTypeLabel(questionType)}</span>
+                        <span class="question-number">Question ${index + 1}</span>
+                        <div class="question-action-buttons">
+                            <button class="edit-question-btn" onclick="openQuestionLearningObjectiveModal('${week}', '${question.questionId || question.id}')" title="Edit learning objective">${Icons.pencil}</button>
+                            <button class="delete-question-btn" onclick="deleteQuestion('${week}', '${question.questionId || question.id}')" title="Delete question">×</button>
+                        </div>
+                    </div>
+                    <div class="question-content">
+                        ${renderLearningObjectiveDisplay(question.learningObjective)}
+                        <p class="question-text">${question.question}</p>
+                        ${getQuestionAnswerDisplay(question)}
                     </div>
                 </div>
-                <div class="question-content">
-                    ${renderLearningObjectiveDisplay(question.learningObjective)}
-                    <p class="question-text">${question.question}</p>
-                    ${getQuestionAnswerDisplay(question)}
-                </div>
-            </div>
-        `;
-    });
-    
-    questionsContainer.innerHTML = html;
-    
-    // Update pass threshold max value
+            `;
+        });
+        questionsContainer.innerHTML = html;
+    }
+
+    // Keep the pass-threshold stepper's cap in sync with the actual question
+    // count - must run for the 0-question case too (#524 follow-up), or
+    // deleting the last question (or loading a unit that never had any)
+    // leaves a stale max/value from whatever the count used to be, letting
+    // an instructor require more correct answers than there are questions.
+    syncThresholdCap(week, questions.length);
+}
+
+/**
+ * Sync a unit's pass-threshold input (max, clamped value, and the visible
+ * "out of N total questions" help text) to the given question count. The
+ * native max attribute alone silently caps the stepper with no visible
+ * explanation - showing the count in the help text is what makes a capped
+ * stepper read as "at the limit" instead of "stuck"/broken.
+ */
+function syncThresholdCap(week, totalQuestions) {
     const weekId = week.toLowerCase().replace(/\s+/g, '-');
     const thresholdInput = document.getElementById(`pass-threshold-${weekId}`);
-    
-    if (thresholdInput) {
-        thresholdInput.max = questions.length;
-        // If there are no questions, always set threshold to 0
-        if (questions.length === 0) {
-            thresholdInput.value = 0;
-        } else {
-            // If threshold exceeds question count, adjust it
-            if (parseInt(thresholdInput.value) > questions.length) {
-                thresholdInput.value = questions.length;
-            }
-            // If threshold hasn't been set (is empty or invalid), default to 0
-            if (thresholdInput.value === '' || thresholdInput.value === null || thresholdInput.value === undefined) {
-                thresholdInput.value = 0;
-            }
-        }
+    const thresholdHelp = document.getElementById(`threshold-help-${weekId}`);
+
+    if (thresholdHelp) {
+        thresholdHelp.textContent = `out of ${totalQuestions} total question${totalQuestions === 1 ? '' : 's'}`;
     }
-    
+
+    if (!thresholdInput) return;
+
+    thresholdInput.max = totalQuestions;
+    if (totalQuestions === 0) {
+        thresholdInput.value = 0;
+        return;
+    }
+    // If threshold exceeds question count, adjust it
+    if (parseInt(thresholdInput.value) > totalQuestions) {
+        thresholdInput.value = totalQuestions;
+    }
+    // If threshold hasn't been set (is empty or invalid), default to 0
+    if (thresholdInput.value === '' || thresholdInput.value === null || thresholdInput.value === undefined) {
+        thresholdInput.value = 0;
+    }
     // Event listeners for threshold input are handled by setupThresholdInputListeners()
     // No need to add them here to avoid duplicates
 }
