@@ -211,10 +211,19 @@ function wireMcqOptionRow(container, row) {
     // Live reorder: as the dragged row passes the halfway point of another
     // row, physically move it there right away (not just on drop) so the
     // other options visibly shift up/down to preview where it'll land.
+    //
+    // preventDefault() has to run on every dragover while a drag is active -
+    // including when the cursor ends up back over the dragged row itself,
+    // which happens as soon as it's live-moved under the cursor. Skipping it
+    // in that case (as an earlier version did) left the last dragover before
+    // release unhandled, so the browser treated the drop as rejected and
+    // played its native snap-back-to-start animation before the row settled
+    // into place - a confusing flash right at release.
     row.addEventListener('dragover', (event) => {
-        if (!mcqDraggedRow || mcqDraggedRow === row) return;
+        if (!mcqDraggedRow) return;
         event.preventDefault(); // required for drop to fire at all
         event.dataTransfer.dropEffect = 'move';
+        if (mcqDraggedRow === row) return; // already here, nothing to reposition
 
         const rect = row.getBoundingClientRect();
         const dropAfter = event.clientY > rect.top + rect.height / 2;
