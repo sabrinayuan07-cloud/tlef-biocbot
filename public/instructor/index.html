@@ -263,8 +263,11 @@
                     <div class="form-section" id="struggle-topic-generation-section">
                         <details class="struggle-topic-panel" id="struggle-topic-panel">
                             <summary>
-                                <span>Optional: generate from a struggle topic</span>
-                                <small>Uses topics assigned to this unit by default</small>
+                                <div class="struggle-topic-summary-text">
+                                    <span>Optional: generate from a struggle topic</span>
+                                    <small>Uses topics assigned to this unit by default</small>
+                                </div>
+                                <svg class="struggle-topic-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
                             </summary>
                             <div class="struggle-topic-generate-row">
                                 <label for="struggle-topic-select">Struggle Topic</label>
@@ -296,12 +299,12 @@
                             <legend class="form-label-legend">Correct Answer</legend>
                             <div class="tf-options">
                             <label class="tf-option">
-                                <span class="tf-option-box"><input type="radio" name="tf-answer" value="true"></span>
                                 <span class="tf-option-label">True</span>
+                                <input type="radio" name="tf-answer" value="true">
                             </label>
                             <label class="tf-option">
-                                <span class="tf-option-box"><input type="radio" name="tf-answer" value="false"></span>
                                 <span class="tf-option-label">False</span>
+                                <input type="radio" name="tf-answer" value="false">
                             </label>
                             </div>
                         </fieldset>
