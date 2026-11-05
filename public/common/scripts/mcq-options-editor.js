@@ -12,8 +12,9 @@
  * appends at the end. Both are capped at MCQ_MAX_OPTIONS; at the cap,
  * Enter just moves focus to the next option instead (same as Tab), and the
  * + button disables. A remove button deletes an option and re-letters what
- * follows; dragging a row by its grip handle reorders it and re-letters
- * accordingly.
+ * follows; dragging a row by any part of its bar (not just the grip icon)
+ * reorders it, pushing the other rows out of the way live as it moves, and
+ * re-letters everything on drop.
  *
  * Re-lettering only ever changes a row's *label* (data-option, placeholder,
  * radio value) - the row's typed text and whichever radio is checked are
@@ -44,14 +45,15 @@ function mcqOptionLetter(index) {
 function buildMcqOptionRow() {
     const row = document.createElement('div');
     row.className = 'mcq-option';
+    row.draggable = true;
     row.innerHTML = `
-        <button type="button" class="mcq-option-drag-handle" aria-label="" draggable="true">
+        <span class="mcq-option-drag-handle" aria-hidden="true">
             <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor" aria-hidden="true">
                 <circle cx="2" cy="2" r="1.5"></circle><circle cx="8" cy="2" r="1.5"></circle>
                 <circle cx="2" cy="8" r="1.5"></circle><circle cx="8" cy="8" r="1.5"></circle>
                 <circle cx="2" cy="14" r="1.5"></circle><circle cx="8" cy="14" r="1.5"></circle>
             </svg>
-        </button>
+        </span>
         <input type="text" class="mcq-input" aria-label="">
         <label class="radio-option">
             <input type="radio" name="mcq-correct" disabled>
@@ -114,13 +116,12 @@ function relabelMcqOptions(container) {
         const input = row.querySelector('.mcq-input');
         const radio = row.querySelector('input[name="mcq-correct"]');
         const removeBtn = row.querySelector('.mcq-option-remove');
-        const dragHandle = row.querySelector('.mcq-option-drag-handle');
         input.dataset.option = letter;
         input.placeholder = `Option ${letter}`;
         input.setAttribute('aria-label', `Option ${letter} text`);
         radio.value = letter;
         removeBtn.setAttribute('aria-label', `Remove option ${letter}`);
-        dragHandle.setAttribute('aria-label', `Drag to reorder option ${letter}`);
+        row.setAttribute('aria-label', `Option ${letter}, drag to reorder`);
     });
 
     // Hiding (not removing) the remove button below the minimum keeps the
@@ -150,7 +151,6 @@ function wireMcqOptionRow(container, row) {
     const input = row.querySelector('.mcq-input');
     const radio = row.querySelector('input[name="mcq-correct"]');
     const removeBtn = row.querySelector('.mcq-option-remove');
-    const dragHandle = row.querySelector('.mcq-option-drag-handle');
 
     // A row can only be marked "correct" once it has text - matches the
     // existing validation an instructor already relies on.
@@ -186,11 +186,16 @@ function wireMcqOptionRow(container, row) {
         relabelMcqOptions(container);
     });
 
-    // Drag-to-reorder: the handle (not the whole row - the row also holds
-    // the text input, and making that draggable fights with placing a text
-    // cursor in it) starts the drag; drop targets on the row being dragged
-    // over insert the dragged row before/after it based on cursor position.
-    dragHandle.addEventListener('dragstart', (event) => {
+    // Drag-to-reorder: the whole row is draggable so the instructor can grab
+    // it anywhere along the bar, not just the grip icon. Starting a drag from
+    // the text input, the "Correct" radio/label, or the remove button is
+    // suppressed so those keep their normal click/typing behavior instead of
+    // hijacking the gesture into a drag.
+    row.addEventListener('dragstart', (event) => {
+        if (event.target.closest('.mcq-input, .radio-option, .mcq-option-remove')) {
+            event.preventDefault();
+            return;
+        }
         mcqDraggedRow = row;
         event.dataTransfer.effectAllowed = 'move';
         // Firefox requires setData to actually start a drag.
@@ -198,39 +203,35 @@ function wireMcqOptionRow(container, row) {
         row.classList.add('mcq-option-dragging');
     });
 
-    dragHandle.addEventListener('dragend', () => {
+    row.addEventListener('dragend', () => {
         row.classList.remove('mcq-option-dragging');
-        mcqOptionRows(container).forEach(r => r.classList.remove('mcq-option-drag-over'));
         mcqDraggedRow = null;
     });
 
+    // Live reorder: as the dragged row passes the halfway point of another
+    // row, physically move it there right away (not just on drop) so the
+    // other options visibly shift up/down to preview where it'll land.
     row.addEventListener('dragover', (event) => {
         if (!mcqDraggedRow || mcqDraggedRow === row) return;
         event.preventDefault(); // required for drop to fire at all
         event.dataTransfer.dropEffect = 'move';
-    });
-
-    row.addEventListener('dragenter', () => {
-        if (!mcqDraggedRow || mcqDraggedRow === row) return;
-        row.classList.add('mcq-option-drag-over');
-    });
-
-    row.addEventListener('dragleave', () => {
-        row.classList.remove('mcq-option-drag-over');
-    });
-
-    row.addEventListener('drop', (event) => {
-        if (!mcqDraggedRow || mcqDraggedRow === row) return;
-        event.preventDefault();
-        row.classList.remove('mcq-option-drag-over');
 
         const rect = row.getBoundingClientRect();
         const dropAfter = event.clientY > rect.top + rect.height / 2;
-        if (dropAfter) {
+        if (dropAfter && row.nextElementSibling !== mcqDraggedRow) {
             row.insertAdjacentElement('afterend', mcqDraggedRow);
-        } else {
+            relabelMcqOptions(container);
+        } else if (!dropAfter && row.previousElementSibling !== mcqDraggedRow) {
             row.insertAdjacentElement('beforebegin', mcqDraggedRow);
+            relabelMcqOptions(container);
         }
+    });
+
+    row.addEventListener('drop', (event) => {
+        if (!mcqDraggedRow) return;
+        event.preventDefault();
+        // The dragover handler above already moved the row into place as the
+        // instructor dragged, so dropping just finalizes where it already is.
         relabelMcqOptions(container);
         focusMcqInput(mcqDraggedRow);
     });

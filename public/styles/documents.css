@@ -2234,7 +2234,10 @@ fieldset.radio-group-fieldset {
     margin-top: 0.5rem;
 }
 
-.tf-option {
+/* Specificity needs to beat ".question-form label { display: block }" below,
+   which also matches .tf-option (it's a <label>) and would otherwise win and
+   silently break the alignment this rule sets up. */
+.tf-options .tf-option {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
@@ -2277,6 +2280,11 @@ fieldset.radio-group-fieldset {
     border-radius: 6px;
     background: #f8f9fa;
     min-width: 0;
+    cursor: grab;
+}
+
+.mcq-option:active {
+    cursor: grabbing;
 }
 
 .mcq-option .mcq-input {
@@ -2318,9 +2326,9 @@ fieldset.radio-group-fieldset {
     color: #b91c1c;
 }
 
-/* Drag handle for reordering an option by dragging it, not a button click -
-   only the handle (not the whole row, which would fight with placing a
-   text cursor in the option input) is draggable. */
+/* Grip icon - purely a visual cue that the row is draggable; the whole
+   .mcq-option row (minus its input/radio/remove controls) is the actual
+   drag source, not this icon specifically. */
 .mcq-option-drag-handle {
     display: inline-flex;
     align-items: center;
@@ -2328,32 +2336,17 @@ fieldset.radio-group-fieldset {
     flex-shrink: 0;
     width: 20px;
     height: 100%;
-    padding: 0;
-    border: none;
-    background: transparent;
     color: #9ca3af;
-    cursor: grab;
 }
 
-.mcq-option-drag-handle:hover {
+.mcq-option:hover .mcq-option-drag-handle {
     color: #495057;
 }
 
-.mcq-option-drag-handle:active {
-    cursor: grabbing;
-}
-
-/* The row currently being dragged - dimmed so the drop target (highlighted
-   below) reads as the thing about to change, not the thing already moving. */
+/* The row currently being dragged - dimmed while the other rows live-shift
+   around it to preview where it'll land. */
 .mcq-option-dragging {
     opacity: 0.4;
-}
-
-/* The row the dragged option is currently over, i.e. where it would land
-   on drop. */
-.mcq-option-drag-over {
-    border-color: var(--primary-color);
-    background: rgba(74, 111, 165, 0.08);
 }
 
 /* Hint + explicit add control below the option rows - Enter-to-add (in the
