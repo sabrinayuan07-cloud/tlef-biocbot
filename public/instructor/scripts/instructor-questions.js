@@ -372,6 +372,28 @@ function setupThresholdInputListeners() {
         
         // Add input event listener for real-time updates
         input.addEventListener('input', handleThresholdInputChange);
+
+        // Custom -/+ buttons (bigger, consistently stylable targets than the
+        // native spin-button arrows) just move the same input's value and
+        // dispatch the same events a native stepper click would, so they
+        // reuse the change-listener above instead of duplicating its save
+        // logic.
+        const stepper = input.closest('.pass-threshold-stepper');
+        stepper?.querySelectorAll('.pass-threshold-step').forEach(button => {
+            button.addEventListener('click', () => {
+                const step = parseInt(button.dataset.step, 10);
+                const min = parseInt(input.min, 10) || 0;
+                const max = parseInt(input.max, 10) || 0;
+                const current = parseInt(input.value, 10) || 0;
+                const next = Math.min(max, Math.max(min, current + step));
+                if (next === current) return;
+                input.value = next;
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+                updateThresholdStepperButtons(input);
+            });
+        });
+        updateThresholdStepperButtons(input);
     });
 }
 
@@ -954,6 +976,7 @@ function syncThresholdCap(week, totalQuestions) {
     thresholdInput.max = totalQuestions;
     if (totalQuestions === 0) {
         thresholdInput.value = 0;
+        updateThresholdStepperButtons(thresholdInput);
         return;
     }
     // If threshold exceeds question count, adjust it
@@ -964,8 +987,25 @@ function syncThresholdCap(week, totalQuestions) {
     if (thresholdInput.value === '' || thresholdInput.value === null || thresholdInput.value === undefined) {
         thresholdInput.value = 0;
     }
+    updateThresholdStepperButtons(thresholdInput);
     // Event listeners for threshold input are handled by setupThresholdInputListeners()
     // No need to add them here to avoid duplicates
+}
+
+/**
+ * Disable the -/+ stepper buttons once the input is at its min/max, so
+ * "stuck" reads as "at the limit" instead of "not responding to clicks".
+ */
+function updateThresholdStepperButtons(thresholdInput) {
+    const stepper = thresholdInput.closest('.pass-threshold-stepper');
+    if (!stepper) return;
+    const min = parseInt(thresholdInput.min, 10) || 0;
+    const max = parseInt(thresholdInput.max, 10) || 0;
+    const current = parseInt(thresholdInput.value, 10) || 0;
+    stepper.querySelectorAll('.pass-threshold-step').forEach(button => {
+        const step = parseInt(button.dataset.step, 10);
+        button.disabled = step < 0 ? current <= min : current >= max;
+    });
 }
 
 /**

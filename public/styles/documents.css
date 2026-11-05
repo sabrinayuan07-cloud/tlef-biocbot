@@ -1694,6 +1694,7 @@
 .threshold-setting {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 0.5rem;
     margin-bottom: 1.5rem;
     padding: 0.75rem;
@@ -1701,12 +1702,56 @@
     border-radius: 6px;
 }
 
-.threshold-input {
-    width: 60px;
-    padding: 0.25rem 0.5rem;
+/* Note: this is deliberately NOT named .threshold-input - that class
+   already belongs to the unrelated "Mode Threshold" percentage-slider
+   wrapper div above (#mode-threshold), whose display:flex was leaking
+   onto this number input and throwing off its own layout/vertical
+   alignment next to the label and help text. */
+.pass-threshold-stepper {
+    display: inline-flex;
+    align-items: stretch;
     border: 1px solid #ccc;
-    border-radius: 4px;
+    border-radius: 6px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.pass-threshold-step {
+    width: 36px;
+    border: none;
+    background: #f1f3f5;
+    color: var(--primary-color);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.pass-threshold-step:hover {
+    background: #e2e6ea;
+}
+
+.pass-threshold-step:disabled {
+    color: #adb5bd;
+    cursor: not-allowed;
+    background: #f1f3f5;
+}
+
+.pass-threshold-input {
+    width: 50px;
+    padding: 0.25rem 0.25rem;
+    border: none;
+    border-left: 1px solid #ccc;
+    border-right: 1px solid #ccc;
     text-align: center;
+    /* Native spin buttons are replaced by .pass-threshold-step above. */
+    -moz-appearance: textfield;
+}
+
+.pass-threshold-input::-webkit-inner-spin-button,
+.pass-threshold-input::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
 }
 
 .threshold-help {
@@ -1780,25 +1825,29 @@
     margin-left: auto;
 }
 
+/* Bordered icon buttons, matching .unit-rename-btn's pattern elsewhere in
+   Course Upload (plain background, colored icon/border, light tint on
+   hover) instead of a filled color circle. The global `button { padding:
+   8px 16px }` in style.css otherwise wins (nothing here overrode padding
+   specifically), stretching these into 32x24 ovals and squeezing the
+   icon's flex box down to 0 width - rendering the edit button as a blank
+   filled oval with no visible icon. */
 .edit-question-btn,
 .delete-question-btn {
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 24px;
-    height: 24px;
-    /* The global `button { padding: 8px 16px }` in style.css otherwise wins
-       (nothing here overrode padding specifically), stretching these into
-       32x24 ovals and squeezing the icon's flex box down to 0 width -
-       rendering the edit button as a blank blue oval with no visible icon. */
-    padding: 0;
-    flex-shrink: 0;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    flex-shrink: 0;
+    border: 1px solid #c7d0db;
+    border-radius: 4px;
+    background: #fff;
     cursor: pointer;
     font-size: 14px;
-    transition: background-color 0.2s ease;
+    line-height: 1;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .edit-question-btn .icon-inline {
@@ -1808,19 +1857,21 @@
 }
 
 .edit-question-btn {
-    background: #0d6efd;
+    color: var(--primary-color);
 }
 
 .edit-question-btn:hover {
-    background: #0b5ed7;
+    background: rgba(74, 111, 165, 0.08);
+    border-color: var(--primary-color);
 }
 
 .delete-question-btn {
-    background: #dc3545;
+    color: #dc3545;
 }
 
 .delete-question-btn:hover {
-    background: #c82333;
+    background: rgba(220, 53, 69, 0.08);
+    border-color: #dc3545;
 }
 
 .question-content {
@@ -2130,6 +2181,57 @@ fieldset.radio-group-fieldset {
 
 .radio-option input[type="radio"] {
     margin: 0;
+}
+
+/* True/False "Correct Answer" picker: a bordered box per option with the
+   radio centered inside and the label below it, the pair centered in the
+   modal. Separate from .radio-group/.radio-option above, which the MCQ
+   "Correct" label next to each option row still uses as its compact
+   inline layout - this isn't a replacement for those, just a different
+   picker for a different place. */
+.tf-options {
+    display: flex;
+    justify-content: center;
+    gap: 1.5rem;
+    margin-top: 0.5rem;
+}
+
+.tf-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.tf-option-box {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 72px;
+    height: 48px;
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    background: #fff;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.tf-option:has(input:checked) .tf-option-box {
+    border-color: var(--primary-color);
+    background: rgba(74, 111, 165, 0.06);
+}
+
+.tf-option-box input[type="radio"] {
+    width: 20px;
+    height: 20px;
+    margin: 0;
+    accent-color: var(--primary-color);
+    cursor: pointer;
+}
+
+.tf-option-label {
+    font-weight: 500;
+    color: #333;
 }
 
 .mcq-options {

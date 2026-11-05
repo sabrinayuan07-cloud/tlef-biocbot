@@ -520,31 +520,23 @@
                         <textarea id="question-text" rows="3" placeholder="Enter your question..."></textarea>
                     </div>
 
-                    <div class="form-section">
-                        <label for="learning-objective-select">Learning Objective (Optional)</label>
-                        <select id="learning-objective-select">
-                            <option value="">Leave unassigned</option>
-                        </select>
-                        <p id="learning-objective-note" class="learning-objective-note" style="display: none;"></p>
-                    </div>
-                    
                     <!-- True/False Answer -->
                     <div class="form-section" id="tf-answer-section" style="display: none;">
                         <fieldset class="radio-group-fieldset">
                             <legend class="form-label-legend">Correct Answer</legend>
-                            <div class="radio-group">
-                            <label class="radio-option">
-                                <input type="radio" name="tf-answer" value="true">
-                                <span>True</span>
+                            <div class="tf-options">
+                            <label class="tf-option">
+                                <span class="tf-option-box"><input type="radio" name="tf-answer" value="true"></span>
+                                <span class="tf-option-label">True</span>
                             </label>
-                            <label class="radio-option">
-                                <input type="radio" name="tf-answer" value="false">
-                                <span>False</span>
+                            <label class="tf-option">
+                                <span class="tf-option-box"><input type="radio" name="tf-answer" value="false"></span>
+                                <span class="tf-option-label">False</span>
                             </label>
                             </div>
                         </fieldset>
                     </div>
-                    
+
                     <!-- Multiple Choice Options -->
                     <div class="form-section" id="mcq-answer-section" style="display: none;">
                         <fieldset class="radio-group-fieldset">
@@ -554,11 +546,21 @@
                             <div class="mcq-options" id="mcq-options-list"></div>
                         </fieldset>
                     </div>
-                    
+
                     <!-- Short Answer Expected -->
                     <div class="form-section" id="sa-answer-section" style="display: none;">
                         <label for="sa-answer">Expected Answer/Key Points</label>
                         <textarea id="sa-answer" rows="3" placeholder="Describe the expected answer or key points..."></textarea>
+                    </div>
+
+                    <!-- Learning Objective: kept last so it's the final thing an
+                         instructor sets, after the question's actual content. -->
+                    <div class="form-section">
+                        <label for="learning-objective-select">Learning Objective (Optional)</label>
+                        <select id="learning-objective-select">
+                            <option value="">Leave unassigned</option>
+                        </select>
+                        <p id="learning-objective-note" class="learning-objective-note" style="display: none;"></p>
                     </div>
                 </div>
             </div>

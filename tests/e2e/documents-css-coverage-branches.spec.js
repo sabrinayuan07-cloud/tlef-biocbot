@@ -431,10 +431,13 @@ test.describe('documents.css branch harness coverage', () => {
         await expect(page.locator('#generate-ai-btn')).toHaveCSS('background-color', 'rgb(90, 45, 145)');
         await expect(page.locator('.question-type-badge.multiple-choice')).toHaveCSS('color', 'rgb(0, 64, 133)');
         await expect(page.locator('.question-type-badge.short-answer')).toHaveCSS('color', 'rgb(133, 100, 4)');
+        // Bordered icon buttons (matching .unit-rename-btn's pattern) with a
+        // light color tint on hover, not the filled color circles these used
+        // to be - see .edit-question-btn/.delete-question-btn in documents.css.
         await page.locator('#edit-question-btn').hover();
-        await expect(page.locator('#edit-question-btn')).toHaveCSS('background-color', 'rgb(11, 94, 215)');
+        await expect(page.locator('#edit-question-btn')).toHaveCSS('background-color', 'rgba(74, 111, 165, 0.08)');
         await page.locator('#delete-question-btn').hover();
-        await expect(page.locator('#delete-question-btn')).toHaveCSS('background-color', 'rgb(200, 35, 51)');
+        await expect(page.locator('#delete-question-btn')).toHaveCSS('background-color', 'rgba(220, 53, 69, 0.08)');
         await page.locator('#scope-hover').hover();
         await expect(page.locator('#scope-hover')).toHaveCSS('color', 'rgb(40, 77, 122)');
         await page.locator('#radio-option').hover();
