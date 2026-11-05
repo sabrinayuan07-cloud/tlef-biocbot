@@ -496,7 +496,15 @@ function createUnitElement(unitName, unitData, isExpanded = false, canDelete = t
                     <!-- Pass Threshold Setting -->
                     <div class="threshold-setting">
                         <label for="pass-threshold-${unitId}">Number of correct answers required for BIOCBOT to be in protégé mode:</label>
-                        <input type="number" id="pass-threshold-${unitId}" min="0" max="10" value="0" class="threshold-input">
+                        <!-- Native spin-button arrows aren't reliably stylable (no
+                             control in Firefox at all) and were tiny - custom
+                             -/+ buttons instead, same value/min/max/change events
+                             the rest of the threshold logic already relies on. -->
+                        <div class="pass-threshold-stepper">
+                            <button type="button" class="pass-threshold-step" data-step="-1" aria-label="Decrease required correct answers">&minus;</button>
+                            <input type="number" id="pass-threshold-${unitId}" min="0" max="10" value="0" class="pass-threshold-input">
+                            <button type="button" class="pass-threshold-step" data-step="1" aria-label="Increase required correct answers">+</button>
+                        </div>
                         <!-- Text (not just the input's max attribute) so the cap is
                              visible without hovering/clicking - updated in
                              updateQuestionsDisplay() alongside max. -->
