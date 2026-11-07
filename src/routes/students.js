@@ -91,11 +91,11 @@ function calculateDurationFromSessionData(session) {
     const start = new Date(firstUserMessage.timestamp);
     const end = new Date(lastBotMessage.timestamp);
     const diffMs = end - start;
-    
+
     const hours = Math.floor(diffMs / (1000 * 60 * 60));
     const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
     const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
-    
+
     if (hours > 0) {
         return `${hours}h ${minutes}m ${seconds}s`;
     } else if (minutes > 0) {
@@ -105,6 +105,15 @@ function calculateDurationFromSessionData(session) {
     }
 }
 
+// Whether the student ever sent a message in this session, as opposed to a
+// session saved from just the auto-welcome bot message landing. This is the
+// filter used for the "Chats to show" dropdown (#519) - duration alone isn't
+// a reliable stand-in, since a real question with no (or a fast) reply is
+// also 0s.
+function hasStudentMessage(session) {
+    return (session?.chatData?.messages || []).some(msg => msg.type === 'user');
+}
+
 /**
  * GET /api/students/:courseId
  * Get all students who have saved chat sessions for a specific course
@@ -112,11 +121,11 @@ function calculateDurationFromSessionData(session) {
 router.get('/:courseId', async (req, res) => {
     try {
         const { courseId } = req.params;
-        // Default excludes 0s-duration sessions (#519) - a session where the
-        // student never sent a message still gets saved as soon as the
-        // auto-welcome bot message lands, so without this every login would
-        // count as "a chat" even though nothing was actually asked.
-        const includeZeroDuration = req.query.includeZeroDuration === 'true';
+        // Default excludes chats where the student never sent a message
+        // (#519) - a session gets saved as soon as the auto-welcome bot
+        // message lands, so without this every login would count as "a
+        // chat" even though nothing was actually asked.
+        const includeEmptyChats = req.query.includeEmptyChats === 'true';
 
         // Get authenticated user information
         const user = req.user;
@@ -165,12 +174,15 @@ router.get('/:courseId', async (req, res) => {
         }).sort({ savedAt: -1 }).toArray();
 
         // Recalculate duration from actual message timestamps, then drop
-        // 0s-duration sessions unless explicitly included (#519) - a student
-        // who only ever got the auto-welcome message shouldn't count as "a
-        // student with saved chats" by default.
+        // sessions where the student never sent a message, unless explicitly
+        // included (#519) - a student who only ever got the auto-welcome
+        // message shouldn't count as "a student with saved chats" by
+        // default. Some kept sessions may still display as 0s (e.g. a
+        // question with no reply, or one answered within a second) - that's
+        // accurate, not a bug.
         const sessionsWithDuration = chatSessions
             .map(session => ({ session, duration: calculateDurationFromSessionData(session) }))
-            .filter(({ duration }) => includeZeroDuration || duration !== '0s');
+            .filter(({ session }) => includeEmptyChats || hasStudentMessage(session));
 
         // Group chat sessions by student
         const studentsMap = new Map();
@@ -398,8 +410,9 @@ router.get('/:courseId/:studentId/sessions/own', async (req, res) => {
 router.get('/:courseId/:studentId/sessions', async (req, res) => {
     try {
         const { courseId, studentId } = req.params;
-        // Default excludes 0s-duration sessions (#519) - see GET /:courseId above.
-        const includeZeroDuration = req.query.includeZeroDuration === 'true';
+        // Default excludes chats where the student never sent a message
+        // (#519) - see GET /:courseId above.
+        const includeEmptyChats = req.query.includeEmptyChats === 'true';
 
         // Get authenticated user information
         const user = req.user;
@@ -448,14 +461,15 @@ router.get('/:courseId/:studentId/sessions', async (req, res) => {
 
         console.log(`Retrieved ${sessions.length} sessions for student ${studentId} in course ${courseId}`);
 
-        // Recalculate duration for each session, then drop 0s-duration
-        // sessions unless explicitly included (#519).
+        // Recalculate duration for each session, then drop sessions where
+        // the student never sent a message, unless explicitly included
+        // (#519).
         const sessionsWithCalculatedDuration = sessions
             .map(session => ({
                 ...session,
                 duration: calculateDurationFromSessionData(session)
             }))
-            .filter(session => includeZeroDuration || session.duration !== '0s');
+            .filter(session => includeEmptyChats || hasStudentMessage(session));
 
         res.json({
             success: true,

@@ -20,6 +20,7 @@ const {
     DOWNLOAD_SECOND_STUDENT_ID,
     DOWNLOAD_SECOND_STUDENT_NAME,
     DOWNLOAD_LARGE_STUDENT_NAME,
+    DOWNLOAD_WELCOME_ONLY_STUDENT_NAME,
     SESSION_VISIBLE_ID,
     SESSION_STUDENT_DELETED_ID,
     SESSION_LEGACY_ID,
@@ -491,11 +492,6 @@ test.describe('Instructor downloads page — system admin UI', () => {
                 content: 'Legacy session should stay visible.',
                 timestamp: '2026-01-17T10:00:00.000Z',
             },
-            {
-                type: 'bot',
-                content: 'It should.',
-                timestamp: '2026-01-17T10:00:05.000Z',
-            },
         ]);
     });
 
@@ -559,6 +555,19 @@ test.describe('Instructor downloads page — system admin UI', () => {
         await expect(preview).toContainText('Student message 1');
         await page.waitForTimeout(250);
         expect(sessionFetches.length).toBe(fetchesAfterFirstOpen);
+    });
+
+    test('the "Chats to show" dropdown reveals and hides a student whose only session has no student message (#519)', async ({ page }) => {
+        await openDownloadsPage(page);
+
+        const welcomeOnlyCard = page.locator('.student-card', { hasText: DOWNLOAD_WELCOME_ONLY_STUDENT_NAME });
+        await expect(welcomeOnlyCard).toHaveCount(0);
+
+        await page.locator('#empty-chat-filter').selectOption('include');
+        await expect(welcomeOnlyCard).toBeVisible({ timeout: 10_000 });
+
+        await page.locator('#empty-chat-filter').selectOption('exclude');
+        await expect(welcomeOnlyCard).toHaveCount(0);
     });
 });
 

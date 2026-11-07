@@ -58,10 +58,10 @@ describe('GET /:courseId — instructor-admin student list', () => {
                 { sessionId: 'c', courseId: 'C1', studentId: 's2', studentName: { displayName: 'Bob' }, savedAt: new Date('2026-01-15') },
             ],
         });
-        // 'b' and 'c' have no chatData, so they'd otherwise be 0s-duration and
-        // excluded by default (#519) - include them here since this test is
-        // about grouping/name-extraction, not the duration filter itself.
-        const res = await request(makeRouteApp(studentsRouter, { db, user: adminInstructor })).get('/C1?includeZeroDuration=true');
+        // 'b' and 'c' have no chatData (no student message), so they'd
+        // otherwise be excluded by default (#519) - include them here since
+        // this test is about grouping/name-extraction, not the filter itself.
+        const res = await request(makeRouteApp(studentsRouter, { db, user: adminInstructor })).get('/C1?includeEmptyChats=true');
         expect(res.status).toBe(200);
         expect(res.body.data).toMatchObject({ courseName: 'Bio 101', totalStudents: 2, totalSessions: 3 });
 
@@ -86,10 +86,10 @@ describe('GET /:courseId — instructor-admin student list', () => {
                 { sessionId: 'fallback-hours', courseId: 'C1', studentId: 'e', savedAt: 5, chatData: { messages: [{ type: 'user', timestamp: '2026-01-01T00:00:00Z' }, { type: 'note', timestamp: '2026-01-01T01:02:03Z' }] } },
             ],
         });
-        // 'a' and 'b' are 0s-duration and would otherwise be excluded by
-        // default (#519) - include them since this test is about duration
+        // 'a' has no student message and would otherwise be excluded by
+        // default (#519) - include it since this test is about duration
         // calculation itself, not the filter.
-        const res = await request(makeRouteApp(studentsRouter, { db, user: adminInstructor })).get('/C1?includeZeroDuration=true');
+        const res = await request(makeRouteApp(studentsRouter, { db, user: adminInstructor })).get('/C1?includeEmptyChats=true');
         const byId = Object.fromEntries(res.body.data.students.map(s => [s.studentId, s]));
         expect(byId.a.studentName).toBe('Unknown Student');
         expect(byId.a.sessions[0].duration).toBe('0s');
@@ -99,7 +99,7 @@ describe('GET /:courseId — instructor-admin student list', () => {
         expect(byId.e.sessions[0].duration).toBe('1h 2m 3s');
     });
 
-    test('0s-duration sessions are excluded by default, and students with only 0s sessions disappear entirely (#519)', async () => {
+    test('sessions with no student message are excluded by default, and students with only such sessions disappear entirely (#519)', async () => {
         const db = memoryDb({
             courses: [{ courseId: 'C1', instructorId: 'i1' }],
             chat_sessions: [
@@ -119,9 +119,54 @@ describe('GET /:courseId — instructor-admin student list', () => {
         expect(defaultRes.body.data).toMatchObject({ totalStudents: 1, totalSessions: 1 });
         expect(defaultRes.body.data.students.map(s => s.studentId)).toEqual(['chatty']);
 
-        const includedRes = await request(makeRouteApp(studentsRouter, { db, user: adminInstructor })).get('/C1?includeZeroDuration=true');
+        const includedRes = await request(makeRouteApp(studentsRouter, { db, user: adminInstructor })).get('/C1?includeEmptyChats=true');
         expect(includedRes.body.data).toMatchObject({ totalStudents: 2, totalSessions: 2 });
         expect(includedRes.body.data.students.map(s => s.studentId).sort()).toEqual(['chatty', 'silent']);
+    });
+
+    test('a student question with no reply is shown by default, even though its duration is 0s (#519)', async () => {
+        const db = memoryDb({
+            courses: [{ courseId: 'C1', instructorId: 'i1' }],
+            chat_sessions: [{
+                sessionId: 'no-reply', courseId: 'C1', studentId: 'asker', savedAt: new Date('2026-03-01'),
+                chatData: { messages: [{ type: 'user', timestamp: '2026-03-01T00:00:00Z' }] },
+            }],
+        });
+        const res = await request(makeRouteApp(studentsRouter, { db, user: adminInstructor })).get('/C1');
+        expect(res.body.data.students.map(s => s.studentId)).toEqual(['asker']);
+        expect(res.body.data.students[0].sessions[0].duration).toBe('0s');
+    });
+
+    test('a student question answered within a second is shown by default, even though its duration is 0s (#519)', async () => {
+        const db = memoryDb({
+            courses: [{ courseId: 'C1', instructorId: 'i1' }],
+            chat_sessions: [{
+                sessionId: 'fast-reply', courseId: 'C1', studentId: 'lucky', savedAt: new Date('2026-03-01'),
+                chatData: { messages: [
+                    { type: 'user', timestamp: '2026-03-01T00:00:00.000Z' },
+                    { type: 'bot', timestamp: '2026-03-01T00:00:00.500Z' },
+                ] },
+            }],
+        });
+        const res = await request(makeRouteApp(studentsRouter, { db, user: adminInstructor })).get('/C1');
+        expect(res.body.data.students.map(s => s.studentId)).toEqual(['lucky']);
+        expect(res.body.data.students[0].sessions[0].duration).toBe('0s');
+    });
+
+    test('a conversation whose first student message has no timestamp is shown by default (#519)', async () => {
+        const db = memoryDb({
+            courses: [{ courseId: 'C1', instructorId: 'i1' }],
+            chat_sessions: [{
+                sessionId: 'no-timestamp', courseId: 'C1', studentId: 'untimed', savedAt: new Date('2026-03-01'),
+                chatData: { messages: [
+                    { type: 'user' },
+                    { type: 'bot', timestamp: '2026-03-01T00:01:00Z' },
+                ] },
+            }],
+        });
+        const res = await request(makeRouteApp(studentsRouter, { db, user: adminInstructor })).get('/C1');
+        expect(res.body.data.students.map(s => s.studentId)).toEqual(['untimed']);
+        expect(res.body.data.students[0].sessions[0].duration).toBe('0s');
     });
 
     test('does not count a startup welcome appended during a later visit', async () => {

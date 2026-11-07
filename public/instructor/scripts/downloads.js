@@ -14,16 +14,17 @@ let currentScope = { type: 'course' };
 let currentCourseName = null;
 let activePseudonymMappings = new Map();
 
-// Whether to include 0s-duration chats (a session saved from just the
-// auto-welcome message, no student message ever sent) in the list and every
-// download below. Off by default (#519) - see downloads.html's filter row.
-let includeZeroDurationChats = false;
+// Whether to include chats where the student never sent a message (e.g. a
+// session saved from just the auto-welcome message landing) in the list and
+// every download below. Off by default (#519) - see downloads.html's filter
+// row.
+let includeEmptyChats = false;
 
-// Appends the 0s-duration filter param to a request URL, whether or not it
+// Appends the empty-chats filter param to a request URL, whether or not it
 // already has query params (e.g. a bucket export's ?studentId=).
-function withZeroDurationParam(url) {
-    if (!includeZeroDurationChats) return url;
-    return url + (url.includes('?') ? '&' : '?') + 'includeZeroDuration=true';
+function withEmptyChatsParam(url) {
+    if (!includeEmptyChats) return url;
+    return url + (url.includes('?') ? '&' : '?') + 'includeEmptyChats=true';
 }
 
 // Global variables to prevent multiple API calls and redirects
@@ -293,11 +294,11 @@ function setupEventListeners() {
         logoutBtn.addEventListener('click', handleLogout);
     }
 
-    // 0s-duration filter (#519)
-    const zeroDurationFilter = document.getElementById('zero-duration-filter');
-    if (zeroDurationFilter) {
-        zeroDurationFilter.addEventListener('change', async () => {
-            includeZeroDurationChats = zeroDurationFilter.value === 'include';
+    // Empty-chats filter: chats where the student never sent a message (#519)
+    const emptyChatFilter = document.getElementById('empty-chat-filter');
+    if (emptyChatFilter) {
+        emptyChatFilter.addEventListener('change', async () => {
+            includeEmptyChats = emptyChatFilter.value === 'include';
             closeStudentModal();
             await loadStudentData();
         });
@@ -372,7 +373,7 @@ async function loadStudentData() {
             return;
         }
 
-        const url = withZeroDurationParam(isSuperchat
+        const url = withEmptyChatsParam(isSuperchat
             ? `/api/superchats/${currentScope.superchatId}/chat-sessions`
             : `/api/students/${currentCourseId}`);
 
@@ -509,7 +510,7 @@ async function downloadAllCourseSessions(format = 'json', anonymized = false) {
             
             try {
                 // Fetch sessions list for this student
-                const sessionsResponse = await fetch(withZeroDurationParam(`/api/students/${currentCourseId}/${student.studentId}/sessions`), {
+                const sessionsResponse = await fetch(withEmptyChatsParam(`/api/students/${currentCourseId}/${student.studentId}/sessions`), {
                     method: 'GET',
                     credentials: 'include'
                 });
@@ -596,7 +597,7 @@ async function downloadSuperchatExport(format, studentId, anonymized = false) {
 
         const params = studentId ? `?studentId=${encodeURIComponent(studentId)}` : '';
         const response = await fetch(
-            withZeroDurationParam(`/api/superchats/${currentScope.superchatId}/chat-sessions/export${params}`),
+            withEmptyChatsParam(`/api/superchats/${currentScope.superchatId}/chat-sessions/export${params}`),
             { method: 'GET', credentials: 'include' }
         );
 
@@ -793,7 +794,7 @@ async function viewStudentSessions(studentId, studentName) {
             return;
         }
 
-        const response = await fetch(withZeroDurationParam(`/api/students/${currentCourseId}/${studentId}/sessions`), {
+        const response = await fetch(withEmptyChatsParam(`/api/students/${currentCourseId}/${studentId}/sessions`), {
             method: 'GET',
             credentials: 'include'
         });
