@@ -184,9 +184,24 @@ function renderInstructorFlashcardSection(unitName) {
             ${isEditableDraft ? `
                 <button type="button" class="secondary-button flashcard-add-btn" id="flashcard-add-${unitId}" onclick="addManualFlashcard('${unitName}')">Add Card${flashcardContext(unitName, flashcardDeckLead())}</button>
                 <button type="button" class="secondary-button flashcard-save-btn" id="flashcard-save-${unitId}" onclick="saveFlashcardDraft('${unitName}')">Save Draft${flashcardContext(unitName, flashcardDeckLead())}</button>
-                <button type="button" class="flashcard-publish-btn" id="flashcard-publish-${unitId}" onclick="publishFlashcardDeck('${unitName}', this)">Publish to Students${flashcardContext(unitName, flashcardDeckLead())}</button>
             ` : ''}
-            ${deck.isPublished ? `<button type="button" class="flashcard-unpublish-btn" id="flashcard-unpublish-${unitId}" onclick="unpublishFlashcardDeck('${unitName}', this)">Unpublish${flashcardContext(unitName, flashcardDeckLead())}</button>` : ''}
+            ${(isEditableDraft || deck.isPublished) ? `
+                <div class="publish-toggle">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="flashcard-publish-${unitId}" ${deck.isPublished ? 'checked' : ''} onchange="toggleFlashcardPublish('${unitName}', this)">
+                        <span class="toggle-slider"></span>
+                        <!-- "Publish (Student Flashcards)", not just "Publish" - the
+                             unit's own publish switch already claims that name, and
+                             two controls on the page can't share a name. -->
+                        ${flashcardContext(unitName, `Publish${flashcardDeckLead()}`)}
+                    </label>
+                    <!-- Same word as the label above, shown beside the switch. Hidden
+                         from assistive technology so it is not read a second time. The
+                         switch is named for what turning it on does ("Publish"); whether
+                         the deck is published now is its checked state. -->
+                    <span class="toggle-label" aria-hidden="true">Publish</span>
+                </div>
+            ` : ''}
         </div>
     `;
     restoreFlashcardFocus(editor, focusBefore);
@@ -480,6 +495,24 @@ async function removeFlashcardEditorRow(button) {
     } catch (error) {
         renderInstructorFlashcardSection(unitName);
         showNotification(error.message || 'Unable to remove flashcard.', 'error');
+    }
+}
+
+/**
+ * Single Published toggle standing in for the old separate Publish/Unpublish
+ * buttons. Decides which action a click means from the deck's own state
+ * rather than the checkbox's native checked value, so clicking while already
+ * published but with newer unsaved draft edits ("Draft changes") still
+ * republishes that draft instead of unpublishing - same as the old
+ * "Publish to Students" button did in that state, just as one control.
+ */
+function toggleFlashcardPublish(unitName, checkbox) {
+    const deck = flashcardDecksByUnit.get(unitName);
+    if (!deck) return;
+    if (deck.hasDraft || !deck.isPublished) {
+        publishFlashcardDeck(unitName, checkbox);
+    } else {
+        unpublishFlashcardDeck(unitName, checkbox);
     }
 }
 
