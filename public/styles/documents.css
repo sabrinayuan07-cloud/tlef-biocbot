@@ -1683,39 +1683,6 @@
     background: #f8fafc;
 }
 
-.flashcard-preview-group {
-    margin-top: 0.5rem;
-}
-
-.flashcard-preview-label {
-    display: block;
-    margin-bottom: 0.25rem;
-    color: #64748b;
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-}
-
-.flashcard-rendered-preview {
-    min-height: 2.75rem;
-    box-sizing: border-box;
-    padding: 0.75rem;
-    overflow-wrap: anywhere;
-    color: #1e293b;
-    background: #f8fafc;
-    border: 1px dashed #94a3b8;
-    border-radius: 6px;
-    font-size: 1rem;
-    line-height: 1.5;
-}
-
-.flashcard-rendered-preview:empty::before {
-    content: 'Nothing to preview';
-    color: #94a3b8;
-    font-style: italic;
-}
-
 .flashcard-remove-btn {
     border: 0;
     background: transparent;

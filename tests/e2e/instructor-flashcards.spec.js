@@ -26,11 +26,6 @@ async function loadHarness(page, initialDeck) {
         const testWindow = /** @type {any} */ (window);
         testWindow.testFlashcardState = { deck, putBodies: [], notifications: [] };
         testWindow.getCurrentCourseId = async () => 'C1';
-        testWindow.RichText = {
-            render: (/** @type {Element} */ element, /** @type {string} */ text) => {
-                element.textContent = `Rendered: ${text}`;
-            }
-        };
         testWindow.showNotification = (/** @type {string} */ message, /** @type {string} */ type) => {
             testWindow.testFlashcardState.notifications.push({ message, type });
         };
@@ -80,32 +75,6 @@ async function loadHarness(page, initialDeck) {
 }
 
 test.describe('instructor flashcard editor', () => {
-    test('shows live student previews for generated rich content', async ({ page }) => {
-        await loadHarness(page, {
-            deckId: 'deck1',
-            courseId: 'C1',
-            lectureName: 'Unit 1',
-            title: 'Unit 1 Flashcards',
-            hasDraft: true,
-            isPublished: false,
-            isStale: false,
-            publishedVersion: 0,
-            draftCards: [{
-                ...card('fc1', 'Water is \\( H_2O \\)'),
-                back: '[SMILES]CCO[/SMILES]'
-            }],
-            publishedCards: []
-        });
-
-        const previews = page.locator('.flashcard-rendered-preview');
-        await expect(previews).toHaveCount(2);
-        await expect(previews.nth(0)).toHaveText('Rendered: Water is \\( H_2O \\)');
-        await expect(previews.nth(1)).toHaveText('Rendered: [SMILES]CCO[/SMILES]');
-
-        await page.locator('.flashcard-back-input').fill('[SMILES]C1=CC=CC=C1[/SMILES]');
-        await expect(previews.nth(1)).toHaveText('Rendered: [SMILES]C1=CC=CC=C1[/SMILES]');
-    });
-
     test('removing a draft card persists immediately and survives a reload', async ({ page }) => {
         await loadHarness(page, {
             deckId: 'deck1',

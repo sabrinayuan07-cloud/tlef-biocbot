@@ -122,7 +122,6 @@ function renderInstructorFlashcardSection(unitName) {
             ${deck.isPublished ? `<button type="button" class="flashcard-unpublish-btn" onclick="unpublishFlashcardDeck('${unitName}', this)">Unpublish</button>` : ''}
         </div>
     `;
-    initializeInstructorFlashcardPreviews(editor);
     flashcardEditorRows(editor).forEach(wireFlashcardEditorRowDrag);
 }
 
@@ -147,17 +146,9 @@ function renderFlashcardEditorRow(card, index, readOnly) {
             <label>Term
                 <textarea class="flashcard-front-input" rows="2" maxlength="300" ${readOnly ? 'readonly' : ''}>${flashcardEscapeHtml(card.front)}</textarea>
             </label>
-            <div class="flashcard-preview-group">
-                <span class="flashcard-preview-label">Student preview · Term</span>
-                <div class="flashcard-rendered-preview" data-flashcard-preview="front" aria-label="Rendered preview of card term"></div>
-            </div>
             <label>Definition
                 <textarea class="flashcard-back-input" rows="3" maxlength="1200" ${readOnly ? 'readonly' : ''}>${flashcardEscapeHtml(card.back)}</textarea>
             </label>
-            <div class="flashcard-preview-group">
-                <span class="flashcard-preview-label">Student preview · Definition</span>
-                <div class="flashcard-rendered-preview" data-flashcard-preview="back" aria-label="Rendered preview of card definition"></div>
-            </div>
             <p class="flashcard-source">Source: ${flashcardEscapeHtml(flashcardSourceLabel(card.source))}</p>
         </article>
     `;
@@ -229,49 +220,6 @@ function wireFlashcardEditorRowDrag(row) {
         // dragover above already moved the row into place live; drop just
         // finalizes where it already is.
         relabelFlashcardEditorRows(editor);
-    });
-}
-
-/**
- * Render one editable card side exactly as it will appear to students.
- *
- * @param {Element} row Instructor card editor row
- * @param {'front'|'back'} side Card side to render
- * @returns {void}
- */
-function renderInstructorFlashcardPreview(row, side) {
-    const input = row.querySelector(`.flashcard-${side}-input`);
-    const preview = row.querySelector(`[data-flashcard-preview="${side}"]`);
-    if (!input || !preview) return;
-
-    const value = input.value || '';
-    if (typeof RichText === 'undefined') {
-        preview.textContent = value;
-        return;
-    }
-    RichText.render(preview, value);
-}
-
-/**
- * Initialize and keep live previews in sync with their raw textareas.
- *
- * @param {Element} root Editor container or newly inserted row
- * @returns {void}
- */
-function initializeInstructorFlashcardPreviews(root) {
-    const rows = root.matches?.('.flashcard-editor-row')
-        ? [root]
-        : Array.from(root.querySelectorAll('.flashcard-editor-row'));
-
-    rows.forEach(row => {
-        renderInstructorFlashcardPreview(row, 'front');
-        renderInstructorFlashcardPreview(row, 'back');
-        row.querySelectorAll('.flashcard-front-input, .flashcard-back-input').forEach(input => {
-            input.addEventListener('input', () => {
-                const side = input.classList.contains('flashcard-front-input') ? 'front' : 'back';
-                renderInstructorFlashcardPreview(row, side);
-            });
-        });
     });
 }
 
@@ -358,10 +306,7 @@ function addManualFlashcard(unitName) {
     }
     editor.insertAdjacentHTML('beforeend', renderFlashcardEditorRow({ front: '', back: '', source: null }, count, false));
     const row = editor.lastElementChild;
-    if (row) {
-        initializeInstructorFlashcardPreviews(row);
-        wireFlashcardEditorRowDrag(row);
-    }
+    if (row) wireFlashcardEditorRowDrag(row);
     row?.querySelector('.flashcard-front-input')?.focus();
 }
 
