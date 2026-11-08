@@ -125,4 +125,47 @@ describe('FlashcardDeck', () => {
     test('ensures deck and progress indexes', async () => {
         await expect(FlashcardDeck.ensureIndexes(memoryDb({}))).resolves.toBeUndefined();
     });
+
+    test('addManualCard creates a deck on demand when none exists for the unit', async () => {
+        const db = memoryDb({});
+        const deck = await FlashcardDeck.addManualCard(db, 'C1', 'Unit 1', {
+            front: 'What is a question converted to a flashcard?', back: 'This one.'
+        }, 'i1');
+
+        expect(deck.deckId).toMatch(/^deck_[0-9a-f-]{36}$/i);
+        expect(deck.hasDraft).toBe(true);
+        expect(deck.draftCards).toHaveLength(1);
+        expect(deck.draftCards[0]).toMatchObject({
+            front: 'What is a question converted to a flashcard?',
+            back: 'This one.'
+        });
+    });
+
+    test('addManualCard appends to an existing draft without disturbing other cards', async () => {
+        const db = memoryDb({});
+        const draft = await FlashcardDeck.saveGeneratedDraft(db, {
+            courseId: 'C1', lectureName: 'Unit 1', cards: sampleCards(), generatedBy: 'i1'
+        });
+
+        const updated = await FlashcardDeck.addManualCard(db, 'C1', 'Unit 1', {
+            front: 'A manually added card', back: 'Its answer'
+        }, 'i1');
+
+        expect(updated.deckId).toBe(draft.deckId);
+        expect(updated.draftCards).toHaveLength(3);
+        expect(updated.draftCards[0].cardId).toBe(draft.draftCards[0].cardId);
+        expect(updated.draftCards[2]).toMatchObject({ front: 'A manually added card', back: 'Its answer' });
+    });
+
+    test('addManualCard rejects pushing a deck past MAX_CARD_COUNT', async () => {
+        const db = memoryDb({});
+        const cards = Array.from({ length: FlashcardDeck.MAX_CARD_COUNT }, (_, i) => ({
+            front: `Card ${i}`, back: `Answer ${i}`
+        }));
+        await FlashcardDeck.saveGeneratedDraft(db, { courseId: 'C1', lectureName: 'Unit 1', cards, generatedBy: 'i1' });
+
+        await expect(FlashcardDeck.addManualCard(db, 'C1', 'Unit 1', {
+            front: 'One too many', back: 'Nope'
+        }, 'i1')).rejects.toThrow(/between/i);
+    });
 });

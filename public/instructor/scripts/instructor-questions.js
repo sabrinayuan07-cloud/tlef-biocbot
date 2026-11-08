@@ -503,6 +503,23 @@ function openQuestionModal(week) {
 }
 
 /**
+ * Open the question creation modal pre-filled from a flashcard's front/back,
+ * so converting a card into a question doesn't require retyping it. Defaults
+ * to short-answer since that's the only question type a front/back card maps
+ * onto directly - the instructor can still switch types before saving.
+ * @param {string} week - Week identifier
+ * @param {string} front - Flashcard front text
+ * @param {string} back - Flashcard back text
+ */
+function openQuestionModalFromFlashcard(week, front, back) {
+    openQuestionModal(week);
+    document.getElementById('question-type').value = 'short-answer';
+    updateQuestionForm(); // clears #question-text as a side effect of the type change - must run before filling it in
+    document.getElementById('question-text').value = front;
+    document.getElementById('sa-answer').value = back;
+}
+
+/**
  * Close the question creation modal
  */
 function closeQuestionModal() {
@@ -922,30 +939,32 @@ function updateQuestionsDisplay(week) {
                 <p>No assessment questions created yet. Click "Add Question" to get started.</p>
             </div>
         `;
-    } else {
-        let html = '';
-        questions.forEach((question, index) => {
-            const questionType = question.questionType || question.type;
-            html += `
-                <div class="question-item" data-question-id="${question.questionId || question.id}">
-                    <div class="question-header">
-                        <span class="question-type-badge ${questionType}">${getQuestionTypeLabel(questionType)}</span>
-                        <span class="question-number">Question ${index + 1}</span>
-                        <div class="question-action-buttons">
-                            <button class="edit-question-btn" onclick="openQuestionLearningObjectiveModal('${week}', '${question.questionId || question.id}')" title="Edit learning objective">${Icons.pencil}</button>
-                            <button class="delete-question-btn" onclick="deleteQuestion('${week}', '${question.questionId || question.id}')" title="Delete question">×</button>
-                        </div>
-                    </div>
-                    <div class="question-content">
-                        ${renderLearningObjectiveDisplay(question.learningObjective)}
-                        <p class="question-text">${question.question}</p>
-                        ${getQuestionAnswerDisplay(question)}
+        return;
+    }
+
+    let html = '';
+    questions.forEach((question, index) => {
+        const questionType = question.questionType || question.type;
+        html += `
+            <div class="question-item" data-question-id="${question.questionId || question.id}">
+                <div class="question-header">
+                    <span class="question-type-badge ${questionType}">${getQuestionTypeLabel(questionType)}</span>
+                    <span class="question-number">Question ${index + 1}</span>
+                    <div class="question-action-buttons">
+                        <button class="convert-to-flashcard-btn" onclick="convertQuestionToFlashcard('${week}', '${question.questionId || question.id}')" title="Convert to flashcard">To Flashcard</button>
+                        <button class="edit-question-btn" onclick="openQuestionLearningObjectiveModal('${week}', '${question.questionId || question.id}')" title="Edit learning objective">${Icons.pencil}</button>
+                        <button class="delete-question-btn" onclick="deleteQuestion('${week}', '${question.questionId || question.id}')" title="Delete question">×</button>
                     </div>
                 </div>
-            `;
-        });
-        questionsContainer.innerHTML = html;
-    }
+                <div class="question-content">
+                    ${renderLearningObjectiveDisplay(question.learningObjective)}
+                    <p class="question-text">${question.question}</p>
+                    ${getQuestionAnswerDisplay(question)}
+                </div>
+            </div>
+        `;
+    });
+    questionsContainer.innerHTML = html;
 
     // Keep the pass-threshold stepper's cap in sync with the actual question
     // count - must run for the 0-question case too (#524 follow-up), or
@@ -1042,7 +1061,15 @@ function getQuestionTypeLabel(type) {
  * @param {object} question - Question object
  * @returns {string} HTML string
  */
-function getQuestionAnswerDisplay(question) {
+/**
+ * Resolve a question's correct answer to plain, human-readable text,
+ * regardless of question type's underlying storage shape (boolean for
+ * true-false, option key/index for multiple-choice, raw string for
+ * short-answer). Shared by the answer preview and flashcard conversion.
+ * @param {object} question - Question object
+ * @returns {string} Plain-text correct answer
+ */
+function getPlainTextAnswer(question) {
     const questionType = question.questionType || question.type;
     const answer = Object.prototype.hasOwnProperty.call(question, 'correctAnswer')
         ? question.correctAnswer
@@ -1050,7 +1077,26 @@ function getQuestionAnswerDisplay(question) {
 
     if (questionType === 'true-false') {
         const isTrue = answer === true || String(answer).toLowerCase() === 'true';
-        return `<p class="answer-preview"><strong>Answer:</strong> ${isTrue ? 'True' : 'False'}</p>`;
+        return isTrue ? 'True' : 'False';
+    } else if (questionType === 'multiple-choice') {
+        const entries = Array.isArray(question.options)
+            ? question.options.map((value, index) => [String.fromCharCode(65 + index), value])
+            : Object.entries(question.options || {});
+        const correctEntry = entries.find(([key], index) =>
+            typeof answer === 'number' ? index === answer : key === answer);
+        return correctEntry ? correctEntry[1] : '';
+    }
+    return answer || '';
+}
+
+function getQuestionAnswerDisplay(question) {
+    const questionType = question.questionType || question.type;
+    const answer = Object.prototype.hasOwnProperty.call(question, 'correctAnswer')
+        ? question.correctAnswer
+        : question.answer;
+
+    if (questionType === 'true-false') {
+        return `<p class="answer-preview"><strong>Answer:</strong> ${getPlainTextAnswer(question)}</p>`;
     } else if (questionType === 'multiple-choice') {
         let optionsHtml = '';
         const entries = Array.isArray(question.options)
@@ -1062,9 +1108,45 @@ function getQuestionAnswerDisplay(question) {
         });
         return `<div class="mcq-preview">${optionsHtml}</div>`;
     } else if (questionType === 'short-answer') {
-        return `<p class="answer-preview"><strong>Expected:</strong> ${answer}</p>`;
+        return `<p class="answer-preview"><strong>Expected:</strong> ${getPlainTextAnswer(question)}</p>`;
     }
     return '';
+}
+
+/**
+ * Convert an existing question into a flashcard for the same unit. Creates
+ * the unit's flashcard deck on demand if one doesn't exist yet (decks are
+ * otherwise only created via AI generation).
+ * @param {string} week - Week identifier
+ * @param {string} questionId - Question identifier
+ */
+async function convertQuestionToFlashcard(week, questionId) {
+    const question = getStoredQuestion(week, questionId);
+    if (!question) return;
+
+    const front = question.question;
+    const back = getPlainTextAnswer(question);
+    if (!front || !back) {
+        showNotification('This question needs an answer before it can become a flashcard.', 'warning');
+        return;
+    }
+
+    try {
+        const courseId = await getCurrentCourseId();
+        const response = await fetch('/api/flashcards/instructor/from-question', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ courseId, lectureName: week, front, back })
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.message || 'Unable to convert question');
+
+        flashcardDecksByUnit.set(week, result.data);
+        renderInstructorFlashcardSection(week);
+        showNotification('Added as a flashcard.', 'success');
+    } catch (error) {
+        showNotification(error.message, 'error');
+    }
 }
 
 function openQuestionLearningObjectiveModal(week, questionId) {

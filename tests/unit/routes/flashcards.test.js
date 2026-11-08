@@ -114,6 +114,46 @@ describe('flashcard instructor routes', () => {
             })
         );
     });
+
+    test('rejects a question-to-flashcard conversion missing required fields', async () => {
+        const response = await request(app({ db: courseDb(), user: instructor }))
+            .post('/instructor/from-question')
+            .send({ courseId: 'C1', lectureName: 'Unit 1' });
+        expect(response.status).toBe(400);
+    });
+
+    test('rejects students from converting a question to a flashcard', async () => {
+        const response = await request(app({ db: courseDb(), user: student }))
+            .post('/instructor/from-question')
+            .send({ courseId: 'C1', lectureName: 'Unit 1', front: 'Q', back: 'A' });
+        expect(response.status).toBe(403);
+    });
+
+    test('creates a deck on demand from a converted question', async () => {
+        const db = courseDb();
+        const response = await request(app({ db, user: instructor }))
+            .post('/instructor/from-question')
+            .send({ courseId: 'C1', lectureName: 'Unit 1', front: 'What is a question?', back: 'A flashcard now.' });
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.hasDraft).toBe(true);
+        expect(response.body.data.draftCards).toHaveLength(1);
+        expect(response.body.data.draftCards[0]).toMatchObject({ front: 'What is a question?', back: 'A flashcard now.' });
+    });
+
+    test('appends a converted question onto an existing draft', async () => {
+        const db = courseDb();
+        await FlashcardDeck.saveGeneratedDraft(db, {
+            courseId: 'C1', lectureName: 'Unit 1', cards: [{ front: 'Existing', back: 'Card' }], generatedBy: 'i1'
+        });
+
+        const response = await request(app({ db, user: instructor }))
+            .post('/instructor/from-question')
+            .send({ courseId: 'C1', lectureName: 'Unit 1', front: 'New card from a question', back: 'Its answer' });
+
+        expect(response.status).toBe(200);
+        expect(response.body.data.draftCards).toHaveLength(2);
+    });
 });
 
 describe('flashcard student routes', () => {

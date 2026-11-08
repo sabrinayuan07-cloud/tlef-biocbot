@@ -109,6 +109,7 @@ test.describe('instructor course management', () => {
 
     test.beforeEach(async () => {
         await seedCourse();
+        await withDb((db) => db.collection('flashcardDecks').deleteMany({ courseId: COURSE_ID }));
     });
 
     test('course page renders with title and seeded units', async ({ page }) => {
@@ -233,6 +234,82 @@ test.describe('instructor course management', () => {
         const q = unit1.assessmentQuestions[0];
         expect(q.questionType).toBe('short-answer');
         expect(q.correctAnswer).toBe(expected);
+    });
+
+    test('instructor can convert a question into a flashcard, creating the deck on demand', async ({ page }) => {
+        await loginViaUI(page);
+        await gotoCoursePage(page);
+
+        await page.locator('.add-question-btn').first().click();
+        await expect(page.locator('#question-modal')).toBeVisible();
+        await page.locator('#question-type').selectOption('short-answer');
+        await page.locator('#question-text').fill('What is the powerhouse of the cell?');
+        await page.locator('#sa-answer').fill('Mitochondria');
+        await page.locator('#question-modal button.btn-primary', { hasText: 'Save Question' }).click();
+        await expect(page.locator('#question-modal')).toBeHidden({ timeout: 10_000 });
+
+        // No flashcard deck exists for Unit 1 yet.
+        await expect(page.locator('#flashcard-status-unit-1')).toHaveText('Not generated');
+
+        await page.locator('.convert-to-flashcard-btn').first().click();
+
+        // The deck is created on demand and the new card appears.
+        await expect(page.locator('#flashcard-status-unit-1')).toHaveText('Draft', { timeout: 10_000 });
+        await expect(page.locator('.flashcard-front-input')).toHaveValue('What is the powerhouse of the cell?');
+        await expect(page.locator('.flashcard-back-input')).toHaveValue('Mitochondria');
+
+        const courseAfter = await withDb((db) =>
+            db.collection('courses').findOne({ courseId: COURSE_ID })
+        );
+        const unit1 = courseAfter.lectures.find((l) => l.name === 'Unit 1');
+        expect(unit1.assessmentQuestions).toHaveLength(1);
+
+        const deck = await withDb((db) =>
+            db.collection('flashcardDecks').findOne({ courseId: COURSE_ID, lectureName: 'Unit 1' })
+        );
+        expect(deck.draftCards).toHaveLength(1);
+        expect(deck.draftCards[0]).toMatchObject({
+            front: 'What is the powerhouse of the cell?',
+            back: 'Mitochondria'
+        });
+    });
+
+    test('instructor can convert a flashcard into a prefilled question', async ({ page }) => {
+        await loginViaUI(page);
+
+        // Seed a draft deck directly so this test exercises the flashcard
+        // side without depending on the question->flashcard flow above.
+        await withDb((db) => db.collection('flashcardDecks').insertOne({
+            deckId: 'deck-e2e-1',
+            courseId: COURSE_ID,
+            lectureName: 'Unit 1',
+            title: 'Unit 1 Flashcards',
+            hasDraft: true,
+            isPublished: false,
+            isStale: false,
+            publishedVersion: 0,
+            draftCards: [{
+                cardId: 'fc-e2e-1',
+                front: 'What pigment makes plants green?',
+                back: 'Chlorophyll',
+                source: null
+            }],
+            draftSourceDocumentIds: [],
+            publishedCards: [],
+            publishedSourceDocumentIds: [],
+            createdAt: new Date(),
+            updatedAt: new Date()
+        }));
+
+        await gotoCoursePage(page);
+        await expect(page.locator('.flashcard-front-input')).toHaveValue('What pigment makes plants green?');
+
+        await page.locator('.flashcard-convert-btn').first().click();
+
+        await expect(page.locator('#question-modal')).toBeVisible();
+        await expect(page.locator('#question-type')).toHaveValue('short-answer');
+        await expect(page.locator('#question-text')).toHaveValue('What pigment makes plants green?');
+        await expect(page.locator('#sa-answer')).toHaveValue('Chlorophyll');
     });
 
     test('instructor can delete a unit', async ({ page }) => {

@@ -1687,6 +1687,15 @@
     font-weight: 600;
 }
 
+.flashcard-convert-btn {
+    border: 0;
+    background: transparent;
+    color: #0d6efd;
+    cursor: pointer;
+    font-weight: 600;
+    margin-right: 0.5rem;
+}
+
 .flashcard-editor-actions {
     margin-top: 1rem;
 }
@@ -1823,6 +1832,22 @@
     display: flex;
     gap: 0.5rem;
     margin-left: auto;
+}
+
+.convert-to-flashcard-btn {
+    border: 1px solid #0d6efd;
+    background: transparent;
+    color: #0d6efd;
+    border-radius: 12px;
+    padding: 0.15rem 0.6rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.convert-to-flashcard-btn:hover {
+    background: #e7f1ff;
 }
 
 /* Bordered icon buttons, matching .unit-rename-btn's pattern elsewhere in

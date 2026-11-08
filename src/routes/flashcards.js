@@ -174,6 +174,25 @@ router.post('/instructor/generate', async (req, res) => {
     }
 });
 
+router.post('/instructor/from-question', async (req, res) => {
+    try {
+        const { courseId, lectureName, front, back } = req.body;
+        if (!courseId || !lectureName || !front || !back) {
+            return res.status(400).json({ success: false, message: 'courseId, lectureName, front, and back are required' });
+        }
+
+        const db = req.app.locals.db;
+        const course = await requireInstructorCourse(db, req, res, courseId);
+        if (!course) return;
+
+        const deck = await FlashcardDeck.addManualCard(db, courseId, lectureName, { front, back, source: null }, req.user.userId);
+        return res.json({ success: true, message: 'Added flashcard from question', data: instructorDeckSummary(deck) });
+    } catch (error) {
+        console.error('Error converting question to flashcard:', error);
+        return res.status(400).json({ success: false, message: error.message || 'Unable to add flashcard' });
+    }
+});
+
 router.put('/instructor/:deckId', async (req, res) => {
     try {
         const db = req.app.locals.db;

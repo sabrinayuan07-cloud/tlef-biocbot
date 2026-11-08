@@ -141,6 +141,45 @@ async function saveGeneratedDraft(db, data) {
     return deck;
 }
 
+/**
+ * Append a single manually-provided card (e.g. converted from an assessment
+ * question) to a unit's deck, creating the deck if it doesn't exist yet -
+ * decks are otherwise only created via AI generation.
+ */
+async function addManualCard(db, courseId, lectureName, card, userId) {
+    const collection = getDecksCollection(db);
+    const existing = await getDeckForUnit(db, courseId, lectureName);
+    const previousCards = existing?.draftCards?.length
+        ? existing.draftCards
+        : (existing?.publishedCards || []);
+    const draftCards = prepareCards([...previousCards, card], previousCards);
+    const now = new Date();
+
+    return collection.findOneAndUpdate(
+        { courseId, lectureName },
+        {
+            $set: {
+                draftCards,
+                hasDraft: true,
+                isStale: false,
+                updatedAt: now
+            },
+            $setOnInsert: {
+                deckId: createId('deck'),
+                title: `${lectureName} Flashcards`,
+                draftSourceDocumentIds: [],
+                draftGeneratedBy: userId,
+                publishedCards: [],
+                publishedSourceDocumentIds: [],
+                publishedVersion: 0,
+                isPublished: false,
+                createdAt: now
+            }
+        },
+        { upsert: true, returnDocument: 'after' }
+    );
+}
+
 async function updateDraft(db, deckId, updates) {
     const existing = await getDeckById(db, deckId);
     if (!existing) return null;
@@ -256,6 +295,7 @@ module.exports = {
     listDecksForCourse,
     listPublishedDecks,
     saveGeneratedDraft,
+    addManualCard,
     updateDraft,
     publishDraft,
     unpublishDeck,
