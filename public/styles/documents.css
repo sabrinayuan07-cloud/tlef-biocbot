@@ -1625,6 +1625,12 @@
     gap: 0.5rem;
 }
 
+.flashcard-editor-row-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
 /* Grip icon - purely a visual cue that the row is draggable; the whole
    .flashcard-editor-row (minus its textareas/remove button) is the actual
    drag source, not this icon specifically. Same pattern as
@@ -1651,7 +1657,7 @@
 .flashcard-editor-row label {
     display: block;
     margin-top: 0.6rem;
-    font-size: 0.8rem;
+    font-size: 0.95rem;
     font-weight: 700;
     color: #475569;
 }
@@ -1664,6 +1670,7 @@
     border: 1px solid #cbd5e1;
     border-radius: 6px;
     font: inherit;
+    font-size: 1.05rem;
     resize: vertical;
 }
 
@@ -1676,8 +1683,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 26px;
-    height: 26px;
+    width: 32px;
+    height: 32px;
     padding: 0;
     flex-shrink: 0;
     border: none;
@@ -1689,8 +1696,8 @@
 }
 
 .flashcard-remove-btn .icon-inline {
-    width: 14px;
-    height: 14px;
+    width: 20px;
+    height: 20px;
     flex-shrink: 0;
 }
 
@@ -1698,13 +1705,22 @@
     color: #b91c1c;
 }
 
+/* Same pill look as .convert-to-flashcard-btn on the question list, so the
+   two conversion actions read as the same control either direction. */
 .flashcard-convert-btn {
-    border: 0;
-    background: transparent;
+    border: 1px solid var(--bb-steel);
+    background: rgba(44, 69, 93, 0.08);
     color: var(--bb-steel);
-    cursor: pointer;
+    border-radius: 12px;
+    padding: 0.15rem 0.6rem;
+    font-size: 0.75rem;
     font-weight: 600;
-    margin-right: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.flashcard-convert-btn:hover {
+    background: var(--bb-steel-hover-light);
 }
 
 .flashcard-editor-actions {
@@ -1720,6 +1736,32 @@
     padding: 0.75rem;
     background: #e9ecef;
     border-radius: 6px;
+}
+
+.threshold-add-question-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    margin-left: auto;
+    padding: 0.4rem 0.75rem;
+    border: none;
+    border-radius: 6px;
+    background: var(--bb-steel);
+    color: white;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.threshold-add-question-btn .btn-icon {
+    margin-right: 0;
+    font-size: 0.9rem;
+    line-height: 1;
+}
+
+.threshold-add-question-btn:hover {
+    background: var(--bb-steel-dark);
 }
 
 /* Note: this is deliberately NOT named .threshold-input - that class
@@ -1847,7 +1889,7 @@
 
 .convert-to-flashcard-btn {
     border: 1px solid var(--bb-steel);
-    background: transparent;
+    background: rgba(44, 69, 93, 0.08);
     color: var(--bb-steel);
     border-radius: 12px;
     padding: 0.15rem 0.6rem;

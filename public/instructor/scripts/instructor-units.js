@@ -509,6 +509,13 @@ function createUnitElement(unitName, unitData, isExpanded = false, canDelete = t
                              visible without hovering/clicking - updated in
                              updateQuestionsDisplay() alongside max. -->
                         <span class="threshold-help" id="threshold-help-${unitId}">out of 0 total questions</span>
+                        <!-- Same openQuestionModal() flow as the Add Question button
+                             below the question list - a quicker-to-reach trigger up
+                             here next to the threshold row. -->
+                        <button type="button" class="threshold-add-question-btn" onclick="openQuestionModal('${unitName}')">
+                            <span class="btn-icon">${Icons.plus}</span>
+                            Add Question
+                        </button>
                     </div>
                     
                     <!-- Questions List -->
