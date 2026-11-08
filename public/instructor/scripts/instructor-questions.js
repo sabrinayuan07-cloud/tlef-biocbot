@@ -951,7 +951,7 @@ function updateQuestionsDisplay(week) {
                     <span class="question-type-badge ${questionType}">${getQuestionTypeLabel(questionType)}</span>
                     <span class="question-number">Question ${index + 1}</span>
                     <div class="question-action-buttons">
-                        <button class="convert-to-flashcard-btn" onclick="convertQuestionToFlashcard('${week}', '${question.questionId || question.id}')" title="Convert to flashcard">To Flashcard</button>
+                        <button class="convert-to-flashcard-btn" onclick="convertQuestionToFlashcard('${week}', '${question.questionId || question.id}')" title="Create a flashcard for this unit using this question's text and answer">Convert to Flashcard</button>
                         <button class="edit-question-btn" onclick="openQuestionLearningObjectiveModal('${week}', '${question.questionId || question.id}')" title="Edit learning objective">${Icons.pencil}</button>
                         <button class="delete-question-btn" onclick="deleteQuestion('${week}', '${question.questionId || question.id}')" title="Delete question">×</button>
                     </div>

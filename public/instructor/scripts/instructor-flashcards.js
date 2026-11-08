@@ -141,7 +141,7 @@ function renderFlashcardEditorRow(card, index, readOnly) {
                     </span>`}
                     <strong>Card ${index + 1}</strong>
                 </span>
-                ${readOnly ? '' : '<button type="button" class="flashcard-convert-btn" onclick="convertFlashcardToQuestion(this)">To Question</button><button type="button" class="flashcard-remove-btn" onclick="removeFlashcardEditorRow(this)">Remove</button>'}
+                ${readOnly ? '' : `<button type="button" class="flashcard-convert-btn" onclick="convertFlashcardToQuestion(this)" title="Create an assessment question pre-filled from this card's term and definition">Convert to Question</button><button type="button" class="flashcard-remove-btn" onclick="removeFlashcardEditorRow(this)" title="Remove this card">${Icons.trash}</button>`}
             </div>
             <label>Term
                 <textarea class="flashcard-front-input" rows="2" maxlength="300" ${readOnly ? 'readonly' : ''}>${flashcardEscapeHtml(card.front)}</textarea>
