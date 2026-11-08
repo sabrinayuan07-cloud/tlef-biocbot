@@ -50,7 +50,7 @@
     border-radius: 6px;
     background: #fff;
     color: #2f3a4a;
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
     font-weight: 600;
     cursor: pointer;
 }
@@ -80,7 +80,7 @@
 .super-course-pool-heading {
     flex: 0 0 auto;
     color: var(--bb-ink-70);
-    font-size: 13px;
+    font-size: var(--bb-text-card-kicker);
     font-weight: 700;
     line-height: 28px;
 }
@@ -103,7 +103,7 @@
     border-radius: 6px;
     background: #fff;
     color: #2f3a4a;
-    font-size: 13px;
+    font-size: var(--bb-text-card-kicker);
     line-height: 1.25;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -136,7 +136,7 @@
     border: 0;
     background: transparent;
     color: var(--bb-ink);
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
     font-weight: 700;
     cursor: pointer;
 }
@@ -215,7 +215,7 @@
 .super-course-history-title {
     margin-bottom: 5px;
     color: var(--bb-ink);
-    font-size: 13px;
+    font-size: var(--bb-text-card-kicker);
     font-weight: 700;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -226,7 +226,7 @@
     min-height: 34px;
     margin-bottom: 7px;
     color: var(--bb-ink-70);
-    font-size: 12px;
+    font-size: var(--bb-text-kicker);
     line-height: 1.35;
     display: -webkit-box;
     -webkit-line-clamp: 2;
@@ -238,7 +238,7 @@
 .super-course-history-meta {
     margin-bottom: 8px;
     color: #777;
-    font-size: 11px;
+    font-size: var(--bb-text-kicker);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -255,7 +255,7 @@
     border-radius: 6px;
     background: #fff;
     color: #2f3a4a;
-    font-size: 12px;
+    font-size: var(--bb-text-kicker);
     font-weight: 600;
     cursor: pointer;
 }
@@ -267,13 +267,13 @@
 
 .super-course-history-empty {
     color: var(--bb-ink-70);
-    font-size: 13px;
+    font-size: var(--bb-text-card-kicker);
     line-height: 32px;
 }
 
 .super-course-pool-note {
     color: var(--bb-ink-70);
-    font-size: 12px;
+    font-size: var(--bb-text-kicker);
     line-height: 1.4;
 }
 
@@ -298,7 +298,7 @@
     border-radius: 6px;
     background: #fff;
     color: var(--bb-ink-70);
-    font-size: 12px;
+    font-size: var(--bb-text-kicker);
     line-height: 1.3;
 }
 
@@ -366,7 +366,7 @@
 }
 
 .message-content .timestamp {
-    font-size: 12px;
+    font-size: var(--bb-text-kicker);
     /* WCAG AA contrast: #888 on the light message bg was 3.3:1; --text-secondary (#666) passes */
     color: var(--bb-ink-70);
     white-space: nowrap;
@@ -385,7 +385,7 @@
     padding: 4px 8px;
     border-radius: 4px;
     color: #888;
-    font-size: 16px;
+    font-size: var(--bb-text-nav);
     line-height: 1;
     transition: all 0.2s ease;
 }
@@ -415,7 +415,7 @@
     /* Neutral grey until pressed - the icon inherits this via currentColor */
     color: #9aa0a6;
     cursor: pointer;
-    font-size: 15px;
+    font-size: var(--bb-text-card-body);
     line-height: 1;
     transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
@@ -446,7 +446,7 @@
 .message-feedback-status {
     max-width: 92px;
     color: var(--bb-ink-70);
-    font-size: 11px;
+    font-size: var(--bb-text-kicker);
     line-height: 1.2;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -461,7 +461,7 @@
     padding: 4px 10px;
     border-radius: 15px;
     color: #888;
-    font-size: 11px;
+    font-size: var(--bb-text-kicker);
     line-height: 1;
     transition: all 0.2s ease;
     display: flex;
@@ -477,7 +477,7 @@
 }
 
 .message-action-btn .icon {
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
 }
 
 /* ─── Practice Question Styles ─── */
@@ -491,13 +491,13 @@
 
 .practice-question-header {
     font-weight: 600;
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
     color: var(--bb-steel);
     margin-bottom: 10px;
 }
 
 .practice-question-text {
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
     line-height: 1.5;
     margin-bottom: 14px;
     color: var(--bb-ink);
@@ -537,7 +537,7 @@
 }
 
 .practice-option-text {
-    font-size: 13px;
+    font-size: var(--bb-text-card-kicker);
     line-height: 1.4;
     flex: 1;
 }
@@ -572,7 +572,7 @@
     padding: 10px 12px;
     border: 2px solid #e0e0e0;
     border-radius: 8px;
-    font-size: 13px;
+    font-size: var(--bb-text-card-kicker);
     font-family: inherit;
     resize: vertical;
     box-sizing: border-box;
@@ -596,7 +596,7 @@
     border: none;
     padding: 8px 20px;
     border-radius: 6px;
-    font-size: 13px;
+    font-size: var(--bb-text-card-kicker);
     font-weight: 500;
     cursor: pointer;
     transition: background 0.2s ease;
@@ -615,7 +615,7 @@
     margin-top: 12px;
     padding: 10px 14px;
     border-radius: 8px;
-    font-size: 13px;
+    font-size: var(--bb-text-card-kicker);
     line-height: 1.5;
 }
 
@@ -643,7 +643,7 @@
 }
 
 .three-dots {
-    font-size: 18px;
+    font-size: var(--bb-text-lede);
     font-weight: bold;
     line-height: 1;
 }
@@ -674,7 +674,7 @@
     padding: 10px 16px;
     text-align: left;
     cursor: pointer;
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
     color: var(--bb-ink);
     transition: background-color 0.2s ease;
     border-bottom: 1px solid var(--bb-ink-16);
@@ -723,7 +723,7 @@
     padding: 12px;
     border: 1px solid var(--bb-ink-16);
     border-radius: 20px;
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
     outline: none;
     min-width: 0;
 }
@@ -733,7 +733,7 @@
     border: 0;
     border-radius: 0;
     padding: 8px 4px 22px;
-    font-size: 16px;
+    font-size: var(--bb-text-nav);
 }
 
 #chat-input.disabled-input,
@@ -761,7 +761,7 @@
     padding: 0 20px;
     cursor: pointer;
     transition: background-color 0.3s;
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
     font-weight: 600;
 }
 
@@ -771,7 +771,7 @@
     height: 44px;
     padding: 0;
     border-radius: 9px;
-    font-size: 25px;
+    font-size: var(--bb-text-h3-flip);
     line-height: 1;
 }
 
@@ -805,7 +805,7 @@
 
 /* Source Citation */
 .message-source {
-    font-size: 12px;
+    font-size: var(--bb-text-kicker);
     flex: 1;
 }
 
@@ -886,7 +886,7 @@
     background-color: var(--background-color);
     padding: 8px 16px;
     border-radius: 20px;
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
 }
 
 .course-label {
@@ -902,7 +902,7 @@
 
 /* Student Super Course bucket picker (in the chat header) */
 .superchat-picker {
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
     font-weight: 600;
     color: var(--bb-steel);
     background-color: var(--card-bg, #fff);
@@ -930,7 +930,7 @@
 }
 
 .user-role {
-    font-size: 12px;
+    font-size: var(--bb-text-kicker);
     color: rgba(255, 255, 255, 0.7);
     margin-top: 4px;
 }
@@ -958,7 +958,7 @@
 }
 
 .chat-history-item .preview {
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
     color: #5f666d;
     white-space: nowrap;
     overflow: hidden;
@@ -966,7 +966,7 @@
 }
 
 .chat-history-item .date {
-    font-size: 12px;
+    font-size: var(--bb-text-kicker);
     color: #5f666d;
     margin-top: 6px;
 }
@@ -1003,7 +1003,7 @@
 }
 
 .preview-header h2 {
-    font-size: 18px;
+    font-size: var(--bb-text-lede);
     font-weight: 500;
 }
 
@@ -1027,7 +1027,7 @@
     padding: 8px 12px;
     border: 1px solid var(--bb-ink-16);
     border-radius: 20px;
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
 }
 
 .no-messages {
@@ -1049,7 +1049,7 @@
 }
 
 .score-info strong {
-    font-size: 16px;
+    font-size: var(--bb-text-nav);
     display: block;
     margin-bottom: 8px;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
@@ -1067,7 +1067,7 @@
 }
 
 .mode-explanation strong {
-    font-size: 18px;
+    font-size: var(--bb-text-lede);
     display: block;
     margin-bottom: 12px;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
@@ -1086,7 +1086,7 @@
     color: #c62828;
     padding: 6px 12px;
     border-radius: 20px;
-    font-size: 0.85rem;
+    font-size: var(--bb-text-card-kicker);
     font-weight: 600;
     margin-right: 15px;
     border: 1px solid #ffcdd2;
@@ -1094,7 +1094,7 @@
 }
 
 .directive-mode-badge .icon {
-    font-size: 1rem;
+    font-size: var(--bb-text-nav);
 }
 
 @keyframes fadeIn {
@@ -1151,7 +1151,7 @@
 
     .current-course {
         padding: 6px 12px;
-        font-size: 12px;
+        font-size: var(--bb-text-kicker);
     }
 
     .history-container {
@@ -1201,7 +1201,7 @@
     padding: 12px 16px;
     text-align: left;
     cursor: pointer;
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
     color: var(--bb-ink);
     transition: all 0.3s ease;
     font-family: inherit;
@@ -1247,7 +1247,7 @@
     margin: 12px 0 0 0;
     padding-top: 10px;
     border-top: 1px solid rgba(0, 0, 0, 0.12);
-    font-size: 12px;
+    font-size: var(--bb-text-kicker);
     line-height: 1.5;
     color: var(--bb-ink-70);
 }
@@ -1264,7 +1264,7 @@
     justify-content: space-between;
     gap: 16px;
     padding: 12px 16px;
-    font-size: 12px;
+    font-size: var(--bb-text-kicker);
     /* WCAG AA contrast: #888 was 3.36:1; --text-secondary (#666) passes. Also fixes
        #view-rules-link, which inherits this color. */
     color: var(--bb-ink-70);
@@ -1299,7 +1299,7 @@
     border-radius: 6px;
     background: #fff;
     color: #2f3a4a;
-    font-size: 13px;
+    font-size: var(--bb-text-card-kicker);
     font-weight: 600;
     cursor: pointer;
     transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
@@ -1332,7 +1332,7 @@
 .super-course-level-notice {
     margin: 16px 20px 0;
     padding: 12px 16px;
-    font-size: 13px;
+    font-size: var(--bb-text-card-kicker);
     line-height: 1.5;
     color: var(--bb-ink-70);
     background: var(--info-bg, #eef4ff);
@@ -1347,7 +1347,7 @@
     align-items: center;
     gap: 8px;
     flex-shrink: 0;
-    font-size: 12px;
+    font-size: var(--bb-text-kicker);
     color: #666;
     background: var(--card-bg, #fff);
     border: 1px solid var(--bb-ink-16);
@@ -1363,7 +1363,7 @@
 }
 
 .answer-level-selector select {
-    font-size: 12px;
+    font-size: var(--bb-text-kicker);
     font-family: inherit;
     padding: 4px 26px 4px 8px;
     border: 1px solid var(--bb-ink-16);
@@ -1408,7 +1408,7 @@
     border: 0;
     border-radius: 0;
     padding: 8px 4px 22px;
-    font-size: 16px;
+    font-size: var(--bb-text-nav);
 }
 
 #instructor-chat-form #instructor-chat-input:focus,
@@ -1420,7 +1420,7 @@
 #instructor-chat-form .answer-level-selector {
     position: relative;
     margin-right: auto;
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
     padding: 0;
     border: none;
     background: transparent;
@@ -1435,7 +1435,7 @@
     background: var(--card-bg, #fff);
     padding: 5px 10px;
     font: inherit;
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
     cursor: pointer;
     transition: border-color 0.2s ease;
 }
@@ -1502,7 +1502,7 @@
     gap: 16px;
     padding: 12px 16px;
     border-radius: 10px;
-    font-size: 15px;
+    font-size: var(--bb-text-card-body);
     color: var(--bb-ink);
     cursor: pointer;
 }
@@ -1570,7 +1570,7 @@
     gap: 12px;
     background: transparent;
     padding: 8px 0;
-    font-size: 13px;
+    font-size: var(--bb-text-card-kicker);
     transition: all 0.3s ease;
 }
 
@@ -1659,7 +1659,7 @@ input:checked+.toggle-slider:before {
     padding: 12px;
     border: 2px solid var(--bb-ink-16);
     border-radius: 8px;
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
     font-family: inherit;
     resize: vertical;
     outline: none;
@@ -1677,7 +1677,7 @@ input:checked+.toggle-slider:before {
     border: none;
     border-radius: 8px;
     padding: 12px 20px;
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.3s ease;
@@ -1713,7 +1713,7 @@ input:checked+.toggle-slider:before {
 
     .calibration-option {
         padding: 10px 12px;
-        font-size: 13px;
+        font-size: var(--bb-text-card-kicker);
     }
 
     .calibration-short-answer {
@@ -1723,19 +1723,19 @@ input:checked+.toggle-slider:before {
     .calibration-answer-input {
         min-height: 60px;
         padding: 10px;
-        font-size: 13px;
+        font-size: var(--bb-text-card-kicker);
     }
 
     .calibration-submit-btn {
         padding: 10px 16px;
-        font-size: 13px;
+        font-size: var(--bb-text-card-kicker);
     }
 
 
 
     .chat-disclaimer {
         align-items: flex-start;
-        font-size: 11px;
+        font-size: var(--bb-text-kicker);
         text-align: left;
     }
 
@@ -1759,7 +1759,7 @@ input:checked+.toggle-slider:before {
 
     .mode-toggle {
         padding: 6px 0;
-        font-size: 12px;
+        font-size: var(--bb-text-kicker);
         gap: 10px;
     }
 
@@ -1796,7 +1796,7 @@ input:checked+.toggle-slider:before {
 .chat-header h1 {
     margin: 0;
     color: var(--bb-ink);
-    font-size: 22px;
+    font-size: var(--bb-text-h3-group);
     font-weight: 600;
     flex-shrink: 0;
 }
@@ -1810,13 +1810,13 @@ input:checked+.toggle-slider:before {
 
 .course-label {
     color: var(--secondary-text);
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
     font-weight: 500;
 }
 
 .course-name {
     color: var(--bb-steel);
-    font-size: 16px;
+    font-size: var(--bb-text-nav);
     font-weight: 600;
     padding: 4px 12px;
     background-color: var(--primary-light);
@@ -1838,7 +1838,7 @@ input:checked+.toggle-slider:before {
 
 .unit-label {
     color: var(--bb-ink);
-    font-size: 13px;
+    font-size: var(--bb-text-card-kicker);
     font-weight: 500;
     white-space: nowrap;
 }
@@ -1850,7 +1850,7 @@ input:checked+.toggle-slider:before {
     border-radius: 6px;
     background-color: white;
     color: var(--bb-ink);
-    font-size: 13px;
+    font-size: var(--bb-text-card-kicker);
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -1887,7 +1887,7 @@ input:checked+.toggle-slider:before {
     background-color: #f8f9fa;
     border-radius: 6px;
     border-left: 4px solid var(--bb-steel);
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
     line-height: 1.4;
 }
 
@@ -1960,7 +1960,7 @@ input:checked+.toggle-slider:before {
 .history-header h2 {
     margin: 0;
     color: var(--bb-ink);
-    font-size: 18px;
+    font-size: var(--bb-text-lede);
     font-weight: 600;
 }
 
@@ -1995,12 +1995,12 @@ input:checked+.toggle-slider:before {
     font-weight: 500;
     margin-bottom: 6px;
     color: var(--bb-ink);
-    font-size: 15px;
+    font-size: var(--bb-text-card-body);
     line-height: 1.4;
 }
 
 .chat-history-item .preview {
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
     color: #5f666d;
     line-height: 1.4;
     margin-bottom: 8px;
@@ -2012,7 +2012,7 @@ input:checked+.toggle-slider:before {
 }
 
 .chat-history-item .date {
-    font-size: 12px;
+    font-size: var(--bb-text-kicker);
     color: #5f666d;
     margin-bottom: 4px;
 }
@@ -2020,7 +2020,7 @@ input:checked+.toggle-slider:before {
 .chat-history-item .metadata {
     display: flex;
     gap: 12px;
-    font-size: 11px;
+    font-size: var(--bb-text-kicker);
     color: #aaa;
 }
 
@@ -2053,20 +2053,20 @@ input:checked+.toggle-slider:before {
 .no-history-content h3 {
     margin: 0 0 8px 0;
     color: var(--bb-ink);
-    font-size: 15px;
+    font-size: var(--bb-text-card-body);
     font-weight: 600;
 }
 
 .no-history-content p {
     margin: 0 0 16px 0;
     color: #5f666d;
-    font-size: 13px;
+    font-size: var(--bb-text-card-kicker);
     line-height: 1.5;
 }
 
 .no-history-link {
     color: var(--bb-steel);
-    font-size: 13px;
+    font-size: var(--bb-text-card-kicker);
     font-weight: 600;
     text-decoration: underline;
 }
@@ -2092,14 +2092,14 @@ input:checked+.toggle-slider:before {
 .no-selection-content h3 {
     margin: 0 0 8px 0;
     color: var(--bb-ink);
-    font-size: 15px;
+    font-size: var(--bb-text-card-body);
     font-weight: 600;
 }
 
 .no-selection-content p {
     margin: 0;
     color: #5f666d;
-    font-size: 13px;
+    font-size: var(--bb-text-card-kicker);
     line-height: 1.5;
 }
 
@@ -2129,7 +2129,7 @@ input:checked+.toggle-slider:before {
 
 .more-messages p {
     margin: 0;
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
 }
 
 /* Preview Actions */
@@ -2145,7 +2145,7 @@ input:checked+.toggle-slider:before {
     border: none;
     border-radius: 6px;
     padding: 8px 16px;
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -2162,7 +2162,7 @@ input:checked+.toggle-slider:before {
     border: 1px solid var(--bb-ink-16);
     border-radius: 6px;
     padding: 8px 16px;
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -2183,7 +2183,7 @@ input:checked+.toggle-slider:before {
     padding: 8px 12px;
     border: 1px solid var(--bb-ink-16);
     border-radius: 20px;
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
     outline: none;
     transition: border-color 0.2s ease;
 }
@@ -2199,7 +2199,7 @@ input:checked+.toggle-slider:before {
     display: none;
     background: none;
     border: none;
-    font-size: 16px;
+    font-size: var(--bb-text-nav);
     color: var(--bb-steel);
     cursor: pointer;
     padding: 0 10px 0 0;
@@ -2219,7 +2219,7 @@ input:checked+.toggle-slider:before {
     flex: 1;
     padding: 8px;
     border-radius: 6px;
-    font-size: 13px;
+    font-size: var(--bb-text-card-kicker);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -2328,7 +2328,7 @@ input:checked+.toggle-slider:before {
 
 .info-modal-header h2 {
     margin: 0;
-    font-size: 24px;
+    font-size: var(--bb-text-h3-flip);
     font-weight: 600;
 }
 
@@ -2341,7 +2341,7 @@ input:checked+.toggle-slider:before {
 
 .info-modal-body h3 {
     color: #2c3e50;
-    font-size: 18px;
+    font-size: var(--bb-text-lede);
     margin: 20px 0 10px 0;
     font-weight: 600;
     border-bottom: 2px solid #e9ecef;
@@ -2359,7 +2359,7 @@ input:checked+.toggle-slider:before {
 
 .info-modal-body li {
     margin: 8px 0;
-    font-size: 15px;
+    font-size: var(--bb-text-card-body);
     color: #555;
     list-style-type: disc;
 }
@@ -2374,7 +2374,7 @@ input:checked+.toggle-slider:before {
     padding: 10px 24px;
     border: none;
     border-radius: 6px;
-    font-size: 15px;
+    font-size: var(--bb-text-card-body);
     font-weight: 600;
     cursor: pointer;
     background: #f8f9fa;
@@ -2427,7 +2427,7 @@ input:checked+.toggle-slider:before {
     background: transparent;
     color: #5d6776;
     cursor: pointer;
-    font-size: 24px;
+    font-size: var(--bb-text-h3-flip);
     line-height: 1;
 }
 
@@ -2439,7 +2439,7 @@ input:checked+.toggle-slider:before {
 
 .chat-survey-modal h2 {
     margin: 0 36px 12px 0;
-    font-size: 20px;
+    font-size: var(--bb-text-h3-group);
     font-weight: 700;
     line-height: 1.3;
     letter-spacing: 0;
@@ -2448,7 +2448,7 @@ input:checked+.toggle-slider:before {
 .chat-survey-intro {
     margin: 0 0 18px;
     color: #4b5563;
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
     line-height: 1.5;
 }
 
@@ -2459,7 +2459,7 @@ input:checked+.toggle-slider:before {
 .chat-survey-rating-label {
     margin: 0 0 10px;
     color: #1f2937;
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
     font-weight: 600;
     line-height: 1.45;
 }
@@ -2481,7 +2481,7 @@ input:checked+.toggle-slider:before {
     background: #ffffff;
     color: #6b7280;
     cursor: pointer;
-    font-size: 27px;
+    font-size: var(--bb-text-h3-group);
     line-height: 1;
 }
 
@@ -2519,7 +2519,7 @@ input:checked+.toggle-slider:before {
     min-height: 18px;
     margin-bottom: 10px;
     color: #b42318;
-    font-size: 13px;
+    font-size: var(--bb-text-card-kicker);
     line-height: 1.3;
 }
 
@@ -2535,7 +2535,7 @@ input:checked+.toggle-slider:before {
     padding: 8px 14px;
     border-radius: 6px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
     font-weight: 600;
     line-height: 1.2;
 }
@@ -2641,7 +2641,7 @@ input:checked+.toggle-slider:before {
     border: 1px solid var(--bb-steel);
     border-radius: 4px;
     padding: 2px 6px;
-    font-size: 14px;
+    font-size: var(--bb-text-card-kicker);
     font-family: inherit;
     margin-right: 6px;
     outline: none;
@@ -2744,7 +2744,7 @@ input:checked+.toggle-slider:before {
 
 .assessment-summary-title {
     margin: 0;
-    font-size: 1.1rem;
+    font-size: var(--bb-text-lede);
     font-weight: 600;
     display: flex;
     align-items: center;
@@ -2757,7 +2757,7 @@ input:checked+.toggle-slider:before {
     padding: 4px 12px;
     border-radius: 20px;
     font-weight: 600;
-    font-size: 0.9rem;
+    font-size: var(--bb-text-card-body);
     border: 1px solid rgba(0, 0, 0, 0.1);
     color: #000;
 }
@@ -2785,7 +2785,7 @@ input:checked+.toggle-slider:before {
     padding: 12px 16px;
     border-bottom: 1px solid #666;
     font-weight: 600;
-    font-size: 0.95rem;
+    font-size: var(--bb-text-card-body);
     display: flex;
     gap: 12px;
 }
@@ -2815,12 +2815,12 @@ input:checked+.toggle-slider:before {
 .answer-box {
     padding: 12px;
     border-radius: 6px;
-    font-size: 0.9rem;
+    font-size: var(--bb-text-card-body);
 }
 
 .answer-box-label {
     display: block;
-    font-size: 0.75rem;
+    font-size: var(--bb-text-kicker);
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-bottom: 6px;
@@ -2848,7 +2848,7 @@ input:checked+.toggle-slider:before {
     margin: 0 16px 16px 16px;
     padding: 12px;
     border-radius: 6px;
-    font-size: 0.9rem;
+    font-size: var(--bb-text-card-body);
     line-height: 1.5;
     display: flex;
     gap: 10px;
@@ -2869,5 +2869,5 @@ input:checked+.toggle-slider:before {
 }
 
 .feedback-icon {
-    font-size: 1.1rem;
+    font-size: var(--bb-text-lede);
 }
