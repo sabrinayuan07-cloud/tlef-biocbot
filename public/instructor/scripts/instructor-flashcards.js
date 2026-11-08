@@ -4,6 +4,11 @@
 
 let flashcardDecksByUnit = new Map();
 
+// Set for the duration of a drag (dragstart -> dragend) so dragover handlers
+// on other rows know which row is being moved. Same pattern as
+// mcq-options-editor.js's drag-to-reorder.
+let flashcardDraggedRow = null;
+
 function flashcardUnitId(unitName) {
     return String(unitName || '').toLowerCase().replace(/\s+/g, '-');
 }
@@ -118,33 +123,113 @@ function renderInstructorFlashcardSection(unitName) {
         </div>
     `;
     initializeInstructorFlashcardPreviews(editor);
+    flashcardEditorRows(editor).forEach(wireFlashcardEditorRowDrag);
 }
 
 function renderFlashcardEditorRow(card, index, readOnly) {
     const sourceData = encodeURIComponent(JSON.stringify(card.source || null));
     return `
-        <article class="flashcard-editor-row" data-card-id="${flashcardEscapeHtml(card.cardId || '')}" data-source="${sourceData}">
+        <article class="flashcard-editor-row" data-card-id="${flashcardEscapeHtml(card.cardId || '')}" data-source="${sourceData}" ${readOnly ? '' : 'draggable="true"'}>
             <div class="flashcard-editor-row-heading">
-                <strong>Card ${index + 1}</strong>
+                <span class="flashcard-editor-row-title">
+                    ${readOnly ? '' : `
+                    <span class="flashcard-drag-handle" aria-hidden="true">
+                        <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor" aria-hidden="true">
+                            <circle cx="2" cy="2" r="1.5"></circle><circle cx="8" cy="2" r="1.5"></circle>
+                            <circle cx="2" cy="8" r="1.5"></circle><circle cx="8" cy="8" r="1.5"></circle>
+                            <circle cx="2" cy="14" r="1.5"></circle><circle cx="8" cy="14" r="1.5"></circle>
+                        </svg>
+                    </span>`}
+                    <strong>Card ${index + 1}</strong>
+                </span>
                 ${readOnly ? '' : '<button type="button" class="flashcard-convert-btn" onclick="convertFlashcardToQuestion(this)">To Question</button><button type="button" class="flashcard-remove-btn" onclick="removeFlashcardEditorRow(this)">Remove</button>'}
             </div>
-            <label>Front
+            <label>Term
                 <textarea class="flashcard-front-input" rows="2" maxlength="300" ${readOnly ? 'readonly' : ''}>${flashcardEscapeHtml(card.front)}</textarea>
             </label>
             <div class="flashcard-preview-group">
-                <span class="flashcard-preview-label">Student preview · Front</span>
-                <div class="flashcard-rendered-preview" data-flashcard-preview="front" aria-label="Rendered preview of card front"></div>
+                <span class="flashcard-preview-label">Student preview · Term</span>
+                <div class="flashcard-rendered-preview" data-flashcard-preview="front" aria-label="Rendered preview of card term"></div>
             </div>
-            <label>Back
+            <label>Definition
                 <textarea class="flashcard-back-input" rows="3" maxlength="1200" ${readOnly ? 'readonly' : ''}>${flashcardEscapeHtml(card.back)}</textarea>
             </label>
             <div class="flashcard-preview-group">
-                <span class="flashcard-preview-label">Student preview · Back</span>
-                <div class="flashcard-rendered-preview" data-flashcard-preview="back" aria-label="Rendered preview of card back"></div>
+                <span class="flashcard-preview-label">Student preview · Definition</span>
+                <div class="flashcard-rendered-preview" data-flashcard-preview="back" aria-label="Rendered preview of card definition"></div>
             </div>
             <p class="flashcard-source">Source: ${flashcardEscapeHtml(flashcardSourceLabel(card.source))}</p>
         </article>
     `;
+}
+
+function flashcardEditorRows(editor) {
+    return Array.from(editor.querySelectorAll('.flashcard-editor-row'));
+}
+
+/**
+ * Renumber "Card N" headings in document order - the only thing a reorder
+ * needs to fix up locally. Card order itself is picked up automatically on
+ * the next save, since collectFlashcardDraftCards() reads rows in DOM order.
+ */
+function relabelFlashcardEditorRows(editor) {
+    flashcardEditorRows(editor).forEach((row, index) => {
+        const heading = row.querySelector('.flashcard-editor-row-heading strong');
+        if (heading) heading.textContent = `Card ${index + 1}`;
+    });
+}
+
+/**
+ * Wire drag-to-reorder on one card row. Same interaction as
+ * mcq-options-editor.js: draggable anywhere on the row except the text
+ * areas/buttons, live-reorders as it passes another row's midpoint, and
+ * re-numbers "Card N" headings as it goes.
+ */
+function wireFlashcardEditorRowDrag(row) {
+    const editor = row.closest('.flashcard-editor-list');
+    if (!editor) return;
+
+    row.addEventListener('dragstart', (event) => {
+        if (event.target.closest('.flashcard-front-input, .flashcard-back-input, .flashcard-remove-btn, .flashcard-convert-btn')) {
+            event.preventDefault();
+            return;
+        }
+        flashcardDraggedRow = row;
+        event.dataTransfer.effectAllowed = 'move';
+        // Firefox requires setData to actually start a drag.
+        event.dataTransfer.setData('text/plain', '');
+        row.classList.add('flashcard-editor-row-dragging');
+    });
+
+    row.addEventListener('dragend', () => {
+        row.classList.remove('flashcard-editor-row-dragging');
+        flashcardDraggedRow = null;
+    });
+
+    row.addEventListener('dragover', (event) => {
+        if (!flashcardDraggedRow) return;
+        event.preventDefault(); // required for drop to fire at all
+        event.dataTransfer.dropEffect = 'move';
+        if (flashcardDraggedRow === row) return;
+
+        const rect = row.getBoundingClientRect();
+        const dropAfter = event.clientY > rect.top + rect.height / 2;
+        if (dropAfter && row.nextElementSibling !== flashcardDraggedRow) {
+            row.insertAdjacentElement('afterend', flashcardDraggedRow);
+            relabelFlashcardEditorRows(editor);
+        } else if (!dropAfter && row.previousElementSibling !== flashcardDraggedRow) {
+            row.insertAdjacentElement('beforebegin', flashcardDraggedRow);
+            relabelFlashcardEditorRows(editor);
+        }
+    });
+
+    row.addEventListener('drop', (event) => {
+        if (!flashcardDraggedRow) return;
+        event.preventDefault();
+        // dragover above already moved the row into place live; drop just
+        // finalizes where it already is.
+        relabelFlashcardEditorRows(editor);
+    });
 }
 
 /**
@@ -273,7 +358,10 @@ function addManualFlashcard(unitName) {
     }
     editor.insertAdjacentHTML('beforeend', renderFlashcardEditorRow({ front: '', back: '', source: null }, count, false));
     const row = editor.lastElementChild;
-    if (row) initializeInstructorFlashcardPreviews(row);
+    if (row) {
+        initializeInstructorFlashcardPreviews(row);
+        wireFlashcardEditorRowDrag(row);
+    }
     row?.querySelector('.flashcard-front-input')?.focus();
 }
 

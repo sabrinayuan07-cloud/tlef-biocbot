@@ -153,6 +153,54 @@ test.describe('instructor flashcard editor', () => {
         await expect(page.locator('#flashcard-status-unit-1')).toHaveText('Published v2');
     });
 
+    test('dragging a card reorders it, renumbers headings, and persists the new order on save', async ({ page }) => {
+        await loadHarness(page, {
+            deckId: 'deck1',
+            courseId: 'C1',
+            lectureName: 'Unit 1',
+            title: 'Unit 1 Flashcards',
+            hasDraft: true,
+            isPublished: false,
+            isStale: false,
+            publishedVersion: 0,
+            draftCards: [card('fc1', 'Card one'), card('fc2', 'Card two'), card('fc3', 'Card three')],
+            publishedCards: []
+        });
+
+        const frontValues = () => page.evaluate(() =>
+            Array.from(document.querySelectorAll('.flashcard-front-input')).map(el => (/** @type {HTMLTextAreaElement} */ (el)).value));
+
+        expect(await frontValues()).toEqual(['Card one', 'Card two', 'Card three']);
+
+        // Native HTML5 drag-and-drop doesn't reliably fire from raw mouse
+        // down/move/up in Chromium headless - dispatch the DragEvents the
+        // handlers actually listen for instead. Drags card 1 past card 3's
+        // midpoint, which should drop it after card 3.
+        await page.evaluate(() => {
+            const rows = document.querySelectorAll('.flashcard-editor-row');
+            const dragged = rows[0];
+            const target = rows[2];
+            const dt = new DataTransfer();
+            const fire = (/** @type {Element} */ el, /** @type {string} */ type, /** @type {number} */ clientY) =>
+                el.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: dt, clientY }));
+
+            const targetRect = target.getBoundingClientRect();
+            fire(dragged, 'dragstart', dragged.getBoundingClientRect().top + 5);
+            fire(target, 'dragover', targetRect.bottom - 5); // past the midpoint -> drop after
+            fire(target, 'drop', targetRect.bottom - 5);
+            fire(dragged, 'dragend', targetRect.bottom - 5);
+        });
+
+        expect(await frontValues()).toEqual(['Card two', 'Card three', 'Card one']);
+        await expect(page.locator('.flashcard-editor-row-heading strong')).toHaveText(['Card 1', 'Card 2', 'Card 3']);
+
+        await page.getByRole('button', { name: 'Save Draft' }).click();
+        await expect.poll(() => page.evaluate(() => /** @type {any} */ (window).testFlashcardState.putBodies.length)).toBe(1);
+        const savedOrder = await page.evaluate(() =>
+            /** @type {any} */ (window).testFlashcardState.putBodies[0].cards.map((/** @type {any} */ c) => c.front));
+        expect(savedOrder).toEqual(['Card two', 'Card three', 'Card one']);
+    });
+
     test('recovers a deck left unpublished without a draft by the previous behavior', async ({ page }) => {
         await loadHarness(page, {
             deckId: 'deck1',
