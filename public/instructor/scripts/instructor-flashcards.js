@@ -235,7 +235,11 @@ function renderFlashcardEditorRow(card, index, readOnly, unitName, totalCards) {
                     </div>`}
                     <h6 class="flashcard-card-title" id="flashcard-title-${key}" tabindex="-1">Card ${index + 1}</h6>
                 </span>
-                ${readOnly ? '' : `<button type="button" class="flashcard-convert-btn" id="flashcard-convert-${key}" onclick="convertFlashcardToQuestion(this)" title="Create an assessment question pre-filled from this card's term and definition">Convert to Question${which}</button><button type="button" class="flashcard-remove-btn" id="flashcard-remove-${key}" onclick="removeFlashcardEditorRow(this)" title="Remove this card">${Icons.trash}${flashcardContext(unitName, `Remove${flashcardCardLead(index + 1)}`)}</button>`}
+                ${readOnly ? '' : `
+                <span class="flashcard-editor-row-actions">
+                    <button type="button" class="flashcard-convert-btn" id="flashcard-convert-${key}" onclick="convertFlashcardToQuestion(this)" title="Create an assessment question pre-filled from this card's term and definition">Convert to Question${which}</button>
+                    <button type="button" class="flashcard-remove-btn" id="flashcard-remove-${key}" onclick="removeFlashcardEditorRow(this)" title="Remove this card">${Icons.trash}${flashcardContext(unitName, `Remove${flashcardCardLead(index + 1)}`)}</button>
+                </span>`}
             </div>
             <label for="flashcard-front-${key}">Term${which}</label>
             <textarea class="flashcard-front-input" id="flashcard-front-${key}" rows="2" maxlength="300" ${readOnly ? 'readonly' : ''}>${flashcardEscapeHtml(card.front)}</textarea>
