@@ -189,7 +189,6 @@ function renderInstructorFlashcardSection(unitName) {
             ${deck.isPublished ? `<button type="button" class="flashcard-unpublish-btn" id="flashcard-unpublish-${unitId}" onclick="unpublishFlashcardDeck('${unitName}', this)">Unpublish${flashcardContext(unitName, flashcardDeckLead())}</button>` : ''}
         </div>
     `;
-    initializeInstructorFlashcardPreviews(editor);
     restoreFlashcardFocus(editor, focusBefore);
     flashcardEditorRows(editor).forEach(wireFlashcardEditorRowDrag);
 }
@@ -225,16 +224,8 @@ function renderFlashcardEditorRow(card, index, readOnly, unitName, totalCards) {
             </div>
             <label for="flashcard-front-${key}">Term${which}</label>
             <textarea class="flashcard-front-input" id="flashcard-front-${key}" rows="2" maxlength="300" ${readOnly ? 'readonly' : ''}>${flashcardEscapeHtml(card.front)}</textarea>
-            <div class="flashcard-preview-group">
-                <span class="flashcard-preview-label">Student preview · Term</span>
-                <div class="flashcard-rendered-preview" data-flashcard-preview="front" aria-label="Rendered preview of card term"></div>
-            </div>
             <label for="flashcard-back-${key}">Definition${which}</label>
             <textarea class="flashcard-back-input" id="flashcard-back-${key}" rows="3" maxlength="1200" ${readOnly ? 'readonly' : ''}>${flashcardEscapeHtml(card.back)}</textarea>
-            <div class="flashcard-preview-group">
-                <span class="flashcard-preview-label">Student preview · Definition</span>
-                <div class="flashcard-rendered-preview" data-flashcard-preview="back" aria-label="Rendered preview of card definition"></div>
-            </div>
             <p class="flashcard-source">Source: ${flashcardEscapeHtml(flashcardSourceLabel(card.source))}</p>
         </li>
     `;
@@ -360,49 +351,6 @@ async function withBusyFlashcardButton(button, work) {
     }
 }
 
-/**
- * Render one editable card side exactly as it will appear to students.
- *
- * @param {Element} row Instructor card editor row
- * @param {'front'|'back'} side Card side to render
- * @returns {void}
- */
-function renderInstructorFlashcardPreview(row, side) {
-    const input = row.querySelector(`.flashcard-${side}-input`);
-    const preview = row.querySelector(`[data-flashcard-preview="${side}"]`);
-    if (!input || !preview) return;
-
-    const value = input.value || '';
-    if (typeof RichText === 'undefined') {
-        preview.textContent = value;
-        return;
-    }
-    RichText.render(preview, value);
-}
-
-/**
- * Initialize and keep live previews in sync with their raw textareas.
- *
- * @param {Element} root Editor container or newly inserted row
- * @returns {void}
- */
-function initializeInstructorFlashcardPreviews(root) {
-    const rows = root.matches?.('.flashcard-editor-row')
-        ? [root]
-        : Array.from(root.querySelectorAll('.flashcard-editor-row'));
-
-    rows.forEach(row => {
-        renderInstructorFlashcardPreview(row, 'front');
-        renderInstructorFlashcardPreview(row, 'back');
-        row.querySelectorAll('.flashcard-front-input, .flashcard-back-input').forEach(input => {
-            input.addEventListener('input', () => {
-                const side = input.classList.contains('flashcard-front-input') ? 'front' : 'back';
-                renderInstructorFlashcardPreview(row, side);
-            });
-        });
-    });
-}
-
 async function generateFlashcardDraft(unitName, button) {
     const original = button.innerHTML;
     const unitLabel = typeof getUnitLabel === 'function' ? getUnitLabel(unitName) : unitName;
@@ -488,10 +436,7 @@ function addManualFlashcard(unitName) {
     }
     editor.insertAdjacentHTML('beforeend', renderFlashcardEditorRow({ front: '', back: '', source: null }, count, false, unitName, count + 1));
     const row = editor.lastElementChild;
-    if (row) {
-        initializeInstructorFlashcardPreviews(row);
-        wireFlashcardEditorRowDrag(row);
-    }
+    if (row) wireFlashcardEditorRowDrag(row);
     // The previously-last row's "move down" button was rendered disabled;
     // it no longer is, now that this new row follows it.
     relabelFlashcardEditorRows(editor);
