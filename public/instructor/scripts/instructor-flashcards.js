@@ -199,7 +199,7 @@ function renderFlashcardEditorRow(card, index, readOnly, unitName) {
         <li class="flashcard-editor-row" data-card-id="${flashcardEscapeHtml(card.cardId || '')}" data-source="${sourceData}">
             <div class="flashcard-editor-row-heading">
                 <h6 class="flashcard-card-title" id="flashcard-title-${key}" tabindex="-1">Card ${index + 1}</h6>
-                ${readOnly ? '' : `<button type="button" class="flashcard-remove-btn" id="flashcard-remove-${key}" onclick="removeFlashcardEditorRow(this)">Remove${which}</button>`}
+                ${readOnly ? '' : `<button type="button" class="flashcard-convert-btn" id="flashcard-convert-${key}" onclick="convertFlashcardToQuestion(this)">To Question${which}</button><button type="button" class="flashcard-remove-btn" id="flashcard-remove-${key}" onclick="removeFlashcardEditorRow(this)">Remove${which}</button>`}
             </div>
             <label for="flashcard-front-${key}">Front${which}</label>
             <textarea class="flashcard-front-input" id="flashcard-front-${key}" rows="2" maxlength="300" ${readOnly ? 'readonly' : ''}>${flashcardEscapeHtml(card.front)}</textarea>
@@ -368,6 +368,19 @@ function addManualFlashcard(unitName) {
     const row = editor.lastElementChild;
     if (row) initializeInstructorFlashcardPreviews(row);
     row?.querySelector('.flashcard-front-input')?.focus();
+}
+
+function convertFlashcardToQuestion(button) {
+    const section = button.closest('.flashcards-section');
+    const unitName = section?.dataset.flashcardUnit;
+    const row = button.closest('.flashcard-editor-row');
+    const front = row?.querySelector('.flashcard-front-input')?.value.trim();
+    const back = row?.querySelector('.flashcard-back-input')?.value.trim();
+    if (!unitName || !front || !back) {
+        showNotification('Add both a front and back to this card before converting it.', 'warning');
+        return;
+    }
+    openQuestionModalFromFlashcard(unitName, front, back);
 }
 
 async function removeFlashcardEditorRow(button) {
