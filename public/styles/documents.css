@@ -1762,9 +1762,87 @@ li.objective-display-item > .objective-display-row {
     background: white;
 }
 
+.flashcard-editor-row[draggable="true"] {
+    cursor: grab;
+}
+
+.flashcard-editor-row[draggable="true"]:active {
+    cursor: grabbing;
+}
+
 .flashcard-editor-row-heading {
     justify-content: space-between;
     margin-bottom: 0.75rem;
+}
+
+.flashcard-editor-row-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Grip icon - purely a visual cue that the row is draggable; the whole
+   .flashcard-editor-row (minus its textareas/remove button) is the actual
+   drag source, not this icon specifically. Same pattern as
+   .mcq-option-drag-handle in the question-modal option editor. */
+.flashcard-drag-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 20px;
+    color: #9ca3af;
+}
+
+.flashcard-editor-row:hover .flashcard-drag-handle {
+    color: #495057;
+}
+
+/* Keyboard-accessible alternative to the drag handle above - same visual
+   pattern as .unit-move-btn, scaled down to fit the card heading row. */
+.flashcard-move-controls {
+    display: inline-flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.flashcard-move-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 1px solid #c7d0db;
+    border-radius: var(--bb-radius);
+    background: #fff;
+    color: var(--primary-color);
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1;
+}
+
+.flashcard-move-btn:hover:not(:disabled) {
+    background: rgba(74, 111, 165, 0.08);
+    border-color: var(--primary-color);
+}
+
+.flashcard-move-btn:focus-visible {
+    outline: 3px solid rgba(74, 111, 165, 0.25);
+    outline-offset: 1px;
+}
+
+.flashcard-move-btn:disabled {
+    color: #5b6470;
+    background: #f3f4f6;
+    border-style: dashed;
+    cursor: not-allowed;
+}
+
+/* The row currently being dragged - dimmed while the other rows live-shift
+   around it to preview where it'll land. */
+.flashcard-editor-row-dragging {
+    opacity: 0.4;
 }
 
 .flashcard-editor-row label {
