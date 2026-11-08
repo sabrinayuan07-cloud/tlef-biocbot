@@ -10,7 +10,7 @@
 
 .stat-card {
     background: var(--card-bg, #ffffff);
-    border: 1px solid var(--border-color, #e0e0e0);
+    border: 1px solid var(--bb-ink-16);
     border-radius: 8px;
     padding: 1rem 1.5rem;
     display: flex;
@@ -21,14 +21,14 @@
 }
 
 .stat-value {
-    font-size: 1.5rem;
+    font-size: var(--bb-text-h3-flip);
     font-weight: 700;
-    color: var(--primary-color, #0055b7);
+    color: var(--bb-steel);
 }
 
 .stat-label {
-    font-size: 0.8rem;
-    color: var(--text-secondary, #666);
+    font-size: var(--bb-text-card-kicker);
+    color: var(--bb-ink-70);
     margin-top: 0.25rem;
 }
 
@@ -48,31 +48,31 @@
 }
 
 .filter-group label {
-    font-size: 0.85rem;
+    font-size: var(--bb-text-card-kicker);
     font-weight: 600;
-    color: var(--text-secondary, #666);
+    color: var(--bb-ink-70);
 }
 
 .filter-group select {
     width: auto;
     padding: 0.5rem 0.75rem;
-    border: 1px solid var(--border-color, #e0e0e0);
+    border: 1px solid var(--bb-ink-16);
     border-radius: 6px;
-    font-size: 0.9rem;
+    font-size: var(--bb-text-card-body);
     background: var(--card-bg, #ffffff);
-    color: var(--text-primary, #333);
+    color: var(--bb-ink);
     cursor: pointer;
 }
 
 .filter-group select:focus {
     outline: none;
-    border-color: var(--primary-color, #0055b7);
+    border-color: var(--bb-steel);
     box-shadow: 0 0 0 2px rgba(0, 85, 183, 0.15);
 }
 
 #shuffle-btn {
     padding: 0.5rem 1rem;
-    font-size: 0.85rem;
+    font-size: var(--bb-text-card-kicker);
 }
 
 /* Progress */
@@ -81,22 +81,22 @@
 }
 
 #progress-text {
-    font-size: 0.85rem;
-    color: var(--text-secondary, #666);
+    font-size: var(--bb-text-card-kicker);
+    color: var(--bb-ink-70);
     margin-bottom: 0.5rem;
     display: block;
 }
 
 .progress-bar {
     height: 6px;
-    background: var(--border-color, #e0e0e0);
+    background: var(--bb-ink-16);
     border-radius: 3px;
     overflow: hidden;
 }
 
 .progress-fill {
     height: 100%;
-    background: var(--primary-color, #0055b7);
+    background: var(--bb-steel);
     border-radius: 3px;
     transition: width 0.3s ease;
     width: 0%;
@@ -105,7 +105,7 @@
 /* Question Card */
 .question-card {
     background: var(--card-bg, #ffffff);
-    border: 1px solid var(--border-color, #e0e0e0);
+    border: 1px solid var(--bb-ink-16);
     border-radius: 12px;
     padding: 2rem;
     max-width: 800px;
@@ -119,9 +119,9 @@
 }
 
 .question-unit {
-    background: var(--primary-color, #0055b7);
+    background: var(--bb-steel);
     color: #fff;
-    font-size: 0.75rem;
+    font-size: var(--bb-text-kicker);
     padding: 0.25rem 0.75rem;
     border-radius: 12px;
     font-weight: 600;
@@ -129,15 +129,15 @@
 
 .question-type-badge {
     background: #e8f4fd;
-    color: var(--primary-color, #0055b7);
-    font-size: 0.75rem;
+    color: var(--bb-steel);
+    font-size: var(--bb-text-kicker);
     padding: 0.25rem 0.75rem;
     border-radius: 12px;
     font-weight: 500;
 }
 
 .question-difficulty {
-    font-size: 0.75rem;
+    font-size: var(--bb-text-kicker);
     padding: 0.25rem 0.75rem;
     border-radius: 12px;
     font-weight: 500;
@@ -159,10 +159,10 @@
 }
 
 .question-text {
-    font-size: 1.1rem;
+    font-size: var(--bb-text-lede);
     line-height: 1.6;
     margin-bottom: 1.5rem;
-    color: var(--text-primary, #333);
+    color: var(--bb-ink);
 }
 
 /* Answer Options (MC/TF) */
@@ -184,14 +184,14 @@ fieldset.answer-options {
     align-items: flex-start;
     gap: 0.75rem;
     padding: 0.75rem 1rem;
-    border: 2px solid var(--border-color, #e0e0e0);
+    border: 2px solid var(--bb-ink-16);
     border-radius: 8px;
     cursor: pointer;
     transition: border-color 0.2s, background-color 0.2s;
 }
 
 .option-label:hover {
-    border-color: var(--primary-color, #0055b7);
+    border-color: var(--bb-steel);
     background: #f8faff;
 }
 
@@ -204,9 +204,9 @@ fieldset.answer-options {
 }
 
 .option-text {
-    font-size: 0.95rem;
+    font-size: var(--bb-text-card-body);
     line-height: 1.5;
-    color: var(--text-primary, #333);
+    color: var(--bb-ink);
 }
 
 .option-label.correct {
@@ -237,20 +237,20 @@ fieldset.answer-options {
 .short-answer-container textarea {
     width: 100%;
     padding: 0.75rem 1rem;
-    border: 2px solid var(--border-color, #e0e0e0);
+    border: 2px solid var(--bb-ink-16);
     border-radius: 8px;
-    font-size: 0.95rem;
+    font-size: var(--bb-text-card-body);
     line-height: 1.5;
     font-family: inherit;
     resize: vertical;
-    color: var(--text-primary, #333);
+    color: var(--bb-ink);
     background: var(--card-bg, #ffffff);
     box-sizing: border-box;
 }
 
 .short-answer-container textarea:focus {
     outline: none;
-    border-color: var(--primary-color, #0055b7);
+    border-color: var(--bb-steel);
     box-shadow: 0 0 0 2px rgba(0, 85, 183, 0.15);
 }
 
@@ -295,21 +295,21 @@ fieldset.answer-options {
 }
 
 .feedback-icon {
-    font-size: 1.25rem;
+    font-size: var(--bb-text-h3-group);
     flex-shrink: 0;
     line-height: 1.5;
 }
 
 .feedback-text {
-    font-size: 0.95rem;
+    font-size: var(--bb-text-card-body);
     line-height: 1.5;
-    color: var(--text-primary, #333);
+    color: var(--bb-ink);
 }
 
 /* Materials Section */
 .materials-container {
     background: #f5f5f5;
-    border: 1px solid var(--border-color, #e0e0e0);
+    border: 1px solid var(--bb-ink-16);
     border-radius: 8px;
     padding: 1rem;
     margin-top: 0.5rem;
@@ -317,13 +317,13 @@ fieldset.answer-options {
 
 .materials-container h2 {
     margin: 0 0 0.5rem 0;
-    font-size: 0.95rem;
-    color: var(--text-primary, #333);
+    font-size: var(--bb-text-card-body);
+    color: var(--bb-ink);
 }
 
 .materials-container > p {
-    font-size: 0.85rem;
-    color: var(--text-secondary, #666);
+    font-size: var(--bb-text-card-kicker);
+    color: var(--bb-ink-70);
     margin: 0 0 0.75rem 0;
 }
 
@@ -339,7 +339,7 @@ fieldset.answer-options {
     gap: 0.5rem;
     padding: 0.5rem 0.75rem;
     background: var(--card-bg, #ffffff);
-    border: 1px solid var(--border-color, #e0e0e0);
+    border: 1px solid var(--bb-ink-16);
     border-radius: 6px;
     cursor: pointer;
     transition: background 0.2s;
@@ -350,19 +350,19 @@ fieldset.answer-options {
 }
 
 .material-icon {
-    font-size: 1rem;
+    font-size: var(--bb-text-nav);
 }
 
 .material-name {
-    font-size: 0.85rem;
-    color: var(--primary-color, #0055b7);
+    font-size: var(--bb-text-card-kicker);
+    color: var(--bb-steel);
     text-decoration: underline;
     flex: 1;
 }
 
 .material-size {
-    font-size: 0.75rem;
-    color: var(--text-secondary, #666);
+    font-size: var(--bb-text-kicker);
+    color: var(--bb-ink-70);
 }
 
 /* Empty / Disabled / Loading States */
@@ -371,12 +371,12 @@ fieldset.answer-options {
 .quiz-disabled {
     text-align: center;
     padding: 3rem 1.5rem;
-    color: var(--text-secondary, #666);
+    color: var(--bb-ink-70);
 }
 
 .quiz-empty p,
 .quiz-disabled p {
-    font-size: 1rem;
+    font-size: var(--bb-text-nav);
     max-width: 400px;
     margin: 0 auto;
 }
@@ -386,25 +386,25 @@ fieldset.answer-options {
     text-align: center;
     padding: 3rem 1.5rem;
     background: var(--card-bg, #ffffff);
-    border: 1px solid var(--border-color, #e0e0e0);
+    border: 1px solid var(--bb-ink-16);
     border-radius: 12px;
     max-width: 500px;
 }
 
 .quiz-complete h2 {
     margin: 0 0 0.5rem 0;
-    color: var(--text-primary, #333);
+    color: var(--bb-ink);
 }
 
 .quiz-complete p {
-    color: var(--text-secondary, #666);
+    color: var(--bb-ink-70);
     margin-bottom: 1rem;
 }
 
 .completion-stats {
-    font-size: 1.5rem;
+    font-size: var(--bb-text-h3-flip);
     font-weight: 700;
-    color: var(--primary-color, #0055b7);
+    color: var(--bb-steel);
     margin-bottom: 1.5rem;
 }
 
@@ -420,7 +420,7 @@ fieldset.answer-options {
     }
 
     .stat-value {
-        font-size: 1.2rem;
+        font-size: var(--bb-text-h3-group);
     }
 
     .quiz-filters {
@@ -441,14 +441,14 @@ fieldset.answer-options {
     }
 
     .question-text {
-        font-size: 1rem;
+        font-size: var(--bb-text-nav);
     }
 }
 
 /* Loading spinner animation */
 .quiz-loading .loading-spinner {
     display: inline-block;
-    color: var(--text-secondary, #666);
+    color: var(--bb-ink-70);
 }
 
 .quiz-loading .loading-spinner::after {
@@ -457,8 +457,8 @@ fieldset.answer-options {
     width: 24px;
     height: 24px;
     margin: 0.5rem auto 0;
-    border: 3px solid var(--border-color, #e0e0e0);
-    border-top-color: var(--primary-color, #0055b7);
+    border: 3px solid var(--bb-ink-16);
+    border-top-color: var(--bb-steel);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
 }
@@ -473,7 +473,7 @@ fieldset.answer-options {
 
 .quiz-chat-container {
     margin-top: 1rem;
-    border: 1px solid var(--border-color, #e0e0e0);
+    border: 1px solid var(--bb-ink-16);
     border-radius: 8px;
     background: var(--card-bg, #ffffff);
     overflow: hidden;
@@ -497,28 +497,28 @@ fieldset.answer-options {
     justify-content: space-between;
     padding: 0.75rem 1rem;
     background: #e8f4fd;
-    border-bottom: 1px solid var(--border-color, #e0e0e0);
+    border-bottom: 1px solid var(--bb-ink-16);
 }
 
 .quiz-chat-title {
     margin: 0;
-    font-size: 0.9rem;
+    font-size: var(--bb-text-card-body);
     font-weight: 600;
-    color: var(--primary-color, #0055b7);
+    color: var(--bb-steel);
 }
 
 .quiz-chat-close {
     background: none;
     border: none;
-    font-size: 1.25rem;
-    color: var(--text-secondary, #666);
+    font-size: var(--bb-text-h3-group);
+    color: var(--bb-ink-70);
     cursor: pointer;
     padding: 0 0.25rem;
     line-height: 1;
 }
 
 .quiz-chat-close:hover {
-    color: var(--text-primary, #333);
+    color: var(--bb-ink);
 }
 
 .quiz-chat-messages {
@@ -534,7 +534,7 @@ fieldset.answer-options {
     max-width: 85%;
     padding: 0.6rem 0.85rem;
     border-radius: 12px;
-    font-size: 0.9rem;
+    font-size: var(--bb-text-card-body);
     line-height: 1.5;
     word-wrap: break-word;
     white-space: pre-wrap;
@@ -542,7 +542,7 @@ fieldset.answer-options {
 
 .quiz-chat-msg.user {
     align-self: flex-end;
-    background: var(--primary-color, #0055b7);
+    background: var(--bb-steel);
     color: #fff;
     border-bottom-right-radius: 4px;
 }
@@ -550,7 +550,7 @@ fieldset.answer-options {
 .quiz-chat-msg.bot {
     align-self: flex-start;
     background: #f0f0f0;
-    color: var(--text-primary, #333);
+    color: var(--bb-ink);
     border-bottom-left-radius: 4px;
 }
 
@@ -558,7 +558,7 @@ fieldset.answer-options {
     align-self: center;
     background: #fff3cd;
     color: #856404;
-    font-size: 0.8rem;
+    font-size: var(--bb-text-card-kicker);
     text-align: center;
     border-radius: 8px;
     max-width: 95%;
@@ -596,7 +596,7 @@ fieldset.answer-options {
 /* Input area */
 .quiz-chat-input-area {
     padding: 0.5rem 0.75rem;
-    border-top: 1px solid var(--border-color, #e0e0e0);
+    border-top: 1px solid var(--bb-ink-16);
     background: #fafafa;
 }
 
@@ -608,26 +608,26 @@ fieldset.answer-options {
 .quiz-chat-input-area input {
     flex: 1;
     padding: 0.5rem 0.75rem;
-    border: 1px solid var(--border-color, #e0e0e0);
+    border: 1px solid var(--bb-ink-16);
     border-radius: 20px;
-    font-size: 0.85rem;
+    font-size: var(--bb-text-card-kicker);
     outline: none;
     background: var(--card-bg, #ffffff);
-    color: var(--text-primary, #333);
+    color: var(--bb-ink);
 }
 
 .quiz-chat-input-area input:focus {
-    border-color: var(--primary-color, #0055b7);
+    border-color: var(--bb-steel);
     box-shadow: 0 0 0 2px rgba(0, 85, 183, 0.15);
 }
 
 .quiz-chat-input-area button {
     padding: 0.5rem 1rem;
-    background: var(--primary-color, #0055b7);
+    background: var(--bb-steel);
     color: #fff;
     border: none;
     border-radius: 20px;
-    font-size: 0.85rem;
+    font-size: var(--bb-text-card-kicker);
     cursor: pointer;
     transition: background 0.2s;
 }
