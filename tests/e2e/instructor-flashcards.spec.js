@@ -2,6 +2,7 @@
 const { test, expect } = require('./fixtures/monocart');
 
 const SCRIPT_PATH = 'public/instructor/scripts/instructor-flashcards.js';
+const ICONS_SCRIPT_PATH = 'public/common/scripts/icons.js';
 
 /** @param {string} id @param {string} front */
 function card(id, front) {
@@ -70,6 +71,9 @@ async function loadHarness(page, initialDeck) {
             throw new Error(`Unexpected request: ${method} ${url}`);
         };
     }, initialDeck);
+    // Real icons.js, not a stub - renderFlashcardEditorRow() uses Icons.trash
+    // for the remove button, same as production load order.
+    await page.addScriptTag({ path: ICONS_SCRIPT_PATH });
     await page.addScriptTag({ path: SCRIPT_PATH });
     await page.evaluate(() => /** @type {any} */ (window).loadFlashcardDecks());
 }
@@ -89,7 +93,7 @@ test.describe('instructor flashcard editor', () => {
             publishedCards: []
         });
 
-        await page.getByRole('button', { name: 'Remove' }).first().click();
+        await page.getByRole('button', { name: 'Remove this card' }).first().click();
         await expect.poll(() => page.evaluate(() => /** @type {any} */ (window).testFlashcardState.putBodies.length)).toBe(1);
         await expect(page.locator('.flashcard-editor-row')).toHaveCount(1);
         await expect(page.locator('.flashcard-front-input')).toHaveValue('Second card');
@@ -115,7 +119,7 @@ test.describe('instructor flashcard editor', () => {
 
         await page.getByRole('button', { name: 'Unpublish' }).click();
         await expect(page.getByRole('button', { name: 'Publish to Students' })).toBeVisible();
-        await expect(page.getByRole('button', { name: 'Remove' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Remove this card' })).toBeVisible();
 
         await page.getByRole('button', { name: 'Publish to Students' }).click();
         await expect(page.getByRole('button', { name: 'Unpublish' })).toBeVisible();
@@ -185,7 +189,7 @@ test.describe('instructor flashcard editor', () => {
         });
 
         await expect(page.locator('#flashcard-status-unit-1')).toHaveText('Unpublished draft');
-        await expect(page.getByRole('button', { name: 'Remove' })).toBeVisible();
+        await expect(page.getByRole('button', { name: 'Remove this card' })).toBeVisible();
         await page.getByRole('button', { name: 'Publish to Students' }).click();
         await expect(page.locator('#flashcard-status-unit-1')).toHaveText('Published v2');
     });

@@ -988,7 +988,7 @@ function updateQuestionsDisplay(week) {
                     <span class="question-type-badge ${questionType}">${getQuestionTypeLabel(questionType)}</span>
                     <span class="question-number">Question ${index + 1}</span>
                     <div class="question-action-buttons">
-                        <button type="button" class="convert-to-flashcard-btn" onclick="convertQuestionToFlashcard('${week}', '${questionKey}')">To Flashcard${unitContext(unitReference, CourseUploadNames.getQuestionLead(index + 1))}</button>
+                        <button type="button" class="convert-to-flashcard-btn" onclick="convertQuestionToFlashcard('${week}', '${questionKey}')" title="Create a flashcard for this unit using this question's text and answer">Convert to Flashcard${unitContext(unitReference, CourseUploadNames.getQuestionLead(index + 1))}</button>
                         <button type="button" class="edit-question-btn" onclick="openQuestionLearningObjectiveModal('${week}', '${questionKey}')" title="Edit learning objective">${Icons.pencil}${unitContext(unitReference, `Edit Learning Objective${CourseUploadNames.getQuestionLead(index + 1)}`)}</button>
                         <button type="button" class="delete-question-btn" onclick="deleteQuestion('${week}', '${questionKey}')" title="Delete question"><span aria-hidden="true">×</span>${unitContext(unitReference, `Delete${CourseUploadNames.getQuestionLead(index + 1)}`)}</button>
                     </div>
