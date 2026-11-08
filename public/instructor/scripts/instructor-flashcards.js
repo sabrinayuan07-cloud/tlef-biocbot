@@ -117,9 +117,16 @@ function renderInstructorFlashcardSection(unitName) {
             ${isEditableDraft ? `
                 <button type="button" class="secondary-button" onclick="addManualFlashcard('${unitName}')">Add Card</button>
                 <button type="button" class="secondary-button" onclick="saveFlashcardDraft('${unitName}')">Save Draft</button>
-                <button type="button" class="flashcard-publish-btn" onclick="publishFlashcardDeck('${unitName}', this)">Publish to Students</button>
             ` : ''}
-            ${deck.isPublished ? `<button type="button" class="flashcard-unpublish-btn" onclick="unpublishFlashcardDeck('${unitName}', this)">Unpublish</button>` : ''}
+            ${(isEditableDraft || deck.isPublished) ? `
+                <div class="publish-toggle">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="flashcard-publish-${unitId}" ${deck.isPublished ? 'checked' : ''} aria-label="Publish this flashcard deck to students" onchange="toggleFlashcardPublish('${unitName}', this)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                    <span class="toggle-label">Published</span>
+                </div>
+            ` : ''}
         </div>
     `;
     flashcardEditorRows(editor).forEach(wireFlashcardEditorRowDrag);
@@ -342,6 +349,24 @@ async function removeFlashcardEditorRow(button) {
     } catch (error) {
         renderInstructorFlashcardSection(unitName);
         showNotification(error.message || 'Unable to remove flashcard.', 'error');
+    }
+}
+
+/**
+ * Single Published toggle standing in for the old separate Publish/Unpublish
+ * buttons. Decides which action a click means from the deck's own state
+ * rather than the checkbox's native checked value, so clicking while already
+ * published but with newer unsaved draft edits ("Draft changes") still
+ * republishes that draft instead of unpublishing - same as the old
+ * "Publish to Students" button did in that state, just as one control.
+ */
+function toggleFlashcardPublish(unitName, checkbox) {
+    const deck = flashcardDecksByUnit.get(unitName);
+    if (!deck) return;
+    if (deck.hasDraft || !deck.isPublished) {
+        publishFlashcardDeck(unitName, checkbox);
+    } else {
+        unpublishFlashcardDeck(unitName, checkbox);
     }
 }
 

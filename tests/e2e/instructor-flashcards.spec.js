@@ -103,7 +103,7 @@ test.describe('instructor flashcard editor', () => {
         await expect(page.locator('.flashcard-front-input')).toHaveValue('Second card');
     });
 
-    test('unpublishing creates an editable draft that can be republished', async ({ page }) => {
+    test('toggling Published off/on unpublishes then republishes the deck', async ({ page }) => {
         await loadHarness(page, {
             deckId: 'deck1',
             courseId: 'C1',
@@ -117,13 +117,50 @@ test.describe('instructor flashcard editor', () => {
             publishedCards: [card('fc1', 'Published card')]
         });
 
-        await page.getByRole('button', { name: 'Unpublish' }).click();
-        await expect(page.getByRole('button', { name: 'Publish to Students' })).toBeVisible();
+        const toggle = page.getByRole('checkbox', { name: 'Publish this flashcard deck to students' });
+        await expect(toggle).toBeChecked();
+
+        // hasDraft=false and isPublished=true -> toggleFlashcardPublish() routes
+        // this click to unpublish.
+        await toggle.click();
+        await expect(toggle).not.toBeChecked();
         await expect(page.getByRole('button', { name: 'Remove this card' })).toBeVisible();
 
-        await page.getByRole('button', { name: 'Publish to Students' }).click();
-        await expect(page.getByRole('button', { name: 'Unpublish' })).toBeVisible();
+        // Now hasDraft=true (unpublish recovers the deck as an editable draft)
+        // and isPublished=false -> routes to publish.
+        await toggle.click();
+        await expect(toggle).toBeChecked();
         await expect(page.locator('#flashcard-status-unit-1')).toHaveText('Published v2');
+    });
+
+    test('toggling Published on with a pending draft republishes it ("Draft changes" state)', async ({ page }) => {
+        await loadHarness(page, {
+            deckId: 'deck1',
+            courseId: 'C1',
+            lectureName: 'Unit 1',
+            title: 'Unit 1 Flashcards',
+            hasDraft: true,
+            isPublished: true,
+            isStale: false,
+            publishedVersion: 1,
+            draftCards: [card('fc1', 'Edited card')],
+            publishedCards: [card('fc1-old', 'Original card')]
+        });
+
+        const toggle = page.getByRole('checkbox', { name: 'Publish this flashcard deck to students' });
+        // Already published, so the toggle renders checked even though there's
+        // an unsaved draft - the status badge ("Draft changes") carries that
+        // nuance instead.
+        await expect(toggle).toBeChecked();
+        await expect(page.locator('#flashcard-status-unit-1')).toHaveText('Draft changes');
+
+        // hasDraft=true -> routes to publish (republishing the newer draft),
+        // not unpublish, even though the checkbox's own state is "checked".
+        await toggle.click();
+        await expect(page.locator('#flashcard-status-unit-1')).toHaveText('Published v2');
+        const published = await page.evaluate(() => /** @type {any} */ (window).testFlashcardState.deck.publishedCards);
+        expect(published).toHaveLength(1);
+        expect(published[0].front).toBe('Edited card');
     });
 
     test('dragging a card reorders it, renumbers headings, and persists the new order on save', async ({ page }) => {
@@ -190,7 +227,9 @@ test.describe('instructor flashcard editor', () => {
 
         await expect(page.locator('#flashcard-status-unit-1')).toHaveText('Unpublished draft');
         await expect(page.getByRole('button', { name: 'Remove this card' })).toBeVisible();
-        await page.getByRole('button', { name: 'Publish to Students' }).click();
+        const toggle = page.getByRole('checkbox', { name: 'Publish this flashcard deck to students' });
+        await expect(toggle).not.toBeChecked();
+        await toggle.click();
         await expect(page.locator('#flashcard-status-unit-1')).toHaveText('Published v2');
     });
 });
