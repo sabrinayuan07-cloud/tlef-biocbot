@@ -373,6 +373,9 @@ test.describe('chat.css harness coverage', () => {
         await page.locator('.toggle-slider').hover();
         await page.locator('.unit-select').hover();
         await page.locator('.unit-select').focus();
+        // Regression check for #645: .unit-select's own padding shorthand
+        // must leave room for the global select chevron added by #643/#644.
+        await expect(page.locator('.unit-select')).toHaveCSS('padding-right', '34px');
         await page.locator('#history-search').focus();
         await page.locator('.chat-history-item').first().hover();
         await page.locator('.preview-actions .primary-button').hover();
