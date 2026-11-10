@@ -81,6 +81,19 @@
                 <p id="scope-subtitle">Student Chat Downloads</p>
             </div>
 
+            <!-- Empty-chats filter: a session gets saved as soon as the
+                 auto-welcome bot message lands, even if the student never
+                 sends a message, so by default those chats are hidden from
+                 both the list and every download below. Switching to
+                 "Include all chats" brings them back (#519). -->
+            <div class="downloads-filter-row">
+                <label class="downloads-filter-label" for="empty-chat-filter">Chats to show</label>
+                <select id="empty-chat-filter" class="downloads-filter-select">
+                    <option value="exclude">Exclude chats where the student sent no messages (default)</option>
+                    <option value="include">Include all chats (including chats with no messages)</option>
+                </select>
+            </div>
+
             <!-- Loading State -->
             <div id="loading-state" class="loading-container" role="status">
                 <div class="loading-spinner"></div>

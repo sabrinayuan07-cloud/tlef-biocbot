@@ -51,11 +51,27 @@ describe('GET /:courseId/:studentId/sessions — admin list', () => {
                 session({ sessionId: 'c', studentId: 's2' }), // different student
             ],
         });
-        const res = await request(app({ db, user: adminInstructor })).get('/C1/s1/sessions');
+        // session() has no chatData (no student message), so 'a' would
+        // otherwise be excluded by default (#519) - include it here since
+        // this test is about deletion-mode filtering, not the message filter.
+        const res = await request(app({ db, user: adminInstructor })).get('/C1/s1/sessions?includeEmptyChats=true');
         expect(res.status).toBe(200);
         expect(res.body.data.sessions.map(s => s.sessionId)).toEqual(['a']);
         expect(res.body.data.studentName).toBe('Alice');
         expect(res.body.data.sessions[0]).toHaveProperty('duration');
+    });
+
+    test('excludes a session with no student message by default; includeEmptyChats=true brings it back (#519)', async () => {
+        const db = memoryDb({
+            courses: [ownedCourse],
+            chat_sessions: [session({ sessionId: 'a' })], // no chatData -> no student message
+        });
+
+        const defaultRes = await request(app({ db, user: adminInstructor })).get('/C1/s1/sessions');
+        expect(defaultRes.body.data.sessions).toEqual([]);
+
+        const includedRes = await request(app({ db, user: adminInstructor })).get('/C1/s1/sessions?includeEmptyChats=true');
+        expect(includedRes.body.data.sessions.map(s => s.sessionId)).toEqual(['a']);
     });
 
     test('500 when a database read fails', async () => {

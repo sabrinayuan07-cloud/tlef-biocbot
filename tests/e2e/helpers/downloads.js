@@ -22,6 +22,8 @@ const DOWNLOAD_SECOND_STUDENT_ID = 'user_e2e_downloads_student_b';
 const DOWNLOAD_SECOND_STUDENT_NAME = 'Riley Reports';
 const DOWNLOAD_LARGE_STUDENT_ID = 'user_e2e_downloads_student_c';
 const DOWNLOAD_LARGE_STUDENT_NAME = 'Sam Sessionful';
+const DOWNLOAD_WELCOME_ONLY_STUDENT_ID = 'user_e2e_downloads_student_d';
+const DOWNLOAD_WELCOME_ONLY_STUDENT_NAME = 'Morgan Welcome';
 
 const SESSION_VISIBLE_ID = 'e2e_downloads_visible_session';
 const SESSION_STUDENT_DELETED_ID = 'e2e_downloads_student_deleted_session';
@@ -31,6 +33,7 @@ const SESSION_OTHER_COURSE_ID = 'e2e_downloads_other_course_session';
 const SESSION_UNRELATED_ID = 'e2e_downloads_unrelated_session';
 const SESSION_LARGE_ID = 'e2e_downloads_large_session';
 const SESSION_LARGE_MESSAGE_COUNT = 25;
+const SESSION_WELCOME_ONLY_ID = 'e2e_downloads_welcome_only_session';
 
 const DOWNLOAD_COURSE_IDS = [
     DOWNLOAD_COURSE_ID,
@@ -271,6 +274,22 @@ async function resetDownloadData({ instructorId }) {
                 savedAt: '2026-01-21T10:00:00.000Z',
                 messages: largeMessages,
             }),
+            buildSessionDoc({
+                sessionId: SESSION_WELCOME_ONLY_ID,
+                studentId: DOWNLOAD_WELCOME_ONLY_STUDENT_ID,
+                studentName: DOWNLOAD_WELCOME_ONLY_STUDENT_NAME,
+                title: 'Welcome Message Only',
+                savedAt: '2026-01-22T10:00:00.000Z',
+                // No user message ever sent - just the auto-welcome bot
+                // message landing. Excluded from the list by default (#519).
+                messages: [
+                    {
+                        type: 'bot',
+                        content: 'Welcome to BiocBot! I can see you have access to published units.',
+                        timestamp: '2026-01-22T10:00:00.000Z',
+                    },
+                ],
+            }),
         ]);
     });
 }
@@ -306,6 +325,8 @@ module.exports = {
     DOWNLOAD_SECOND_STUDENT_NAME,
     DOWNLOAD_LARGE_STUDENT_ID,
     DOWNLOAD_LARGE_STUDENT_NAME,
+    DOWNLOAD_WELCOME_ONLY_STUDENT_ID,
+    DOWNLOAD_WELCOME_ONLY_STUDENT_NAME,
     SESSION_VISIBLE_ID,
     SESSION_STUDENT_DELETED_ID,
     SESSION_LEGACY_ID,
@@ -314,6 +335,7 @@ module.exports = {
     SESSION_UNRELATED_ID,
     SESSION_LARGE_ID,
     SESSION_LARGE_MESSAGE_COUNT,
+    SESSION_WELCOME_ONLY_ID,
     getInstructorId,
     setSystemAdmin,
     resetDownloadData,

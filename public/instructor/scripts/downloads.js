@@ -14,6 +14,19 @@ let currentScope = { type: 'course' };
 let currentCourseName = null;
 let activePseudonymMappings = new Map();
 
+// Whether to include chats where the student never sent a message (e.g. a
+// session saved from just the auto-welcome message landing) in the list and
+// every download below. Off by default (#519) - see downloads.html's filter
+// row.
+let includeEmptyChats = false;
+
+// Appends the empty-chats filter param to a request URL, whether or not it
+// already has query params (e.g. a bucket export's ?studentId=).
+function withEmptyChatsParam(url) {
+    if (!includeEmptyChats) return url;
+    return url + (url.includes('?') ? '&' : '?') + 'includeEmptyChats=true';
+}
+
 // Global variables to prevent multiple API calls and redirects
 let courseIdCache = null;
 let courseIdPromise = null;
@@ -280,6 +293,16 @@ function setupEventListeners() {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', handleLogout);
     }
+
+    // Empty-chats filter: chats where the student never sent a message (#519)
+    const emptyChatFilter = document.getElementById('empty-chat-filter');
+    if (emptyChatFilter) {
+        emptyChatFilter.addEventListener('change', async () => {
+            includeEmptyChats = emptyChatFilter.value === 'include';
+            closeStudentModal();
+            await loadStudentData();
+        });
+    }
 }
 
 /**
@@ -350,9 +373,9 @@ async function loadStudentData() {
             return;
         }
 
-        const url = isSuperchat
+        const url = withEmptyChatsParam(isSuperchat
             ? `/api/superchats/${currentScope.superchatId}/chat-sessions`
-            : `/api/students/${currentCourseId}`;
+            : `/api/students/${currentCourseId}`);
 
         console.log(`Loading student data for ${isSuperchat ? 'superchat' : 'course'}: ${isSuperchat ? currentScope.superchatId : currentCourseId}`);
         showLoadingState();
@@ -487,7 +510,7 @@ async function downloadAllCourseSessions(format = 'json', anonymized = false) {
             
             try {
                 // Fetch sessions list for this student
-                const sessionsResponse = await fetch(`/api/students/${currentCourseId}/${student.studentId}/sessions`, {
+                const sessionsResponse = await fetch(withEmptyChatsParam(`/api/students/${currentCourseId}/${student.studentId}/sessions`), {
                     method: 'GET',
                     credentials: 'include'
                 });
@@ -574,7 +597,7 @@ async function downloadSuperchatExport(format, studentId, anonymized = false) {
 
         const params = studentId ? `?studentId=${encodeURIComponent(studentId)}` : '';
         const response = await fetch(
-            `/api/superchats/${currentScope.superchatId}/chat-sessions/export${params}`,
+            withEmptyChatsParam(`/api/superchats/${currentScope.superchatId}/chat-sessions/export${params}`),
             { method: 'GET', credentials: 'include' }
         );
 
@@ -771,7 +794,7 @@ async function viewStudentSessions(studentId, studentName) {
             return;
         }
 
-        const response = await fetch(`/api/students/${currentCourseId}/${studentId}/sessions`, {
+        const response = await fetch(withEmptyChatsParam(`/api/students/${currentCourseId}/${studentId}/sessions`), {
             method: 'GET',
             credentials: 'include'
         });

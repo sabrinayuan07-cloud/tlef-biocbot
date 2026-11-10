@@ -96,6 +96,15 @@ function calculateSessionDuration(session) {
     return `${seconds}s`;
 }
 
+// Whether the student ever sent a message in this session, as opposed to a
+// session saved from just the auto-welcome bot message landing. This is the
+// filter used for the "Chats to show" dropdown (#519) - duration alone isn't
+// a reliable stand-in, since a real question with no (or a fast) reply is
+// also 0s.
+function hasStudentMessage(session) {
+    return ((session && session.chatData && session.chatData.messages) || []).some(msg => msg.type === 'user');
+}
+
 function normalizeStudentName(raw) {
     if (typeof raw === 'string' && raw.trim()) return raw;
     if (raw && typeof raw === 'object') {
@@ -455,7 +464,15 @@ router.get('/:id/chat-sessions', async (req, res) => {
             .sort({ savedAt: -1 })
             .toArray();
 
-        const students = groupSessionsByStudent(sessions, session => ({
+        // Default excludes chats where the student never sent a message
+        // (#519) - see routes/students.js's equivalent course-scope endpoint
+        // for the full reasoning.
+        const includeEmptyChats = req.query.includeEmptyChats === 'true';
+        const includedSessions = includeEmptyChats
+            ? sessions
+            : sessions.filter(hasStudentMessage);
+
+        const students = groupSessionsByStudent(includedSessions, session => ({
             sessionId: session.sessionId,
             studentId: session.studentId,
             title: session.title || 'Super Course Chat',
@@ -471,7 +488,7 @@ router.get('/:id/chat-sessions', async (req, res) => {
                 superchatName: doc.name,
                 students,
                 totalStudents: students.length,
-                totalSessions: sessions.length
+                totalSessions: includedSessions.length
             }
         });
     } catch (error) {
@@ -500,7 +517,15 @@ router.get('/:id/chat-sessions/export', async (req, res) => {
             .sort({ savedAt: -1 })
             .toArray();
 
-        const students = groupSessionsByStudent(sessions, session => ({
+        // Default excludes chats where the student never sent a message
+        // (#519) - see routes/students.js's equivalent course-scope endpoint
+        // for the full reasoning.
+        const includeEmptyChats = req.query.includeEmptyChats === 'true';
+        const includedSessions = includeEmptyChats
+            ? sessions
+            : sessions.filter(hasStudentMessage);
+
+        const students = groupSessionsByStudent(includedSessions, session => ({
             ...session,
             duration: calculateSessionDuration(session)
         }));
@@ -513,7 +538,7 @@ router.get('/:id/chat-sessions/export', async (req, res) => {
                 exportDate: new Date().toISOString(),
                 students,
                 totalStudents: students.length,
-                totalSessions: sessions.length
+                totalSessions: includedSessions.length
             }
         });
     } catch (error) {
