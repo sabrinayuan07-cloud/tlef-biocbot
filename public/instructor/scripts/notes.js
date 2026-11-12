@@ -283,8 +283,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         wrap.innerHTML = `
             <div class="empty-icon">${Icons.inbox}</div>
             <h3>No notes yet</h3>
-            <p>Super Chat Notes are a shared notebook the bot reads. Add corrections, explanations,
-               or things students keep asking about &mdash; and the bot will use them in Super Chat answers.</p>
+            <p>Super Course Notes are a shared notebook the bot reads. Add corrections, explanations,
+               or things students keep asking about &mdash; and the bot will use them in Super Course answers.</p>
         `;
         const btn = document.createElement('button');
         btn.className = 'btn-primary';

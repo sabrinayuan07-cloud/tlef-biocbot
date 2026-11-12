@@ -348,15 +348,15 @@ test.describe('Super Chat Notes role gating', () => {
 test.describe('TA Super Chat navigation', () => {
     test.use({ storageState: storageStatePath('ta') });
 
-    test('keeps Super Chat and Super Chat Notes available from the TA dashboard', async ({ page }) => {
+    test('keeps Super Course and Super Course Notes available from the TA dashboard', async ({ page }) => {
         await setNotesSettings();
         await seedInstructorSuperchatContext();
 
         await page.goto('/ta');
-        await expect(page.getByRole('link', { name: 'Super Chat', exact: true })).toBeVisible();
-        await expect(page.getByRole('link', { name: 'Super Chat Notes', exact: true })).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Super Course', exact: true })).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Super Course Notes', exact: true })).toBeVisible();
 
-        await page.getByRole('link', { name: 'Super Chat', exact: true }).click();
+        await page.getByRole('link', { name: 'Super Course', exact: true }).click();
         await expect(page).toHaveURL(/\/instructor\/chat$/);
         await expect(page.locator('#instructor-chat-input')).toBeVisible();
         await expect(page.locator('#super-course-pool-list')).toContainText('BIOC 202 Notes Instructor');

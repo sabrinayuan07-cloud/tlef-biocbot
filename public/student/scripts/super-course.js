@@ -725,7 +725,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!sessions.length) {
             const empty = document.createElement('div');
             empty.className = 'super-course-history-empty';
-            empty.textContent = 'No saved Super Chat sessions yet.';
+            empty.textContent = 'No saved Super Course sessions yet.';
             historyList.appendChild(empty);
             return;
         }
@@ -810,7 +810,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function deleteHistorySession(sessionId) {
-        if (!sessionId || !confirm('Delete this Super Chat session?')) return;
+        if (!sessionId || !confirm('Delete this Super Course session?')) return;
 
         try {
             const response = await fetch(`/api/student/super-course/sessions/${encodeURIComponent(sessionId)}?superchatId=${encodeURIComponent(currentSuperchatId)}`, {

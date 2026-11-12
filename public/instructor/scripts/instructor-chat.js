@@ -772,7 +772,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!sessions.length) {
             const empty = document.createElement('div');
             empty.className = 'super-course-history-empty';
-            empty.textContent = 'No saved Super Chat sessions yet.';
+            empty.textContent = 'No saved Super Course sessions yet.';
             historyList.appendChild(empty);
             return;
         }
@@ -852,18 +852,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             loadChatData(chatData);
             markActiveHistorySession(sessionId);
             if (typeof showNotification === 'function') {
-                showNotification('Super Chat session loaded', 'success');
+                showNotification('Super Course session loaded', 'success');
             }
         } catch (error) {
             console.error('Error loading instructor Super Chat session:', error);
             if (typeof showNotification === 'function') {
-                showNotification('Unable to load that Super Chat session', 'error');
+                showNotification('Unable to load that Super Course session', 'error');
             }
         }
     }
 
     async function deleteHistorySession(sessionId) {
-        if (!sessionId || !confirm('Delete this Super Chat session?')) return;
+        if (!sessionId || !confirm('Delete this Super Course session?')) return;
 
         try {
             const response = await fetch(`/api/instructor/chat/sessions/${encodeURIComponent(sessionId)}`, {
@@ -883,7 +883,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (error) {
             console.error('Error deleting instructor Super Chat session:', error);
             if (typeof showNotification === 'function') {
-                showNotification('Unable to delete that Super Chat session', 'error');
+                showNotification('Unable to delete that Super Course session', 'error');
             }
         }
     }

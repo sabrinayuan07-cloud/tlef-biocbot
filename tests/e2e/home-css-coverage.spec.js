@@ -37,7 +37,7 @@ function homeCssHarness() {
             <nav class="main-nav">
                 <ul>
                     <li class="active"><a href="#">Home</a></li>
-                    <li><a href="#">Super Chat Notes</a></li>
+                    <li><a href="#">Super Course Notes</a></li>
                 </ul>
             </nav>
             <div class="user-info">Coverage Instructor</div>

@@ -1148,7 +1148,7 @@ function renderLiveStruggleTable() {
         // Distinguish struggles that originated in the cross-course Super Chat
         // (attributed here) from ones raised in this course's own chat.
         const sourceBadge = item.source === 'superCourse'
-            ? ' <span class="state-badge" style="background:#6f42c1; color:#fff;" title="Raised in the cross-course Super Chat">via Super Chat</span>'
+            ? ' <span class="state-badge" style="background:#6f42c1; color:#fff;" title="Raised in the cross-course Super Course">via Super Course</span>'
             : '';
 
         html += `
@@ -1870,12 +1870,12 @@ async function appendSuperCourseOption(selectElement) {
     if (!selectElement) return;
 
     const optgroup = document.createElement('optgroup');
-    optgroup.label = 'Super Chat';
+    optgroup.label = 'Super Course';
 
     // All-buckets aggregate (legacy/global view).
     const allOption = document.createElement('option');
     allOption.value = SUPER_COURSE_FILTER_ID;
-    allOption.textContent = 'Super Chat (all buckets)';
+    allOption.textContent = 'Super Course (all buckets)';
     optgroup.appendChild(allOption);
 
     // One entry per bucket.
@@ -2292,7 +2292,7 @@ async function setSelectedCourse(courseId, courseName, courseData = null) {
 async function enterSuperCourseStruggleView() {
     const courseNameDisplay = document.getElementById('course-name-display');
     if (courseNameDisplay) {
-        courseNameDisplay.textContent = 'Super Chat (all courses)';
+        courseNameDisplay.textContent = 'Super Course (all courses)';
     }
 
     const courseSelectionContainer = document.getElementById('course-selection-container');
@@ -2321,7 +2321,7 @@ async function enterSuperCourseStruggleView() {
     if (struggleSection) struggleSection.style.display = 'block';
     const struggleContent = document.getElementById('struggle-topics-content');
     if (struggleContent) {
-        struggleContent.innerHTML = '<p style="color:#666; padding:10px 0;">Struggles students raised in the cross-course Super Chat, aggregated across all courses. Each is also recorded on the course that owns the topic.</p>';
+        struggleContent.innerHTML = '<p style="color:#666; padding:10px 0;">Struggles students raised in the cross-course Super Course, aggregated across all courses. Each is also recorded on the course that owns the topic.</p>';
     }
 
     // Aggregated Super Chat widgets.

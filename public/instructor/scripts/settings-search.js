@@ -117,8 +117,8 @@ document.addEventListener('DOMContentLoaded', () => {
             sectionId: 'notes-llm-key-section',
             panel: 'admin-platform',
             title: 'Instructor notes API key',
-            description: 'The API key used for uploading and retrieving Super Chat notes.',
-            tags: ['notes api key', 'super chat notes key', 'notes platform key']
+            description: 'The API key used for uploading and retrieving Super Course notes.',
+            tags: ['notes api key', 'super course notes key', 'notes platform key']
         },
         {
             sectionId: 'instructor-superchat-llm-key-section',
