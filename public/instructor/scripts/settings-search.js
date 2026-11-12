@@ -299,6 +299,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const resultsList = document.getElementById('settings-search-results');
     if (!searchInput || !resultsList) return;
 
+    const searchForm = searchInput.closest('form');
+    if (searchForm) {
+        searchForm.addEventListener('submit', (event) => event.preventDefault());
+    }
+
     let currentResults = [];
     let activeIndex = -1;
     let pendingSectionJump = null;
