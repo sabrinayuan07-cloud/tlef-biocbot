@@ -58,11 +58,19 @@
   font-weight: 500;
 }
 
+.course-select-pair {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  flex-wrap: wrap;
+}
+
 .course-select-row {
   display: flex;
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  flex: 1 1 320px;
 }
 
 .course-select-row label {
