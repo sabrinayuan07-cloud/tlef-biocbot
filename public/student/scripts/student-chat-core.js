@@ -180,7 +180,8 @@ async function handleExplainAction(text, topic = null, sourceMessageId = null) {
             {
                 triggeredBy: 'explain_button',
                 actionStatus: 'success',
-                sourceMessageId: resolvedSourceMessageId
+                sourceMessageId: resolvedSourceMessageId,
+                animate: true
             }
         );
         if (typeof maybeShowChatSurvey === 'function') {
@@ -632,6 +633,15 @@ function addMessage(content, sender, withSource = false, skipAutoSave = false, s
 
     // Scroll to bottom
     chatMessages.scrollTop = chatMessages.scrollHeight;
+
+    // Reveal a freshly-arrived bot answer word-by-word instead of all at once.
+    // Only for plain-text live responses (messageOptions.animate), never for
+    // isHtml system/link messages or history restores, which don't set it.
+    if (sender === 'bot' && !isHtml && messageOptions && messageOptions.animate && typeof window.typeOutText === 'function') {
+        window.typeOutText(paragraph, content, {
+            onStep: () => { chatMessages.scrollTop = chatMessages.scrollHeight; }
+        });
+    }
 
     // Auto-save the message
     // Only auto-save if not explicitly skipped

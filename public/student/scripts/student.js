@@ -1193,7 +1193,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // Only show "I understand X now" button when directive mode is active for this response
                 const showStruggleReset = response.struggleDebug?.directiveModeActive ? lastActiveStruggleTopic : null;
-                addMessage(response.message, 'bot', true, false, response.sourceAttribution, false, showStruggleReset, detectedTopic, response.messageId);
+                addMessage(response.message, 'bot', true, false, response.sourceAttribution, false, showStruggleReset, detectedTopic, response.messageId, null, { animate: true });
                 if (typeof maybeShowChatSurvey === 'function') {
                     maybeShowChatSurvey();
                 }
