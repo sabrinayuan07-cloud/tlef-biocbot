@@ -443,7 +443,9 @@ textarea {
     color: var(--text-secondary);
     border-bottom: 1px solid rgba(0, 0, 0, 0.08);
     margin-bottom: 4px;
-    word-break: break-all;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .account-menu-item {

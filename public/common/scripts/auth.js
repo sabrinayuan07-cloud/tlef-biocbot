@@ -459,6 +459,7 @@ function updateUserDisplay() {
     const emailElement = document.getElementById('account-menu-email');
     if (emailElement) {
         emailElement.textContent = currentUser.email || '';
+        emailElement.title = currentUser.email || '';
     }
 }
 
