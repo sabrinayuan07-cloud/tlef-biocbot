@@ -58,6 +58,25 @@
   font-weight: 500;
 }
 
+.course-select-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.course-select-row label {
+  display: inline;
+  margin-bottom: 0;
+  white-space: nowrap;
+}
+
+.course-select-row .course-select-dropdown {
+  width: auto;
+  flex: 1;
+  min-width: 220px;
+}
+
 .course-selector .form-label-text {
   display: block;
   margin: 0 0 8px;
