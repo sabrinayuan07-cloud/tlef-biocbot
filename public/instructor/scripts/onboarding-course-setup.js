@@ -1049,9 +1049,9 @@ async function createCourse(courseData) {
         console.log(`📡 [MONGODB] API response headers:`, Object.fromEntries(response.headers.entries()));
         
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`❌ [MONGODB] API error response: ${response.status} ${errorText}`);
-            throw new Error(`Failed to create course: ${response.status} ${errorText}`);
+            const message = await extractErrorMessage(response, 'Failed to create course');
+            console.error(`❌ [MONGODB] API error response: ${message}`);
+            throw new Error(message);
         }
         
         const result = await response.json();

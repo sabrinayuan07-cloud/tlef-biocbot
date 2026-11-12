@@ -244,20 +244,7 @@ async function downloadDocument(documentId) {
         const response = await fetch(`/api/documents/${documentId}/download`);
 
         if (!response.ok) {
-            const contentType = response.headers.get('Content-Type') || '';
-            let message = 'Unable to download this document.';
-
-            if (contentType.includes('application/json')) {
-                const errorData = await response.json();
-                message = errorData.message || message;
-            } else {
-                const errorText = await response.text();
-                if (errorText && errorText.trim()) {
-                    message = errorText.trim();
-                }
-            }
-
-            throw new Error(message);
+            throw new Error(await extractErrorMessage(response, 'Unable to download this document'));
         }
 
         const blob = await response.blob();
@@ -615,8 +602,7 @@ async function cleanupOrphanedDocuments() {
         });
         
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Cleanup failed: ${response.status} ${errorText}`);
+            throw new Error(await extractErrorMessage(response, 'Cleanup failed'));
         }
         
         const result = await response.json();
@@ -649,8 +635,7 @@ async function viewDocument(documentId) {
         const response = await fetch(`/api/documents/${documentId}`);
         
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Failed to fetch document: ${response.status} ${errorText}`);
+            throw new Error(await extractErrorMessage(response, 'Failed to fetch document'));
         }
         
         const result = await response.json();
@@ -793,8 +778,7 @@ async function confirmCourseMaterials(week) {
             if (response.status === 404) {
                 showNotification(`Course materials for ${week} validated successfully! (Backend endpoint not yet implemented)`, 'info');
             } else {
-                const errorText = await response.text();
-                throw new Error(`Server error: ${response.status} ${errorText}`);
+                throw new Error(await extractErrorMessage(response, 'Server error'));
             }
         }
         

@@ -616,8 +616,7 @@ async function saveOnboardingData() {
         });
         
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Failed to save onboarding data: ${response.status} ${errorText}`);
+            throw new Error(await extractErrorMessage(response, 'Failed to save onboarding data'));
         }
         
         console.log('Onboarding data saved successfully');

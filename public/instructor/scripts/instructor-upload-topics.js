@@ -475,24 +475,6 @@ function handleFileUpload(file) {
 }
 
 /**
- * Build an error message from a failed response. Server errors are
- * structured JSON ({ success, code, message }); prefer the human-readable
- * `message` field over dumping the raw body into a toast.
- */
-async function extractErrorMessage(response, fallbackLabel) {
-    const raw = await response.text();
-    try {
-        const parsed = JSON.parse(raw);
-        if (parsed && typeof parsed.message === 'string' && parsed.message) {
-            return parsed.message;
-        }
-    } catch (e) {
-        // Not JSON - fall through to the raw body below.
-    }
-    return `${fallbackLabel}: ${response.status} ${raw}`;
-}
-
-/**
  * Handle the main upload action
  */
 async function handleUpload() {

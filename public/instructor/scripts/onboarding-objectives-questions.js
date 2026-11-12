@@ -28,8 +28,7 @@ async function saveUnit1LearningObjectives(courseId, lectureName, objectives, in
         });
         
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Failed to save learning objectives: ${response.status} ${errorText}`);
+            throw new Error(await extractErrorMessage(response, 'Failed to save learning objectives'));
         }
         
         const result = await response.json();
@@ -975,8 +974,7 @@ async function saveUnit1ProbingQuestion(courseId, lectureName, questionText, ins
         });
         
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Failed to save probing question: ${response.status} ${errorText}`);
+            throw new Error(await extractErrorMessage(response, 'Failed to save probing question'));
         }
         
         const result = await response.json();
@@ -1036,8 +1034,7 @@ async function saveUnit1LearningObjective(courseId, lectureName, objectiveText, 
         });
         
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Failed to save learning objective: ${response.status} ${errorText}`);
+            throw new Error(await extractErrorMessage(response, 'Failed to save learning objective'));
         }
         
         const result = await response.json();
@@ -1170,9 +1167,9 @@ async function saveUnit1AssessmentQuestion(courseId, lectureName, questionObjOrT
         console.log(`📡 [MONGODB] API response headers:`, Object.fromEntries(response.headers.entries()));
         
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`❌ [MONGODB] API error response: ${response.status} ${errorText}`);
-            throw new Error(`Failed to save assessment question: ${response.status} ${errorText}`);
+            const message = await extractErrorMessage(response, 'Failed to save assessment question');
+            console.error(`❌ [MONGODB] API error response: ${message}`);
+            throw new Error(message);
         }
         
         const result = await response.json();
@@ -1227,9 +1224,9 @@ async function saveUnit1PassThreshold(courseId, lectureName, passThreshold, inst
         console.log(`📡 [MONGODB] API response headers:`, Object.fromEntries(response.headers.entries()));
         
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`❌ [MONGODB] Error saving pass threshold: ${response.status} ${errorText}`);
-            throw new Error(`Failed to save pass threshold: ${response.status} ${errorText}`);
+            const message = await extractErrorMessage(response, 'Failed to save pass threshold');
+            console.error(`❌ [MONGODB] Error saving pass threshold: ${message}`);
+            throw new Error(message);
         }
         
         const result = await response.json();

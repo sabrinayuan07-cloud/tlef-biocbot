@@ -96,8 +96,8 @@ async function checkPublishedUnitsAndLoadQuestions() {
         const response = await fetch(`/api/courses/${courseId}`);
 
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error('API error response body:', errorText);
+            const message = await extractErrorMessage(response, 'Failed to fetch course data');
+            console.error('API error response body:', message);
 
             // If course not found, clear localStorage and try to load available courses
             if (response.status === 404) {
@@ -109,7 +109,7 @@ async function checkPublishedUnitsAndLoadQuestions() {
             }
 
             window.isCheckingPublishedUnits = false; // Reset flag on error
-            throw new Error(`Failed to fetch course data: ${response.status} - ${errorText}`);
+            throw new Error(message);
         }
 
         const courseData = await response.json();

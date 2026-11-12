@@ -185,8 +185,7 @@ async function deleteAssessmentQuestion(questionId, week) {
         });
         
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Delete failed: ${response.status} ${errorText}`);
+            throw new Error(await extractErrorMessage(response, 'Delete failed'));
         }
         
         // Reload questions from database to ensure consistency
@@ -229,8 +228,7 @@ async function savePassThreshold(lectureName, threshold) {
         });
         
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Failed to save threshold: ${response.status} ${errorText}`);
+            throw new Error(await extractErrorMessage(response, 'Failed to save threshold'));
         }
         
         const result = await response.json();
@@ -819,19 +817,19 @@ async function saveQuestion() {
         });
         
         if (!response.ok) {
-            const errorText = await response.text();
+            const message = await extractErrorMessage(response, 'Failed to save question');
             console.error('❌ [SAVE_QUESTION] API Error:', {
                 status: response.status,
                 statusText: response.statusText,
-                errorText: errorText
+                message
             });
-            
+
             // Check if it's an authentication error
             if (response.status === 401) {
                 throw new Error('Authentication expired. Please refresh the page and try again.');
             }
-            
-            throw new Error(`Failed to save question: ${response.status} ${errorText}`);
+
+            throw new Error(message);
         }
         
         const result = await response.json();
@@ -1116,8 +1114,7 @@ async function saveQuestionLearningObjective() {
         });
 
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Update failed: ${response.status} ${errorText}`);
+            throw new Error(await extractErrorMessage(response, 'Update failed'));
         }
 
         await reloadQuestionsForUnit(week);

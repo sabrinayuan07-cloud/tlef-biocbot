@@ -608,9 +608,9 @@ async function saveUnit1Document(courseId, lectureName, documentType, file, inst
         console.log(`📡 [MONGODB] API response headers:`, Object.fromEntries(response.headers.entries()));
         
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`❌ [MONGODB] API error response: ${response.status} ${errorText}`);
-            throw new Error(`Failed to save document: ${response.status} ${errorText}`);
+            const message = await extractErrorMessage(response, 'Failed to save document');
+            console.error(`❌ [MONGODB] API error response: ${message}`);
+            throw new Error(message);
         }
         
         const result = await response.json();
@@ -659,8 +659,7 @@ async function saveUnit1URL(courseId, lectureName, documentType, url, name, inst
         });
         
         if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Failed to save URL content: ${response.status} ${errorText}`);
+            throw new Error(await extractErrorMessage(response, 'Failed to save URL content'));
         }
         
         const result = await response.json();
@@ -719,9 +718,9 @@ async function saveUnit1Text(courseId, lectureName, documentType, text, name, in
         console.log(`📡 [MONGODB] API response headers:`, Object.fromEntries(response.headers.entries()));
         
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`❌ [MONGODB] API error response: ${response.status} ${errorText}`);
-            throw new Error(`Failed to save text content: ${response.status} ${errorText}`);
+            const message = await extractErrorMessage(response, 'Failed to save text content');
+            console.error(`❌ [MONGODB] API error response: ${message}`);
+            throw new Error(message);
         }
         
         const result = await response.json();

@@ -198,15 +198,8 @@ async function joinCourse(courseId, courseCode = '') {
         console.log(`📡 [MONGODB] API response status: ${response.status} ${response.statusText}`);
         
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`❌ [MONGODB] API error response: ${response.status} ${errorText}`);
-            let message = `Failed to join course: ${response.status}`;
-            try {
-                const errorData = JSON.parse(errorText);
-                message = errorData.message || message;
-            } catch (parseError) {
-                message = errorText || message;
-            }
+            const message = await extractErrorMessage(response, 'Failed to join course');
+            console.error(`❌ [MONGODB] API error response: ${message}`);
             return { success: false, message };
         }
         

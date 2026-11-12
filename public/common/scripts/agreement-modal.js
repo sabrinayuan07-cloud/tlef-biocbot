@@ -351,9 +351,9 @@ class AgreementModal {
             console.log('🔍 [AGREEMENT] Response status:', response.status);
             
             if (!response.ok) {
-                const errorText = await response.text();
-                console.error('🔍 [AGREEMENT] Error response:', errorText);
-                throw new Error(`HTTP error! status: ${response.status}`);
+                const message = await extractErrorMessage(response, 'Failed to load agreement status');
+                console.error('🔍 [AGREEMENT] Error response:', message);
+                throw new Error(message);
             }
 
             const result = await response.json();

@@ -185,9 +185,9 @@ async function saveObjectives(week) {
         });
         
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Error response:', errorText);
-            throw new Error(`Failed to save learning objectives: ${response.status} ${errorText}`);
+            const message = await extractErrorMessage(response, 'Failed to save learning objectives');
+            console.error('Error response:', message);
+            throw new Error(message);
         }
         
         const result = await response.json();

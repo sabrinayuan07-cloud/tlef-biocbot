@@ -99,8 +99,8 @@ async function fetchCourseId() {
                 console.log(`🔍 [GET_COURSE_ID] No courses found in response`);
             }
         } else {
-            const errorText = await response.text();
-            console.error(`🔍 [GET_COURSE_ID] API error: ${response.status} - ${errorText}`);
+            const message = await extractErrorMessage(response, 'Course lookup failed');
+            console.error(`🔍 [GET_COURSE_ID] API error: ${message}`);
         }
     } catch (error) {
         console.error('Error fetching instructor courses:', error);

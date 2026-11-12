@@ -162,8 +162,8 @@ async function fetchCourseId() {
                 console.log(`🔍 [GET_COURSE_ID] No courses found in response`);
             }
         } else {
-            const errorText = await response.text();
-            console.error(`🔍 [GET_COURSE_ID] API error: ${response.status} - ${errorText}`);
+            const message = await extractErrorMessage(response, 'Course lookup failed');
+            console.error(`🔍 [GET_COURSE_ID] API error: ${message}`);
         }
     } catch (error) {
         console.error('Error fetching instructor courses:', error);
@@ -640,8 +640,8 @@ async function loadFlaggedContent() {
                     const result = await response.json();
                     console.log('🔍 [FLAGGED] Manual API response data:', result);
                 } else {
-                    const errorText = await response.text();
-                    console.log('🔍 [FLAGGED] Manual API error:', errorText);
+                    const message = await extractErrorMessage(response, 'Manual flag check failed');
+                    console.log('🔍 [FLAGGED] Manual API error:', message);
                 }
             } catch (error) {
                 console.log('🔍 [FLAGGED] Manual API error:', error);
