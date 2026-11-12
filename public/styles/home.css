@@ -58,31 +58,65 @@
   font-weight: 500;
 }
 
+/* Two label+select fields laid out as a 2-column grid: both labels share
+   row 1, both dropdowns share row 2, so the dropdowns line up with each
+   other regardless of the labels' different lengths. Each field keeps its
+   own wrapper div (display:contents - a no-op for layout, box removed but
+   children still participate in the grid) so home.js's
+   joinCourseSelectDropdown.closest('div') still finds just that field when
+   hiding "Join Another Course" for TA users, not the whole pair. */
 .course-select-pair {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 30px;
+  row-gap: 8px;
   align-items: center;
-  gap: 30px;
-  flex-wrap: wrap;
 }
 
-.course-select-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-  flex: 1 1 320px;
+.course-select-pair .course-select-row {
+  display: contents;
 }
 
-.course-select-row label {
-  display: inline;
+.course-select-pair .course-select-row label {
+  grid-row: 1;
   margin-bottom: 0;
   white-space: nowrap;
 }
 
-.course-select-row .course-select-dropdown {
-  width: auto;
-  flex: 1;
-  min-width: 220px;
+.course-select-pair .course-select-row .course-select-dropdown {
+  grid-row: 2;
+  width: 100%;
+}
+
+.course-select-pair .course-select-row:nth-of-type(1) label,
+.course-select-pair .course-select-row:nth-of-type(1) .course-select-dropdown {
+  grid-column: 1;
+}
+
+.course-select-pair .course-select-row:nth-of-type(2) label,
+.course-select-pair .course-select-row:nth-of-type(2) .course-select-dropdown {
+  grid-column: 2;
+}
+
+@media (max-width: 600px) {
+  /* Revert to simple stacked fields - the 2-column grid above doesn't
+     degrade cleanly to one column since both fields share grid rows 1/2. */
+  .course-select-pair {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .course-select-pair .course-select-row {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .course-select-pair .course-select-row .course-select-dropdown {
+    width: 100%;
+  }
 }
 
 .course-selector .form-label-text {
