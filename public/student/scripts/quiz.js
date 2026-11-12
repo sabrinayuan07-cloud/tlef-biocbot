@@ -594,15 +594,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     /**
      * Add a message to the quiz chat display
      */
-    function addQuizChatMessage(text, role) {
+    function addQuizChatMessage(text, role, animate = false) {
         const msgDiv = document.createElement('div');
         msgDiv.className = `quiz-chat-msg ${role}`;
-        msgDiv.textContent = text;
         quizChatMessages.appendChild(msgDiv);
         if (role === 'bot' && typeof window.applyLLMTagClassesToElement === 'function') {
             window.applyLLMTagClassesToElement(msgDiv);
         }
         quizChatMessages.scrollTop = quizChatMessages.scrollHeight;
+
+        // Reveal a freshly-arrived bot answer word-by-word instead of all at once.
+        if (animate && role === 'bot' && typeof window.typeOutText === 'function') {
+            window.typeOutText(msgDiv, text, {
+                onStep: () => { quizChatMessages.scrollTop = quizChatMessages.scrollHeight; }
+            });
+        } else {
+            msgDiv.textContent = text;
+        }
     }
 
     /**
@@ -657,7 +665,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     await window.applyLLMBodyTag();
                 }
                 const botMessage = data.message;
-                addQuizChatMessage(botMessage, data.source === 'system' ? 'system' : 'bot');
+                const isSystemMessage = data.source === 'system';
+                addQuizChatMessage(botMessage, isSystemMessage ? 'system' : 'bot', !isSystemMessage);
                 quizChatHistory.push({ role: 'assistant', content: botMessage });
             } else {
                 addQuizChatMessage('Sorry, I had trouble processing that. Please try again.', 'system');
