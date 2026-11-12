@@ -17,6 +17,8 @@ let currentRosterMatch = null;
 // LMS grades keyed by BiocBot user id so a student card can find its own row.
 let gradesByLocalUserId = new Map();
 const dirtyEnrollment = new Map(); // studentId -> boolean (enrolled)
+let currentStudentCourseId = null;
+let studentSearchQuery = '';
 
 document.addEventListener('DOMContentLoaded', async function() {
     await waitForAuth();
@@ -249,6 +251,37 @@ function downloadPseudonymMapping() {
 function initializeStudentHub() {
     // Course selection is now handled by the home page
     // No need for dropdown change handler
+    const studentSearchInput = document.getElementById('student-search-input');
+    const studentSearchClear = document.getElementById('student-search-clear');
+    const studentSearchForm = studentSearchInput ? studentSearchInput.closest('form') : null;
+    if (studentSearchForm) {
+        studentSearchForm.addEventListener('submit', (event) => event.preventDefault());
+    }
+    if (studentSearchInput) {
+        studentSearchInput.addEventListener('input', () => {
+            studentSearchQuery = studentSearchInput.value;
+            if (studentSearchClear) {
+                studentSearchClear.hidden = studentSearchQuery.length === 0;
+            }
+            if (currentStudentCourseId) {
+                renderStudents(currentStudentCourseId);
+            }
+        });
+    }
+    if (studentSearchClear) {
+        studentSearchClear.addEventListener('click', () => {
+            studentSearchQuery = '';
+            if (studentSearchInput) {
+                studentSearchInput.value = '';
+                studentSearchInput.focus();
+            }
+            studentSearchClear.hidden = true;
+            if (currentStudentCourseId) {
+                renderStudents(currentStudentCourseId);
+            }
+        });
+    }
+
     const surveyStatusFilter = document.getElementById('survey-status-filter');
     if (surveyStatusFilter) {
         addKeyboardPickerActivation(surveyStatusFilter);
@@ -384,6 +417,7 @@ async function loadInstructorCourses() {
 
 async function loadStudents(courseId) {
     try {
+        currentStudentCourseId = courseId;
         await loadAnonymizeStudentsSetting(courseId);
 
         // 1. Fetch Students
@@ -1214,7 +1248,17 @@ function renderStudents(courseId) {
         return;
     }
 
-    container.innerHTML = currentStudents.map(s => {
+    const query = studentSearchQuery.trim().toLowerCase();
+    const studentsToRender = query
+        ? currentStudents.filter(s => (s.displayName || s.username || s.userId || '').toLowerCase().includes(query))
+        : currentStudents;
+
+    if (studentsToRender.length === 0) {
+        container.innerHTML = '<p>No students match your search.</p>';
+        return;
+    }
+
+    container.innerHTML = studentsToRender.map(s => {
         const enrolled = dirtyEnrollment.has(s.userId) ? dirtyEnrollment.get(s.userId) : !!s.enrolled;
         const isTA = !!s.isTA;
         const hasPendingTAInvite = !isTA && s.role === 'ta' && Array.isArray(s.invitedCourses) && s.invitedCourses.includes(courseId);
