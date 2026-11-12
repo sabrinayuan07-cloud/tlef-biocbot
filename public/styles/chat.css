@@ -372,6 +372,37 @@
     white-space: nowrap;
 }
 
+/* Centered system-style notice (e.g. tutor/protégé mode switch) - no avatar,
+   no bubble background, so it reads as a UI event rather than something the
+   bot "said" via the normal bot-message bubble. */
+.system-notice {
+    justify-content: center;
+    padding: 0.5rem 1rem;
+}
+
+.system-notice .message-avatar {
+    display: none;
+}
+
+.system-notice .message-content {
+    background-color: transparent;
+    max-width: 90%;
+    padding: 4px 16px;
+    text-align: center;
+}
+
+.system-notice .message-content p {
+    margin: 0;
+    color: var(--text-secondary, #666);
+    font-size: 13px;
+    font-style: italic;
+}
+
+.system-notice .message-content .timestamp {
+    display: block;
+    margin-top: 2px;
+}
+
 .user-message .message-content .timestamp {
     color: rgba(255, 255, 255, 0.7);
 }
