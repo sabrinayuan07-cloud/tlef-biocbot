@@ -989,6 +989,10 @@ function createPreviewMessage(messageData) {
         if (messageData.messageType === 'mode-result') {
             messageDiv.classList.add('standard-mode-result');
             contentDiv.classList.add('standard-mode-content');
+        } else if (messageData.messageType === 'mode-toggle-result') {
+            // Matches the live/restored centered system-notice styling, not a bot bubble
+            messageDiv.classList.remove('bot-message');
+            messageDiv.classList.add('system-notice');
         }
     } else if (messageData.messageType === 'practice-test-question' && messageData.questionData) {
         // Clear default content

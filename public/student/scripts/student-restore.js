@@ -76,13 +76,11 @@ function renderRestoredModeToggleResult(messageData) {
     const chatMessages = document.getElementById('chat-messages');
     if (!chatMessages) return;
 
+    // Rendered as a centered system notice rather than a bot-message bubble,
+    // matching the live showModeToggleResult() in student-calibration.js.
     const modeMessage = document.createElement('div');
-    modeMessage.classList.add('message', 'bot-message', 'mode-toggle-result');
+    modeMessage.classList.add('message', 'bot-message', 'system-notice', 'mode-toggle-result');
     applyRestoredTimingData(modeMessage, messageData);
-
-    const avatarDiv = document.createElement('div');
-    avatarDiv.classList.add('message-avatar');
-    avatarDiv.textContent = 'B';
 
     const contentDiv = document.createElement('div');
     contentDiv.classList.add('message-content');
@@ -105,7 +103,6 @@ function renderRestoredModeToggleResult(messageData) {
         contentDiv.appendChild(timestamp);
     }
 
-    modeMessage.appendChild(avatarDiv);
     modeMessage.appendChild(contentDiv);
     chatMessages.appendChild(modeMessage);
     chatMessages.scrollTop = chatMessages.scrollHeight;

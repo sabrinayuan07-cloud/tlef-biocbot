@@ -1002,7 +1002,7 @@ test.describe('Mode toggle (Protégé / Tutor)', () => {
             c.checked = false; // protégé
             c.dispatchEvent(new Event('change', { bubbles: true }));
         });
-        await expect(page.locator('.mode-toggle-result')).toContainText('BiocBot is now in protégé mode', { timeout: 10_000 });
+        await expect(page.locator('.mode-toggle-result')).toContainText('You have now entered protégé mode', { timeout: 10_000 });
         await expect.poll(() => page.evaluate(() => localStorage.getItem('studentMode'))).toBe('protege');
 
         await page.evaluate(() => {
@@ -1010,7 +1010,7 @@ test.describe('Mode toggle (Protégé / Tutor)', () => {
             c.checked = true; // tutor
             c.dispatchEvent(new Event('change', { bubbles: true }));
         });
-        await expect(page.locator('.mode-toggle-result').last()).toContainText('BiocBot is now in tutor mode');
+        await expect(page.locator('.mode-toggle-result').last()).toContainText('You have now entered tutor mode');
         await expect.poll(() => page.evaluate(() => localStorage.getItem('studentMode'))).toBe('tutor');
     });
 });
