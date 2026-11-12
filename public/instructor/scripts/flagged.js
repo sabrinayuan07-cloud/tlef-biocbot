@@ -1514,13 +1514,12 @@ function showSuccessMessage(message) {
 }
 
 /**
- * Show error message (simple implementation)
+ * Show error message
  * @param {string} message - Error message
  */
 function showErrorMessage(message) {
-    // TODO: Implement proper toast notification system
     console.error('Error:', message);
-    alert(message); // Temporary simple alert
+    showNotification(message, 'error');
 }
 
 

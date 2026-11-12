@@ -549,13 +549,7 @@ test.describe('flagged.js — instructor render & moderation', () => {
         await expect(card).toBeVisible();
     });
 
-    test('approve flow error path: failing response re-enables the buttons and shows an alert', async ({ page }) => {
-        let alertSeen = false;
-        page.on('dialog', (dialog) => {
-            alertSeen = true;
-            dialog.dismiss();
-        });
-
+    test('approve flow error path: failing response re-enables the buttons and shows an error toast', async ({ page }) => {
         await installFlaggedRoutes(page, {
             flags: [buildFlag({ flagId: 'flag_err' })],
             responseStatus: 500,
@@ -572,7 +566,7 @@ test.describe('flagged.js — instructor render & moderation', () => {
         // Send button should return to its normal state after the failure.
         await expect(card.locator('.send-approve-btn')).toHaveText('Send & Approve', { timeout: 10_000 });
         await expect(card.locator('.send-approve-btn')).toBeEnabled();
-        expect(alertSeen).toBe(true);
+        await expect(page.locator('.notification.notification-error')).toBeVisible({ timeout: 10_000 });
     });
 
     test('dismiss flow: status payload uses dismissed, card disappears from pending filter', async ({ page }) => {
@@ -592,9 +586,6 @@ test.describe('flagged.js — instructor render & moderation', () => {
     });
 
     test('dismiss flow error path: re-enables buttons on API failure', async ({ page }) => {
-        let alertSeen = false;
-        page.on('dialog', (dialog) => { alertSeen = true; dialog.dismiss(); });
-
         await installFlaggedRoutes(page, {
             flags: [buildFlag({ flagId: 'flag_dismiss_err' })],
             statusUpdateStatus: 500,
@@ -606,7 +597,7 @@ test.describe('flagged.js — instructor render & moderation', () => {
         await card.locator('.dismiss-btn').click();
 
         await expect(card.locator('.dismiss-btn')).toBeEnabled({ timeout: 10_000 });
-        expect(alertSeen).toBe(true);
+        await expect(page.locator('.notification.notification-error')).toBeVisible({ timeout: 10_000 });
     });
 
     test('refresh button rebuilds the list and updates label states', async ({ page }) => {
@@ -732,10 +723,7 @@ test.describe('flagged.js — mental health flags', () => {
         expect(captured.mhActions[0]).toMatchObject({ action: 'dismiss' });
     });
 
-    test('mh action error path surfaces the alert via showErrorMessage', async ({ page }) => {
-        let alertSeen = false;
-        page.on('dialog', (dialog) => { alertSeen = true; dialog.dismiss(); });
-
+    test('mh action error path surfaces an error toast via showErrorMessage', async ({ page }) => {
         await installFlaggedRoutes(page, {
             mhFlags: [buildMHFlag({ flagId: 'mhf_action_err' })],
             mhActionStatus: 500,
@@ -746,7 +734,7 @@ test.describe('flagged.js — mental health flags', () => {
         await expect(card).toBeVisible({ timeout: 15_000 });
         await card.locator('.mh-escalate-btn').click();
 
-        await expect.poll(() => alertSeen).toBe(true);
+        await expect(page.locator('.notification.notification-error')).toBeVisible({ timeout: 10_000 });
     });
 
     test('admin defaults to the escalated filter on first load and exposes resolve/disregard controls', async ({ page }) => {
