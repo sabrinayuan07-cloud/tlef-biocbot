@@ -18,17 +18,10 @@
 
 /* Course Selection Styles */
 .course-selection-container {
-  box-sizing: border-box;
-  /* Matches the expanded (Change Course) panel's natural height so the box
-     doesn't visibly resize when toggling between the two views. */
-  min-height: 167px;
   padding: 20px;
   background-color: var(--bb-ground);
   border-radius: 8px;
   border: 1px solid var(--bb-ink-16);
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
 }
 
 .current-course-display {
@@ -65,16 +58,16 @@
   font-weight: 500;
 }
 
-/* Two label+select fields laid out as a 2-column grid: both labels share
-   row 1, both dropdowns share row 2, so the dropdowns line up with each
-   other regardless of the labels' different lengths. Each field keeps its
-   own wrapper div (display:contents - a no-op for layout, box removed but
-   children still participate in the grid) so home.js's
+/* Two label+select fields plus the Cancel/Join actions, laid out as a
+   3-column grid: both labels share row 1, both dropdowns and the actions
+   share row 2 (Cancel ends up to the right of "Join Another Course"). Each
+   field keeps its own wrapper div (display:contents - a no-op for layout,
+   box removed but children still participate in the grid) so home.js's
    joinCourseSelectDropdown.closest('div') still finds just that field when
    hiding "Join Another Course" for TA users, not the whole pair. */
 .course-select-pair {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr 1fr auto;
   column-gap: 30px;
   row-gap: 8px;
   align-items: center;
@@ -103,6 +96,11 @@
 .course-select-pair .course-select-row:nth-of-type(2) label,
 .course-select-pair .course-select-row:nth-of-type(2) .course-select-dropdown {
   grid-column: 2;
+}
+
+.course-select-pair .course-selector-actions {
+  grid-column: 3;
+  grid-row: 2;
 }
 
 @media (max-width: 600px) {
