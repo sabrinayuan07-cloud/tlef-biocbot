@@ -9,8 +9,20 @@
  */
 
 const { test, expect } = require('./fixtures/monocart');
+const fs = require('fs');
+const path = require('path');
 
 const HARNESS_PATH = '/documents-css-coverage-harness';
+
+// /instructor/* static assets (including components.css) sit behind
+// authMiddleware.requireInstructorOrTA server-side, which this harness's
+// unauthenticated page.goto() can't pass - a <link> to it would silently
+// 302 to /login and never apply. Inlining the real file's content as a
+// <style> tag exercises the same rules without needing the guarded route.
+const componentsCss = fs.readFileSync(
+    path.join(__dirname, '../../public/instructor/styles/components.css'),
+    'utf8'
+);
 
 function documentsCssHarness() {
     return `<!doctype html>
@@ -21,6 +33,7 @@ function documentsCssHarness() {
     <title>Documents CSS Coverage Harness</title>
     <link rel="stylesheet" href="/styles/style.css">
     <link rel="stylesheet" href="/styles/documents.css">
+    <style>${componentsCss}</style>
 </head>
 <body>
     <div class="app-container">

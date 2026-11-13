@@ -763,35 +763,9 @@
     margin-bottom: 16px;
 }
 
-/* Button Styles */
-.btn-primary, .btn-secondary {
-    padding: 10px 20px;
-    border-radius: var(--bb-radius);
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    border: none;
-}
-
-.btn-primary {
-    background-color: var(--primary-color);
-    color: white;
-}
-
-.btn-primary:hover {
-    background-color: var(--accent-color);
-}
-
-.btn-secondary {
-    background-color: transparent;
-    color: var(--text-color);
-    border: 1px solid var(--border-color);
-}
-
-.btn-secondary:hover {
-    background-color: var(--border-color);
-}
+/* .btn-primary/.btn-secondary: shared definition now lives in
+   public/instructor/styles/components.css, loaded on this page too -
+   this page used to carry its own copy with different padding/colors. */
 
 /* Mode Questions Modal Styles */
 .mode-info {
@@ -1145,19 +1119,9 @@
     margin-top: 18px;
 }
 
-.save-btn {
-    background-color: #4CAF50;
-    color: white;
-    border: none;
-    border-radius: var(--bb-radius);
-    padding: 8px 16px;
-    font-size: 14px;
-    cursor: pointer;
-}
-
-.save-btn:hover {
-    background-color: #45a049;
-}
+/* .save-btn: shared definition now lives in components.css, loaded on
+   this page too - this page used to carry its own copy with a
+   different color/padding. */
 
 /* Content Type Selection */
 .content-type-options {
@@ -1725,42 +1689,9 @@
     color: #495057;
 }
 
-.question-action-buttons {
-    display: flex;
-    gap: 0.5rem;
-    margin-left: auto;
-}
-
-.edit-question-btn,
-.delete-question-btn {
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 14px;
-    transition: background-color 0.2s ease;
-}
-
-.edit-question-btn {
-    background: #0d6efd;
-}
-
-.edit-question-btn:hover {
-    background: #0b5ed7;
-}
-
-.delete-question-btn {
-    background: #dc3545;
-}
-
-.delete-question-btn:hover {
-    background: #c82333;
-}
+/* .question-action-buttons/.edit-question-btn/.delete-question-btn:
+   shared definition now lives in components.css, loaded on this page
+   too - this page used to carry its own near-identical copy. */
 
 .question-content {
     padding: 1rem;
@@ -1835,44 +1766,10 @@
     flex-wrap: wrap;
 }
 
-.add-question-btn, .generate-ai-btn, .auto-link-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1rem;
-    border: none;
-    border-radius: var(--bb-radius);
-    cursor: pointer;
-    font-weight: 500;
-    transition: all 0.2s ease;
-}
-
-.add-question-btn {
-    background-color: #f8f9fa;
-    border: 1px dashed #e0e0e0;
-    color: #666;
-    display: flex;
-    visibility: visible;
-    opacity: 1;
-    width: 100%;
-    justify-content: center;
-}
-
-.auto-link-btn {
-    background: #eff6ff;
-    border: 1px solid #bfdbfe;
-    color: #1d4ed8;
-}
-
-.auto-link-btn:hover {
-    background: #dbeafe;
-}
-
-.auto-link-btn.is-loading,
-.auto-link-btn:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-}
+/* .add-question-btn/.generate-ai-btn/.auto-link-btn: shared definition
+   now lives in components.css, loaded on this page too - this page
+   used to carry its own drifted copy (flat purple .generate-ai-btn,
+   raw hex colors instead of --bb-* tokens). */
 
 .learning-objective-note {
     margin: 0.5rem 0 0;
@@ -1890,27 +1787,6 @@
     background: #f8f9fa;
     color: #333;
     line-height: 1.5;
-}
-
-.add-question-btn:hover {
-    background-color: #f0f0f0;
-    border-color: #999;
-    color: #333;
-}
-
-.generate-ai-btn {
-    background: #6f42c1;
-    color: white;
-}
-
-.generate-ai-btn:hover:not(:disabled) {
-    background: #5a2d91;
-}
-
-.generate-ai-btn:disabled {
-    background: #6c757d;
-    cursor: not-allowed;
-    opacity: 0.6;
 }
 
 .btn-icon {

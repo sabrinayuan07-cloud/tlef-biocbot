@@ -101,3 +101,125 @@
   border-radius: var(--bb-radius);
   padding: 20px;
 }
+
+/* ─── Question management buttons ─────────────────────────────────────────
+   Shared by documents.html (Course Upload) and onboarding.html, which each
+   used to carry their own copy of this question-editor button set with
+   drifted colors (documents.css still had a flat purple .generate-ai-btn
+   and raw hex/px values; onboarding.css's copy was the one already
+   migrated to --bb-* tokens, so that's the version kept here). */
+.add-question-btn,
+.generate-ai-btn,
+.auto-link-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: var(--bb-radius);
+  cursor: pointer;
+  font-weight: 500;
+  font-size: var(--bb-text-card-body);
+  transition: all 0.2s ease;
+}
+
+.add-question-btn {
+  background: var(--bb-ground);
+  border: 1px dashed var(--bb-ink-16);
+  color: var(--bb-ink-70);
+  display: flex;
+  visibility: visible;
+  opacity: 1;
+  width: 100%;
+  justify-content: center;
+}
+
+.add-question-btn:hover {
+  background-color: var(--bb-ground-alt);
+  border-color: var(--bb-ink-20);
+  color: var(--bb-ink);
+}
+
+.auto-link-btn {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1d4ed8;
+}
+
+.auto-link-btn:hover {
+  background: #dbeafe;
+}
+
+.auto-link-btn.is-loading,
+.auto-link-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.generate-ai-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.generate-ai-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+}
+
+.generate-ai-btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.question-action-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-left: auto;
+}
+
+.edit-question-btn,
+.delete-question-btn {
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: var(--bb-text-card-kicker);
+  transition: background-color 0.2s ease;
+}
+
+.edit-question-btn {
+  background: #0d6efd;
+}
+
+.edit-question-btn:hover {
+  background: #0b5ed7;
+}
+
+.delete-question-btn {
+  background: #dc3545;
+}
+
+.delete-question-btn:hover {
+  background: #c82333;
+}
+
+.save-btn {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--bb-radius);
+  font-size: var(--bb-text-card-body);
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.save-btn:hover {
+  background: #218838;
+}

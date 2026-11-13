@@ -8,8 +8,20 @@
  */
 
 const { test, expect } = require('./fixtures/monocart');
+const fs = require('fs');
+const path = require('path');
 
 const HARNESS_PATH = '/documents-css-coverage-branches-harness';
+
+// /instructor/* static assets (including components.css) sit behind
+// authMiddleware.requireInstructorOrTA server-side, which this harness's
+// unauthenticated page.goto() can't pass - a <link> to it would silently
+// 302 to /login and never apply. Inlining the real file's content as a
+// <style> tag exercises the same rules without needing the guarded route.
+const componentsCss = fs.readFileSync(
+    path.join(__dirname, '../../public/instructor/styles/components.css'),
+    'utf8'
+);
 
 function branchHarness() {
     return `<!doctype html>
@@ -20,6 +32,7 @@ function branchHarness() {
     <title>Documents CSS Branch Coverage Harness</title>
     <link rel="stylesheet" href="/styles/style.css">
     <link rel="stylesheet" href="/styles/documents.css">
+    <style>${componentsCss}</style>
 </head>
 <body>
     <main class="main-content">
@@ -424,11 +437,11 @@ test.describe('documents.css branch harness coverage', () => {
         await expect(page.locator('#branch-text')).toHaveCSS('border-color', 'rgb(74, 111, 165)');
 
         await page.locator('#add-question-btn').hover();
-        await expect(page.locator('#add-question-btn')).toHaveCSS('color', 'rgb(51, 51, 51)');
+        await expect(page.locator('#add-question-btn')).toHaveCSS('color', 'rgb(29, 31, 32)');
         await page.locator('#auto-link-btn').hover();
         await expect(page.locator('#auto-link-btn')).toHaveCSS('background-color', 'rgb(219, 234, 254)');
         await page.locator('#generate-ai-btn').hover();
-        await expect(page.locator('#generate-ai-btn')).toHaveCSS('background-color', 'rgb(90, 45, 145)');
+        await expect(page.locator('#generate-ai-btn')).toHaveCSS('background-image', 'linear-gradient(135deg, rgb(90, 111, 216) 0%, rgb(106, 65, 144) 100%)');
         await expect(page.locator('.question-type-badge.multiple-choice')).toHaveCSS('color', 'rgb(0, 64, 133)');
         await expect(page.locator('.question-type-badge.short-answer')).toHaveCSS('color', 'rgb(133, 100, 4)');
         await page.locator('#edit-question-btn').hover();
@@ -441,9 +454,9 @@ test.describe('documents.css branch harness coverage', () => {
         await expect(page.locator('#radio-option')).toHaveCSS('background-color', 'rgb(248, 249, 250)');
 
         await page.locator('#secondary-btn').hover();
-        await expect(page.locator('#secondary-btn')).toHaveCSS('background-color', 'rgb(225, 229, 235)');
+        await expect(page.locator('#secondary-btn')).toHaveCSS('background-color', 'rgb(90, 98, 104)');
         await page.locator('#primary-btn').hover();
-        await expect(page.locator('#primary-btn')).toHaveCSS('background-color', 'rgb(61, 90, 128)');
+        await expect(page.locator('#primary-btn')).toHaveCSS('background-color', 'rgb(69, 160, 73)');
     });
 
     test('applies remaining mobile branch layout rules', async ({ page }) => {
