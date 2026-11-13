@@ -3154,8 +3154,7 @@ function ensureTopicUnitAssignmentModal() {
             </div>
             <div class="topic-unit-modal-body">
                 <p class="topic-unit-modal-topic" id="topic-unit-modal-topic"></p>
-                <label for="topic-unit-select">Unit</label>
-                <select id="topic-unit-select" class="topic-unit-select"></select>
+                <select id="topic-unit-select" class="topic-unit-select" aria-label="Unit"></select>
             </div>
             <div class="topic-unit-modal-actions">
                 <button type="button" class="approved-topic-add-btn secondary" id="topic-unit-cancel-btn">Cancel</button>
