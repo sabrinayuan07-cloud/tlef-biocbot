@@ -178,8 +178,7 @@
 }
 
 .course-selector-actions .action-btn {
-  flex: 1;
-  min-width: 120px;
+  flex: 0 0 auto;
 }
 
 .home-container {
