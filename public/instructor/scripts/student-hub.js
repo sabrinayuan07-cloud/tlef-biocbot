@@ -456,19 +456,13 @@ async function loadStudents(courseId) {
             // Continue with just students if TA load fails
         }
 
-        // 3. Merge lists
-        // Mark TAs with isTA property
+        // 3. Student Hub shows students only - TAs have their own TA Hub page.
+        // Still track currentTAs (used elsewhere to detect existing/invited
+        // TAs) and filter them out of the roster so a TA assigned to this
+        // course doesn't also show up as a duplicate "student" card.
         currentTAs = courseTAs.map(ta => ({ ...ta, isTA: true }));
-        
-        // Filter out students who are also TAs (to avoid duplicates if backend returns them in both)
-        // or if we want to show them as TAs.
         const taIds = new Set(currentTAs.map(ta => ta.userId));
-        const uniqueStudents = students.filter(s => !taIds.has(s.userId));
-        
-        // Combine: TAs first or mixed? User said "keep the student box from the TA in there".
-        // Let's put TAs at the top for visibility, or sort alphabetically.
-        // Let's just combine them.
-        currentStudents = [...currentTAs, ...uniqueStudents];
+        currentStudents = students.filter(s => !taIds.has(s.userId));
         
         renderStudents(courseId);
         await loadLmsGrades(courseId);
@@ -1260,8 +1254,7 @@ function renderStudents(courseId) {
 
     container.innerHTML = studentsToRender.map(s => {
         const enrolled = dirtyEnrollment.has(s.userId) ? dirtyEnrollment.get(s.userId) : !!s.enrolled;
-        const isTA = !!s.isTA;
-        const hasPendingTAInvite = !isTA && s.role === 'ta' && Array.isArray(s.invitedCourses) && s.invitedCourses.includes(courseId);
+        const hasPendingTAInvite = s.role === 'ta' && Array.isArray(s.invitedCourses) && s.invitedCourses.includes(courseId);
         const taInviteButtonLabel = s.role === 'ta' ? 'Invite to TA Course' : 'Promote to TA';
         const struggleTopicsSection = anonymizeStudentsEnabled ? '' : `
                     <div class="struggle-topics-section" style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px;">
@@ -1281,18 +1274,17 @@ function renderStudents(courseId) {
         `;
         
         return `
-            <div class="student-card ${isTA ? 'ta-card' : ''}" style="${isTA ? 'border-left: 4px solid #17a2b8;' : ''}">
+            <div class="student-card">
                 <div class="student-header">
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <h3 class="student-name">${escapeHTML(s.displayName || s.username || s.userId)}</h3>
-                        ${isTA ? '<span class="badge badge-info" style="background: #117a8b; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8em;">TA</span>' : ''}
                     </div>
                 </div>
                 <div class="student-info">
                     <p><strong>Username:</strong> ${escapeHTML(s.username || '—')}</p>
                     <p><strong>Email:</strong> ${escapeHTML(s.email || '—')}</p>
                     <p><strong>Last Login:</strong> ${s.lastLogin ? new Date(s.lastLogin).toLocaleString() : '—'}</p>
-                    ${isTA ? '' : renderStudentGrades(s.userId)}
+                    ${renderStudentGrades(s.userId)}
                     ${struggleTopicsSection}
                 </div>
                 <div class="student-actions">
@@ -1306,12 +1298,8 @@ function renderStudents(courseId) {
                     </label>
                     <button class="btn-small btn-secondary" id="save-${s.userId}" disabled
                             onclick="saveEnrollment('${courseId}','${s.userId}')">Save</button>
-                    
-                    ${isTA ? `
-                        <button class="btn-small btn-danger" onclick="demoteFromTA('${s.userId}', '${escapeHTML(s.displayName || s.username)}', '${courseId}')">
-                            Demote from TA
-                        </button>
-                    ` : hasPendingTAInvite ? `
+
+                    ${hasPendingTAInvite ? `
                          <button class="btn-small btn-secondary" disabled style="opacity: 0.7; cursor: default;">
                             Pending TA joining course
                         </button>
