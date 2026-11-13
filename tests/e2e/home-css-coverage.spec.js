@@ -394,7 +394,7 @@ test.describe('home.css harness coverage', () => {
             };
         });
         expect(sidebarLayout).toEqual({ leftInset: 20, rightInset: 20 });
-        await expect(page.locator('.course-selection-container')).toHaveCSS('border-radius', '8px');
+        await expect(page.locator('.course-selection-container')).toHaveCSS('border-radius', '0px');
         await expect(page.locator('.current-course-display')).toHaveCSS('display', 'flex');
         await expect(page.locator('.course-selector')).toHaveCSS('flex-direction', 'column');
         await expect(page.locator('.course-select-dropdown').first()).toHaveCSS('max-width', '470px');
@@ -446,7 +446,7 @@ test.describe('home.css harness coverage', () => {
         await page.setViewportSize({ width: 1100, height: 1200 });
         await gotoHarness(page);
 
-        await expect(page.locator('.live-struggle-table-container')).toHaveCSS('border-radius', '8px');
+        await expect(page.locator('.live-struggle-table-container')).toHaveCSS('border-radius', '0px');
         await expect(page.locator('.live-struggle-table-container .table-header')).toHaveCSS('display', 'flex');
         await expect(page.locator('.table-controls')).toHaveCSS('display', 'flex');
         await expect(page.locator('.filter-checkbox')).toHaveCSS('user-select', 'none');
@@ -459,7 +459,7 @@ test.describe('home.css harness coverage', () => {
         await page.locator('.live-struggle-table tbody tr').first().hover();
         await expect(page.locator('.live-struggle-table tbody tr').first()).toHaveCSS('background-color', 'rgb(242, 242, 243)');
 
-        await expect(page.locator('.weekly-struggle-chart-container')).toHaveCSS('border-radius', '8px');
+        await expect(page.locator('.weekly-struggle-chart-container')).toHaveCSS('border-radius', '0px');
         await expect(page.locator('.weekly-struggle-chart-container .chart-header')).toHaveCSS('display', 'flex');
         await expect(page.locator('.chart-nav-controls')).toHaveCSS('display', 'flex');
         await expect(page.locator('.chart-nav-btn').first()).toHaveCSS('opacity', '0.4');
@@ -494,7 +494,7 @@ test.describe('home.css harness coverage', () => {
         await expect(page.locator('.topic-chip-remove')).toHaveCSS('background-color', 'rgb(220, 53, 69)');
         await page.locator('.approved-topic-input').focus();
         await expect(page.locator('.approved-topic-input')).toHaveCSS('border-color', 'rgb(74, 144, 217)');
-        await expect(page.locator('.approved-topic-unit-select')).toHaveCSS('border-radius', '8px');
+        await expect(page.locator('.approved-topic-unit-select')).toHaveCSS('border-radius', '0px');
         await page.locator('.approved-topic-add-btn').first().hover();
         await expect(page.locator('.approved-topic-add-btn').first()).toHaveCSS('background-color', 'rgb(58, 123, 200)');
 
@@ -536,7 +536,7 @@ test.describe('home.css harness coverage', () => {
         await expect(page.locator('.stat-card').first()).toHaveCSS('padding', '15px');
         await expect(page.locator('.stat-card .stat-value').first()).toHaveCSS('font-size', '24px');
         await expect(page.locator('.mode-bar-item').first()).toHaveCSS('flex-direction', 'column');
-        await expect(page.locator('.mode-bar').first()).toHaveCSS('border-radius', '6px');
+        await expect(page.locator('.mode-bar').first()).toHaveCSS('border-radius', '0px');
         await expect(page.locator('.mode-count').first()).toHaveCSS('text-align', 'left');
         await expect(page.locator('.live-struggle-table-container .table-header')).toHaveCSS('flex-direction', 'column');
         await expect(page.locator('.table-controls')).toHaveCSS('justify-content', 'space-between');

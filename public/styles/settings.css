@@ -57,7 +57,7 @@
     padding: 18px;
     background-color: var(--background-light);
     border: 1px solid var(--bb-ink-16);
-    border-radius: 10px;
+    border-radius: var(--bb-radius);
     color: var(--bb-ink);
     text-decoration: none;
     transition: border-color 0.15s ease, box-shadow 0.15s ease;
@@ -65,7 +65,6 @@
 
 .settings-tile:hover {
     border-color: var(--bb-steel);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .settings-tile:focus-visible {
@@ -156,7 +155,7 @@
     width: 100%;
     padding: 10px 36px 10px 38px;
     border: 1px solid var(--border-color);
-    border-radius: 8px;
+    border-radius: var(--bb-radius);
     font-size: 14px;
     color: var(--text-primary);
     background-color: var(--background-light);
@@ -224,8 +223,7 @@
     list-style: none;
     background-color: var(--background-light);
     border: 1px solid var(--border-color);
-    border-radius: 8px;
-    box-shadow: 0 6px 20px var(--shadow-color);
+    border-radius: var(--bb-radius);
     max-height: 420px;
     overflow-y: auto;
 }
@@ -238,7 +236,7 @@
     width: 100%;
     padding: 8px 10px;
     border: none;
-    border-radius: 6px;
+    border-radius: var(--bb-radius);
     background: none;
     text-align: left;
     cursor: pointer;
@@ -316,7 +314,7 @@
     top: 57px;
     background-color: var(--background-light);
     border: 1px solid var(--bb-ink-16);
-    border-radius: 10px;
+    border-radius: var(--bb-radius);
     padding: 12px 10px;
 }
 
@@ -337,7 +335,7 @@
     display: block;
     padding: 8px 10px;
     margin-bottom: 4px;
-    border-radius: 6px;
+    border-radius: var(--bb-radius);
     font-size: 14px;
     color: var(--bb-steel);
 }
@@ -349,7 +347,7 @@
 .settings-rail-link {
     display: block;
     padding: 8px 10px;
-    border-radius: 6px;
+    border-radius: var(--bb-radius);
     font-size: 14px;
     color: var(--bb-ink);
 }
@@ -400,8 +398,7 @@
    ============================================= */
 .settings-section {
     background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    border-radius: var(--bb-radius);
     padding: 20px;
     margin-bottom: var(--bb-gap-loose);
 }
@@ -434,7 +431,7 @@
     align-items: flex-start;
     padding: 16px;
     background-color: var(--background-light);
-    border-radius: 6px;
+    border-radius: var(--bb-radius);
     border: 1px solid var(--bb-ink-16);
     margin-bottom: 20px;
 }
@@ -515,7 +512,7 @@
 /* Collapsible advanced group (native details/summary) */
 .settings-advanced {
     border: 1px solid var(--bb-ink-16);
-    border-radius: 8px;
+    border-radius: var(--bb-radius);
     background-color: var(--background-light);
     margin-top: 4px;
 }
@@ -526,7 +523,7 @@
     font-size: 15px;
     font-weight: 500;
     color: var(--bb-ink);
-    border-radius: 8px;
+    border-radius: var(--bb-radius);
 }
 
 .settings-advanced > summary:hover {
@@ -552,13 +549,12 @@
 .development-disclaimer {
     background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
     border: 2px solid #ffc107;
-    border-radius: 12px;
+    border-radius: var(--bb-radius);
     padding: 20px;
     margin-bottom: 20px;
     display: flex;
     align-items: flex-start;
     gap: 16px;
-    box-shadow: 0 4px 12px rgba(255, 193, 7, 0.2);
 }
 
 .development-disclaimer .disclaimer-icon {
@@ -594,7 +590,7 @@
 .select-input {
     padding: 8px 10px;
     border: 1px solid var(--bb-ink-16);
-    border-radius: 6px;
+    border-radius: var(--bb-radius);
     font-size: 14px;
     background-color: var(--card-bg, #fff);
     color: inherit;
@@ -660,7 +656,7 @@
     margin: 0;
     padding: 8px 12px;
     border: 1px solid var(--bb-ink-16);
-    border-radius: 6px;
+    border-radius: var(--bb-radius);
 }
 
 .llm-platform-choice legend {
@@ -714,7 +710,7 @@
     padding: 6px 10px;
     border-left: 3px solid var(--warning-color, #b7791f);
     background: rgba(183, 121, 31, 0.08);
-    border-radius: 0 4px 4px 0;
+    border-radius: var(--bb-radius);
 }
 
 /* Admin platform groups: keep the GPT and Sandbox rows visually aligned, and
@@ -735,7 +731,7 @@
     margin: 0;
     padding: 10px 12px 10px var(--bb-gap-dense);
     border: 1px solid var(--bb-ink-16);
-    border-radius: 8px;
+    border-radius: var(--bb-radius);
     background: #fff;
     cursor: pointer;
 }
@@ -790,7 +786,7 @@
     margin-top: 12px;
     padding: 10px 12px;
     border: 1px solid var(--bb-ink-16);
-    border-radius: 6px;
+    border-radius: var(--bb-radius);
     background: var(--surface-alt, #fafafa);
 }
 
@@ -870,7 +866,7 @@
 /* Newly created bucket is highlighted until the next save */
 .superchat-checklist-item.is-new {
     background-color: #e8f7ef;
-    border-radius: 6px;
+    border-radius: var(--bb-radius);
     padding: 4px 8px;
     margin: -4px -8px;
 }
@@ -893,7 +889,7 @@
     color: white;
     border: none;
     padding: 10px 20px;
-    border-radius: 6px;
+    border-radius: var(--bb-radius);
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
@@ -952,7 +948,7 @@
     bottom: 0;
     background-color: #767676;
     transition: .4s;
-    border-radius: 24px;
+    border-radius: var(--bb-radius);
 }
 
 .toggle-slider:before {
@@ -1019,7 +1015,7 @@ input.is-invalid {
     width: 100%;
     padding: 12px;
     border: 1px solid var(--bb-ink-16);
-    border-radius: 6px;
+    border-radius: var(--bb-radius);
     background-color: white;
     font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
     font-size: 13px;
@@ -1067,7 +1063,7 @@ input.is-invalid {
     gap: 0.5rem;
     padding: 0.75rem;
     border: 1px solid var(--bb-ink-16);
-    border-radius: 8px;
+    border-radius: var(--bb-radius);
     background: var(--card-bg, #fff);
 }
 
@@ -1077,7 +1073,7 @@ input.is-invalid {
     gap: 0.4rem;
     padding: 0.4rem 0.75rem;
     border: 1px solid var(--bb-ink-16);
-    border-radius: 20px;
+    border-radius: var(--bb-radius);
     cursor: pointer;
     transition: background 0.15s, border-color 0.15s;
     font-size: 0.85rem;
@@ -1175,7 +1171,7 @@ input.is-invalid {
     min-height: 56px;
     padding: 0.85rem 1rem;
     border: 1px solid var(--bb-ink-16);
-    border-radius: 10px;
+    border-radius: var(--bb-radius);
     background: white;
     cursor: pointer;
     transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
@@ -1194,7 +1190,7 @@ input.is-invalid {
 
 .transfer-unit-section {
     border: 1px solid var(--bb-ink-16);
-    border-radius: 10px;
+    border-radius: var(--bb-radius);
     padding: 1rem;
     background: #fafbfd;
 }
@@ -1267,7 +1263,7 @@ input.is-invalid {
 .transfer-unit-name {
     padding: 0.85rem 0.95rem;
     border: 1px solid var(--bb-ink-16);
-    border-radius: 10px;
+    border-radius: var(--bb-radius);
     background: white;
     font-weight: 500;
 }
@@ -1278,7 +1274,7 @@ input.is-invalid {
     align-items: center;
     min-height: 52px;
     border: 1px solid var(--bb-ink-16);
-    border-radius: 10px;
+    border-radius: var(--bb-radius);
     background: white;
 }
 
@@ -1299,7 +1295,7 @@ input.is-invalid {
     color: var(--bb-ink-70);
     text-align: center;
     border: 1px dashed var(--bb-ink-16);
-    border-radius: 10px;
+    border-radius: var(--bb-radius);
     background: white;
 }
 
@@ -1327,8 +1323,7 @@ input.is-invalid {
     width: min(100%, 560px);
     background: #fff;
     border: 1px solid var(--bb-ink-16);
-    border-radius: 16px;
-    box-shadow: 0 24px 64px rgba(15, 23, 42, 0.2);
+    border-radius: var(--bb-radius);
     overflow: hidden;
 }
 
@@ -1373,7 +1368,7 @@ input.is-invalid {
 
 .transfer-modal-note {
     padding: 0.9rem 1rem;
-    border-radius: 12px;
+    border-radius: var(--bb-radius);
     background: #f4f7fb;
     border: 1px solid #dbe5f0;
     color: var(--bb-ink);
@@ -1455,7 +1450,7 @@ input.is-invalid {
     gap: 1rem;
     padding: 1rem;
     border: 1px solid var(--bb-ink-16);
-    border-radius: 12px;
+    border-radius: var(--bb-radius);
     background: #fff;
 }
 

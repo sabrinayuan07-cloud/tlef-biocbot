@@ -20,7 +20,7 @@
 .course-selection-container {
   padding: 20px;
   background-color: var(--bb-ground);
-  border-radius: 8px;
+  border-radius: var(--bb-radius);
   border: 1px solid var(--bb-ink-16);
 }
 
@@ -71,7 +71,7 @@
   max-width: 470px;
   box-sizing: border-box;
   padding: 10px 15px;
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
   border: 1px solid var(--bb-ink-16);
   font-size: 1rem;
   background-color: white;
@@ -93,7 +93,7 @@
 .selected-course-details {
   padding: 15px;
   background-color: white;
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
   border: 1px solid var(--bb-ink-16);
 }
 
@@ -132,9 +132,8 @@
 /* Section Styles */
 .home-section {
   background: white;
-  border-radius: 12px;
+  border-radius: var(--bb-radius);
   padding: 30px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   border: 1px solid var(--bb-ink-16);
 }
 
@@ -247,7 +246,7 @@
   align-items: center;
   gap: 15px;
   padding: 15px;
-  border-radius: 8px;
+  border-radius: var(--bb-radius);
   background-color: var(--bb-ground);
   transition: background-color 0.3s ease;
 }
@@ -278,7 +277,7 @@
 /* Button Styles */
 .action-btn {
   padding: 10px 20px;
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
@@ -424,12 +423,10 @@
 /* Hover effects for interactive elements */
 .course-actions .action-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .digest-flags .action-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Flagged Content Section */
@@ -494,7 +491,7 @@
 
 .missing-item {
   padding: 15px;
-  border-radius: 8px;
+  border-radius: var(--bb-radius);
   background-color: #fff3cd;
   border: 1px solid #ffc107;
 }
@@ -584,7 +581,7 @@
 
 .disclaimer-item {
   padding: 20px;
-  border-radius: 8px;
+  border-radius: var(--bb-radius);
   background-color: var(--bb-ground);
   border-left: 3px solid #6c757d;
 }
@@ -619,7 +616,7 @@
 
 .stat-card {
   padding: 20px;
-  border-radius: 8px;
+  border-radius: var(--bb-radius);
   background-color: var(--bb-ground);
   border: 1px solid var(--bb-ink-16);
   text-align: center;
@@ -630,7 +627,6 @@
 
 .stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .stat-card .stat-label {
@@ -655,7 +651,7 @@
 
 .mode-distribution {
   padding: 20px;
-  border-radius: 8px;
+  border-radius: var(--bb-radius);
   background-color: var(--bb-ground);
   border: 1px solid var(--bb-ink-16);
 }
@@ -690,14 +686,14 @@
   flex: 1;
   height: 30px;
   background-color: var(--bb-ground-alt);
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
   overflow: hidden;
   position: relative;
 }
 
 .mode-bar-fill {
   height: 100%;
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
   transition: width 0.5s ease;
   display: flex;
   align-items: center;
@@ -801,9 +797,8 @@
   margin-top: 30px;
   padding: 20px;
   background-color: white;
-  border-radius: 8px;
+  border-radius: var(--bb-radius);
   border: 1px solid var(--bb-ink-16);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .live-struggle-table-container .table-header {
@@ -852,7 +847,7 @@
   max-height: 500px; /* ~10 rows */
   overflow-x: auto;
   overflow-y: auto;
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
   border: 1px solid #e0e0e0;
 }
 
@@ -908,7 +903,7 @@
 .state-badge {
   display: inline-block;
   padding: 4px 12px;
-  border-radius: 12px;
+  border-radius: var(--bb-radius);
   font-size: 0.85rem;
   font-weight: 600;
   text-transform: uppercase;
@@ -931,7 +926,7 @@
   color: white;
   border: none;
   padding: 8px 16px;
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
@@ -969,9 +964,8 @@
   margin-top: 30px;
   padding: 20px;
   background-color: white;
-  border-radius: 8px;
+  border-radius: var(--bb-radius);
   border: 1px solid var(--bb-ink-16);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .weekly-struggle-chart-container .chart-header {
@@ -1000,7 +994,7 @@
 .chart-nav-btn {
   padding: 6px var(--bb-gap-dense) !important;
   font-size: 0.85rem !important;
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
   min-width: auto;
 }
 
@@ -1047,12 +1041,11 @@
   max-width: min(340px, 90%);
   max-height: min(300px, 60vh);
   padding: 10px 12px;
-  border-radius: 8px;
+  border-radius: var(--bb-radius);
   background-color: rgba(33, 37, 41, 0.95);
   color: #fff;
   font-size: 0.82rem;
   line-height: 1.4;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.15s ease;
@@ -1088,7 +1081,7 @@
   flex: 0 0 auto;
   width: 10px;
   height: 10px;
-  border-radius: 2px;
+  border-radius: var(--bb-radius);
 }
 
 .chart-tooltip-footer {
@@ -1104,7 +1097,7 @@
 
 .chart-tooltip-body::-webkit-scrollbar-thumb {
   background-color: rgba(255, 255, 255, 0.35);
-  border-radius: 3px;
+  border-radius: var(--bb-radius);
 }
 
 .chart-legend-note {
@@ -1276,7 +1269,7 @@
     background-color: var(--bb-ink);
     color: #fff;
     padding: 8px 12px;
-    border-radius: 6px;
+    border-radius: var(--bb-radius);
     font-size: 0.85rem;
     white-space: normal;
     min-width: 200px;
@@ -1287,7 +1280,6 @@
     transition: opacity 0.2s, visibility 0.2s;
     z-index: 1000;
     pointer-events: none;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     font-weight: normal;
     line-height: 1.4;
 }
@@ -1342,7 +1334,6 @@
 
 .approved-topic-chip:hover {
     background: #dceeff;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
 }
 
 .approved-topic-chip.editing {
@@ -1432,7 +1423,7 @@
     box-sizing: border-box;
     padding: 8px var(--bb-gap-dense);
     border: 1px solid #d0d5dd;
-    border-radius: 8px;
+    border-radius: var(--bb-radius);
     font-size: 0.9em;
     font-family: inherit;
     outline: none;
@@ -1446,7 +1437,7 @@
     box-sizing: border-box;
     padding: 8px 12px;
     border: 1px solid #d0d5dd;
-    border-radius: 8px;
+    border-radius: var(--bb-radius);
     background: #fff;
     font-size: 0.9em;
     font-family: inherit;
@@ -1459,7 +1450,7 @@
 
 .approved-topic-add-btn {
     padding: 8px 16px;
-    border-radius: 8px;
+    border-radius: var(--bb-radius);
     border: 1px solid #2f6fb3;
     background: #2f6fb3;
     color: #fff;
@@ -1497,7 +1488,6 @@
 .clickable-topic-card:hover,
 .clickable-topic-card:focus {
     transform: translateY(-2px);
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.12) !important;
     outline: none;
 }
 
@@ -1523,8 +1513,7 @@
 .topic-unit-modal-card {
     width: min(440px, 100%);
     background: #fff;
-    border-radius: 16px;
-    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.24);
+    border-radius: var(--bb-radius);
     overflow: hidden;
 }
 

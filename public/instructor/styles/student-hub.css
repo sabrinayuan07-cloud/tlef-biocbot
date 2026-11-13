@@ -57,7 +57,7 @@
     margin: 12px 0 14px;
     padding: 10px 14px;
     border: 1px solid #e2e8f0;
-    border-radius: 8px;
+    border-radius: var(--bb-radius);
     background: var(--bb-ground);
 }
 
@@ -90,7 +90,7 @@
     margin: 0 0 16px;
     padding: 10px 14px;
     border: 1px solid #fbd7a5;
-    border-radius: 8px;
+    border-radius: var(--bb-radius);
     background: #fffaf2;
     color: #5b4a2e;
     font-size: var(--bb-text-card-kicker);
@@ -168,7 +168,7 @@
     max-width: 100%;
     padding: 3px 8px;
     border: 1px solid #e2e8f0;
-    border-radius: 6px;
+    border-radius: var(--bb-radius);
     background: var(--bb-white);
     font-size: var(--bb-text-card-kicker);
 }
@@ -239,7 +239,7 @@
 .survey-stat {
     padding: var(--bb-gap-dense) 16px;
     border: 1px solid var(--bb-ink-16);
-    border-radius: 8px;
+    border-radius: var(--bb-radius);
     background: var(--bb-white);
 }
 
@@ -259,7 +259,7 @@
 .survey-responses-status {
     padding: var(--bb-gap-dense) 16px;
     border: 1px solid var(--bb-ink-16);
-    border-radius: 8px;
+    border-radius: var(--bb-radius);
     background: var(--bb-white);
     color: #5f666d;
 }
@@ -454,9 +454,8 @@
     flex-direction: column;
     overflow: hidden;
     border: 1px solid rgba(255, 255, 255, 0.7);
-    border-radius: 16px;
+    border-radius: var(--bb-radius);
     background: var(--bb-white);
-    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.3);
 }
 
 .pseudonym-modal-header {
@@ -542,7 +541,7 @@
 .pseudonym-file-label {
     min-height: 40px;
     padding: 9px 14px;
-    border-radius: 6px;
+    border-radius: var(--bb-radius);
     font-size: var(--bb-text-card-body);
 }
 
@@ -555,7 +554,7 @@
 .pseudonym-status {
     margin: 20px 0 14px;
     padding: 12px 14px;
-    border-radius: 8px;
+    border-radius: var(--bb-radius);
     background: var(--bb-ground);
     color: #475569;
 }
@@ -581,7 +580,7 @@
     overflow-x: auto;
     overflow-y: auto;
     border: 1px solid #e2e8f0;
-    border-radius: 9px;
+    border-radius: var(--bb-radius);
 }
 
 .pseudonym-table {
@@ -648,7 +647,7 @@ body.pseudonym-modal-open {
         height: 100%;
         max-height: none;
         border: 0;
-        border-radius: 0;
+        border-radius: var(--bb-radius);
     }
 
     .pseudonym-modal-header,

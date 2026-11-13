@@ -10,7 +10,7 @@
   width: 100%;
   height: 8px;
   background-color: var(--bb-ground-alt);
-  border-radius: 4px;
+  border-radius: var(--bb-radius);
   overflow: hidden;
   margin-bottom: 1rem;
 }
@@ -33,7 +33,7 @@
   color: var(--bb-ink-70);
   position: relative;
   padding: 0.5rem 1rem;
-  border-radius: 20px;
+  border-radius: var(--bb-radius);
   transition: all 0.3s ease;
 }
 
@@ -62,9 +62,8 @@
 
 .step-content {
   background: white;
-  border-radius: 12px;
+  border-radius: var(--bb-radius);
   padding: 2rem;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 /* Welcome Step */
@@ -220,7 +219,7 @@
 .form-group select {
   padding: 0.75rem;
   border: 2px solid var(--bb-ink-16);
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
   font-size: var(--bb-text-nav);
   transition: border-color 0.3s ease;
 }
@@ -270,7 +269,7 @@
   align-items: start;
   padding: 0.85rem;
   border: 2px solid var(--bb-ink-16);
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
   background: var(--bb-white);
 }
 
@@ -320,7 +319,7 @@
   align-items: center;
   padding: 1rem;
   border: 2px solid var(--bb-ink-16);
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
   cursor: pointer;
   transition: all 0.3s ease;
   background: white;
@@ -435,7 +434,7 @@
   flex: 1;
   padding: 0.75rem;
   border: 2px solid var(--bb-ink-16);
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
   font-size: var(--bb-text-nav);
 }
 
@@ -450,7 +449,7 @@
   background: #4caf50;
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
   font-size: var(--bb-text-h3-group);
   cursor: pointer;
   display: flex;
@@ -466,7 +465,7 @@
 .tip-box {
   background: #e8f5e8;
   border: 1px solid #4caf50;
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
   padding: 1rem;
   font-size: var(--bb-text-card-body);
   color: #2e7d32;
@@ -486,7 +485,7 @@
   justify-content: space-between;
   padding: 0.75rem;
   background: var(--bb-ground);
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
   border-left: 4px solid #4caf50;
 }
 
@@ -528,7 +527,7 @@
   padding: var(--bb-gap-loose);
   background: white;
   border: 2px solid var(--bb-ink-16);
-  border-radius: 8px;
+  border-radius: var(--bb-radius);
   transition: all 0.3s ease;
 }
 
@@ -570,7 +569,7 @@
 .status-badge {
   display: inline-block;
   padding: 0.25rem 0.5rem;
-  border-radius: 4px;
+  border-radius: var(--bb-radius);
   font-size: var(--bb-text-card-kicker);
   font-weight: 500;
 }
@@ -595,7 +594,7 @@
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
   cursor: pointer;
   font-size: var(--bb-text-card-body);
   transition: background-color 0.3s ease;
@@ -616,7 +615,7 @@
   text-align: center;
   padding: var(--bb-gap-loose);
   background: var(--bb-ground);
-  border-radius: 8px;
+  border-radius: var(--bb-radius);
   border: 2px dashed var(--bb-ink-16);
 }
 
@@ -625,7 +624,7 @@
   color: white;
   border: none;
   padding: 1rem 2rem;
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
   font-size: var(--bb-text-nav);
   cursor: pointer;
   transition: all 0.3s ease;
@@ -654,7 +653,7 @@
   flex: 1;
   padding: 0.75rem;
   border: 2px solid var(--bb-ink-16);
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
   font-size: var(--bb-text-nav);
 }
 
@@ -669,7 +668,7 @@
   background: #4caf50;
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
   font-size: var(--bb-text-h3-group);
   cursor: pointer;
   display: flex;
@@ -695,7 +694,7 @@
   padding: 0.75rem;
   border-left: 3px solid #007bff;
   margin-bottom: 1rem;
-  border-radius: 4px;
+  border-radius: var(--bb-radius);
 }
 
 .threshold-setting {
@@ -705,14 +704,14 @@
   margin-bottom: var(--bb-gap-loose);
   padding: 0.75rem;
   background: var(--bb-ground-alt);
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
 }
 
 .threshold-input {
   width: 60px;
   padding: 0.25rem 0.5rem;
   border: 1px solid var(--bb-ink-16);
-  border-radius: 4px;
+  border-radius: var(--bb-radius);
   text-align: center;
 }
 
@@ -731,13 +730,13 @@
   padding: 2rem 1rem;
   color: #6c757d;
   background: var(--bb-ground);
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
   border: 2px dashed var(--bb-ink-16);
 }
 
 .question-item {
   border: 1px solid var(--bb-ink-16);
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
   margin-bottom: 1rem;
   background: white;
   overflow: hidden;
@@ -755,7 +754,7 @@
 
 .question-type-badge {
   padding: 0.25rem 0.5rem;
-  border-radius: 12px;
+  border-radius: var(--bb-radius);
   font-size: var(--bb-text-kicker);
   font-weight: 600;
   text-transform: uppercase;
@@ -862,7 +861,7 @@
   margin-top: 0.5rem;
   padding: 0.5rem;
   background: var(--bb-ground);
-  border-radius: 4px;
+  border-radius: var(--bb-radius);
   font-size: var(--bb-text-card-body);
 }
 
@@ -873,7 +872,7 @@
 .mcq-option-preview {
   padding: 0.25rem 0.5rem;
   margin: 0.25rem 0;
-  border-radius: 4px;
+  border-radius: var(--bb-radius);
   font-size: var(--bb-text-card-body);
 }
 
@@ -898,7 +897,7 @@
   gap: 0.5rem;
   padding: 0.75rem 1rem;
   border: none;
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
   cursor: pointer;
   font-weight: 500;
   font-size: var(--bb-text-card-body);
@@ -965,7 +964,7 @@
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
   font-size: var(--bb-text-card-body);
   font-weight: 500;
   cursor: pointer;
@@ -999,14 +998,14 @@
   width: 100%;
   padding: 0.75rem;
   border: 1px solid var(--bb-ink-16);
-  border-radius: 4px;
+  border-radius: var(--bb-radius);
   font-size: var(--bb-text-nav);
 }
 
 .learning-objective-note {
   margin: 0.5rem 0 0;
   padding: 0.65rem 0.8rem;
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
   background: #eff6ff;
   color: #1d4ed8;
   font-size: var(--bb-text-card-kicker);
@@ -1015,7 +1014,7 @@
 .edit-learning-objective-question-text {
   margin: 0;
   padding: 0.85rem 1rem;
-  border-radius: 8px;
+  border-radius: var(--bb-radius);
   background: var(--bb-ground);
   color: var(--bb-ink);
   line-height: 1.5;
@@ -1054,7 +1053,7 @@ fieldset.radio-group-fieldset {
   gap: 0.5rem;
   cursor: pointer;
   padding: 0.5rem;
-  border-radius: 4px;
+  border-radius: var(--bb-radius);
   transition: background-color 0.2s ease;
 }
 
@@ -1079,7 +1078,7 @@ fieldset.radio-group-fieldset {
   gap: 1rem;
   padding: 0.75rem;
   border: 1px solid var(--bb-ink-16);
-  border-radius: 4px;
+  border-radius: var(--bb-radius);
   background: var(--bb-ground);
 }
 
@@ -1200,12 +1199,11 @@ fieldset.radio-group-fieldset {
   background-color: white;
   margin: 2rem;
   padding: 0;
-  border-radius: 12px;
+  border-radius: var(--bb-radius);
   width: 90%;
   max-width: 600px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .modal-header {
@@ -1273,7 +1271,7 @@ fieldset.radio-group-fieldset {
   width: 100%;
   padding: 2rem;
   border: 2px dashed var(--bb-ink-16);
-  border-radius: 8px;
+  border-radius: var(--bb-radius);
   background: white;
   cursor: pointer;
   transition: all 0.3s ease;
@@ -1304,7 +1302,7 @@ fieldset.radio-group-fieldset {
 .input-section textarea {
   padding: 0.75rem;
   border: 2px solid var(--bb-ink-16);
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
   font-size: var(--bb-text-nav);
   transition: border-color 0.3s ease;
 }
@@ -1321,7 +1319,7 @@ fieldset.radio-group-fieldset {
   gap: 0.25rem;
   padding: 1rem;
   background: var(--bb-ground);
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
   margin-top: 1rem;
 }
 
@@ -1354,7 +1352,7 @@ fieldset.radio-group-fieldset {
   flex: 1;
   padding: 0.75rem;
   border: 2px solid var(--bb-ink-16);
-  border-radius: 8px;
+  border-radius: var(--bb-radius);
   font-size: var(--bb-text-nav);
   transition: border-color 0.3s ease;
 }
@@ -1368,7 +1366,7 @@ fieldset.radio-group-fieldset {
   background: #4caf50;
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--bb-radius);
   padding: 0.75rem 1.5rem;
   font-size: var(--bb-text-h3-group);
   cursor: pointer;
@@ -1389,7 +1387,7 @@ fieldset.radio-group-fieldset {
   align-items: center;
   background: var(--bb-ground);
   border: 1px solid var(--bb-ink-16);
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
   padding: 0.75rem 1rem;
   margin-bottom: 0.5rem;
 }
@@ -1403,7 +1401,7 @@ fieldset.radio-group-fieldset {
   background: #dc3545;
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--bb-radius);
   padding: 0.25rem 0.5rem;
   cursor: pointer;
   font-size: var(--bb-text-nav);
@@ -1417,7 +1415,7 @@ fieldset.radio-group-fieldset {
 .tip-box {
   background: #e3f2fd;
   border: 1px solid #2196f3;
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
   padding: 1rem;
   margin-top: 1rem;
 }
@@ -1455,7 +1453,7 @@ fieldset.radio-group-fieldset {
 .onboarding-complete .completion-message {
   background: rgba(255, 255, 255, 0.1);
   border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 8px;
+  border-radius: var(--bb-radius);
   padding: var(--bb-gap-loose);
   margin-bottom: 2rem;
 }
@@ -1477,7 +1475,7 @@ fieldset.radio-group-fieldset {
 .completion-actions .btn-primary,
 .completion-actions .btn-secondary {
   padding: 1rem 2rem;
-  border-radius: 8px;
+  border-radius: var(--bb-radius);
   text-decoration: none;
   font-weight: 600;
   transition: all 0.3s ease;
@@ -1492,7 +1490,6 @@ fieldset.radio-group-fieldset {
 .completion-actions .btn-primary:hover {
   background: var(--bb-ground);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 .completion-actions .btn-secondary {
@@ -1511,7 +1508,7 @@ fieldset.radio-group-fieldset {
 .join-course-info {
   background: var(--bb-ground);
   border: 2px solid var(--bb-ink-16);
-  border-radius: 8px;
+  border-radius: var(--bb-radius);
   padding: var(--bb-gap-loose);
   margin: 1rem 0;
 }
@@ -1531,7 +1528,7 @@ fieldset.radio-group-fieldset {
 .course-details {
   background: white;
   border: 1px solid var(--bb-ink-16);
-  border-radius: 6px;
+  border-radius: var(--bb-radius);
   padding: 1rem;
   margin-top: 1rem;
 }
@@ -1567,7 +1564,7 @@ fieldset.radio-group-fieldset {
     margin: 0 0 4px;
     padding: 8px 12px;
     border: 1px solid var(--bb-ink-16);
-    border-radius: 6px;
+    border-radius: var(--bb-radius);
 }
 
 .llm-platform-choice legend {
