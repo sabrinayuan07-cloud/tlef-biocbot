@@ -2723,8 +2723,8 @@ function renderApprovedGlobalTopics(topics, courseId) {
     // Build editable chips
     const chips = cleanTopics.map((topicEntry, index) => {
         const unitBadge = topicEntry.unitId
-            ? `<span class="topic-unit-badge mapped">${escapeHtml(topicEntry.unitId)}</span>`
-            : '<span class="topic-unit-badge unassigned">Unassigned</span>';
+            ? `<button type="button" class="topic-unit-badge-btn mapped" title="Click to reassign this topic's unit">${escapeHtml(topicEntry.unitId)}</button>`
+            : '<button type="button" class="topic-unit-badge-btn unassigned" title="Click to assign this topic to a unit">Unassigned</button>';
 
         return `
         <span class="approved-topic-chip" data-index="${index}" data-topic="${escapeHtml(topicEntry.topic)}">
@@ -2762,6 +2762,14 @@ function renderApprovedGlobalTopics(topics, courseId) {
             <span class="approved-topics-hint">Double-click a topic to edit it</span>
         </div>
     `;
+
+    container.querySelectorAll('.topic-unit-badge-btn').forEach((badgeBtn) => {
+        badgeBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const topic = badgeBtn.closest('.approved-topic-chip')?.dataset.topic;
+            if (topic) openTopicUnitAssignmentModal(topic);
+        });
+    });
 
     const newTopicUnitSelect = container.querySelector('#new-topic-unit-select');
     if (newTopicUnitSelect) {

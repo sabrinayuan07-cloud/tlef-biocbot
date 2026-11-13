@@ -1356,7 +1356,8 @@
     user-select: none;
 }
 
-.topic-unit-badge {
+.topic-unit-badge,
+.topic-unit-badge-btn {
     display: inline-flex;
     align-items: center;
     border-radius: 999px;
@@ -1366,16 +1367,36 @@
     letter-spacing: 0.01em;
 }
 
-.topic-unit-badge.mapped {
+.topic-unit-badge.mapped,
+.topic-unit-badge-btn.mapped {
     background: #e7f8ef;
     color: #146c43;
     border: 1px solid #b7ebc8;
 }
 
-.topic-unit-badge.unassigned {
+.topic-unit-badge.unassigned,
+.topic-unit-badge-btn.unassigned {
     background: #fff7e6;
     color: #9a5b00;
     border: 1px solid #ffd591;
+}
+
+/* The approved-topics chip's badge is a real <button> (clickable to
+   reassign the topic's unit without delete-and-recreate), unlike the
+   static <span> badge on the read-only Persistence Topics card. */
+.topic-unit-badge-btn {
+    cursor: pointer;
+    font-family: inherit;
+    transition: filter 0.15s ease;
+}
+
+.topic-unit-badge-btn:hover {
+    filter: brightness(0.95);
+}
+
+.topic-unit-badge-btn:focus-visible {
+    outline: 2px solid var(--bb-steel, #2c455d);
+    outline-offset: 2px;
 }
 
 .topic-chip-remove {
