@@ -18,10 +18,17 @@
 
 /* Course Selection Styles */
 .course-selection-container {
+  box-sizing: border-box;
+  /* Matches the expanded (Change Course) panel's natural height so the box
+     doesn't visibly resize when toggling between the two views. */
+  min-height: 167px;
   padding: 20px;
   background-color: var(--bb-ground);
   border-radius: 8px;
   border: 1px solid var(--bb-ink-16);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .current-course-display {
