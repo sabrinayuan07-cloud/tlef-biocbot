@@ -3156,7 +3156,6 @@ function ensureTopicUnitAssignmentModal() {
                 <p class="topic-unit-modal-topic" id="topic-unit-modal-topic"></p>
                 <label for="topic-unit-select">Unit</label>
                 <select id="topic-unit-select" class="topic-unit-select"></select>
-                <p class="topic-unit-modal-hint">This uses the stable unit name, such as Unit 1, not the renamed display title.</p>
             </div>
             <div class="topic-unit-modal-actions">
                 <button type="button" class="approved-topic-add-btn secondary" id="topic-unit-cancel-btn">Cancel</button>
