@@ -6,6 +6,7 @@
 let currentTAs = [];
 let instructorCourses = [];
 let taToRemove = null;
+let taSearchQuery = '';
 let taPermissions = {}; // Store TA permissions for each course
 let rolePresets = {}; // { presetName: { materials, questions, ... } }, loaded once from the server
 let taPermissionsLoadFailed = new Set(); // courseIds whose permissions fetch failed this load
@@ -90,7 +91,32 @@ function initializeTAHub() {
  * Initialize form event handlers
  */
 function initializeFormHandlers() {
-    // No form handlers needed for view-only TA Hub
+    const taSearchInput = document.getElementById('ta-search-input');
+    const taSearchClear = document.getElementById('ta-search-clear');
+    const taSearchForm = taSearchInput ? taSearchInput.closest('form') : null;
+    if (taSearchForm) {
+        taSearchForm.addEventListener('submit', (event) => event.preventDefault());
+    }
+    if (taSearchInput) {
+        taSearchInput.addEventListener('input', () => {
+            taSearchQuery = taSearchInput.value;
+            if (taSearchClear) {
+                taSearchClear.hidden = taSearchQuery.length === 0;
+            }
+            displayTAs();
+        });
+    }
+    if (taSearchClear) {
+        taSearchClear.addEventListener('click', () => {
+            taSearchQuery = '';
+            if (taSearchInput) {
+                taSearchInput.value = '';
+                taSearchInput.focus();
+            }
+            taSearchClear.hidden = true;
+            displayTAs();
+        });
+    }
 }
 
 /**
@@ -334,9 +360,19 @@ function displayTAs() {
         `;
         return;
     }
-    
+
+    const query = taSearchQuery.trim().toLowerCase();
+    const tasToRender = query
+        ? currentTAs.filter(ta => (ta.displayName || ta.username || ta.userId || '').toLowerCase().includes(query))
+        : currentTAs;
+
+    if (tasToRender.length === 0) {
+        tasContainer.innerHTML = '<p>No TAs match your search.</p>';
+        return;
+    }
+
     // Create TA cards with permission controls
-    tasContainer.innerHTML = currentTAs.map(ta => {
+    tasContainer.innerHTML = tasToRender.map(ta => {
         const coursePermissions = taPermissions[ta.courseId] || {};
         // Default is now fail-closed (no keys set) rather than the old
         // fail-open {canAccessCourses:true, canAccessFlags:true} - matches
