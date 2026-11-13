@@ -108,7 +108,7 @@
     font-size: 14px;
     text-align: left;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s var(--bb-ease-reveal);
 }
 
 .action-btn:hover {
@@ -186,7 +186,7 @@
     padding: 15px;
     background-color: var(--background-color);
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: background-color 0.2s var(--bb-ease-reveal);
 }
 
 .accordion-header:hover {
@@ -196,7 +196,7 @@
 .accordion-toggle {
     margin-left: auto;
     font-size: 12px;
-    transition: transform 0.3s;
+    transition: transform 0.3s var(--bb-ease-reveal);
 }
 
 .header-actions {
@@ -369,7 +369,7 @@
     right: 0;
     bottom: 0;
     background-color: #ccc;
-    transition: 0.3s;
+    transition: 0.3s var(--bb-ease-reveal);
     border-radius: var(--bb-radius);
 }
 
@@ -381,7 +381,7 @@
     left: 3px;
     bottom: 3px;
     background-color: white;
-    transition: 0.3s;
+    transition: 0.3s var(--bb-ease-reveal);
     border-radius: 50%;
 }
 
@@ -414,7 +414,7 @@
 .accordion-content {
     overflow: hidden;
     padding: 16px;
-    transition: max-height 0.3s ease-in-out, padding 0.3s ease-in-out;
+    transition: max-height 0.3s var(--bb-ease-reveal), padding 0.3s var(--bb-ease-reveal);
 }
 
 .accordion-content.collapsed {
@@ -551,7 +551,7 @@
     cursor: pointer;
     font-size: 14px;
     color: var(--primary-color);
-    transition: all 0.2s ease;
+    transition: all 0.2s var(--bb-ease-reveal);
     width: 100%;
 }
 
@@ -583,7 +583,7 @@
     border: 2px dashed #dee2e6;
     border-radius: var(--bb-radius);
     text-align: center;
-    transition: border-color 0.3s, background-color 0.3s;
+    transition: border-color 0.3s var(--bb-ease-reveal), background-color 0.3s var(--bb-ease-reveal);
 }
 
 .add-week-section:hover {
@@ -600,7 +600,7 @@
     cursor: pointer;
     padding: 12px 24px;
     border-radius: var(--bb-radius);
-    transition: background-color 0.3s, color 0.3s;
+    transition: background-color 0.3s var(--bb-ease-reveal), color 0.3s var(--bb-ease-reveal);
     display: inline-flex;
     align-items: center;
     gap: 8px;
@@ -667,7 +667,7 @@
     cursor: pointer;
     padding: 4px;
     border-radius: var(--bb-radius);
-    transition: all 0.2s ease;
+    transition: all 0.2s var(--bb-ease-reveal);
 }
 
 .modal-close:hover {
@@ -1013,7 +1013,7 @@
     border-bottom: 1px solid #e0e0e0;
     cursor: pointer;
     user-select: none;
-    transition: background-color 0.2s ease;
+    transition: background-color 0.2s var(--bb-ease-reveal);
     position: relative; /* Add positioning context */
     z-index: 2; /* Higher than the section content */
 }
@@ -1139,7 +1139,7 @@
     border-radius: var(--bb-radius);
     background: white;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.3s var(--bb-ease-reveal);
     text-align: left;
 }
 
@@ -1283,7 +1283,7 @@
     font-size: 16px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.3s var(--bb-ease-reveal);
     min-height: 56px;
 }
 
@@ -1320,7 +1320,7 @@
     border: 1px solid var(--border-color);
     border-radius: var(--bb-radius);
     font-size: 14px;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    transition: border-color 0.3s var(--bb-ease-reveal), box-shadow 0.3s var(--bb-ease-reveal);
 }
 
 .input-section input[type="url"]:focus {
@@ -1335,7 +1335,7 @@
     border: 1px solid var(--border-color);
     border-radius: var(--bb-radius);
     font-size: 14px;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    transition: border-color 0.3s var(--bb-ease-reveal), box-shadow 0.3s var(--bb-ease-reveal);
 }
 
 .input-section input[type="text"]:focus {
@@ -1353,7 +1353,7 @@
     font-family: inherit;
     resize: vertical;
     min-height: 120px;
-    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    transition: border-color 0.3s var(--bb-ease-reveal), box-shadow 0.3s var(--bb-ease-reveal);
 }
 
 .input-section textarea:focus {
@@ -1936,7 +1936,7 @@ fieldset.radio-group-fieldset {
     cursor: pointer;
     padding: 0.5rem;
     border-radius: var(--bb-radius);
-    transition: background-color 0.2s ease;
+    transition: background-color 0.2s var(--bb-ease-reveal);
 }
 
 .radio-option:hover {
@@ -1999,7 +1999,7 @@ fieldset.radio-group-fieldset {
     border-radius: var(--bb-radius);
     background: #ffffff;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s var(--bb-ease-reveal);
     min-height: 56px;
 }
 
@@ -2049,7 +2049,7 @@ fieldset.radio-group-fieldset {
     font-size: 16px;
     font-weight: 500;
     background: #ffffff;
-    transition: border-color 0.2s ease;
+    transition: border-color 0.2s var(--bb-ease-reveal);
 }
 
 .ai-question-count input:focus {
@@ -2074,7 +2074,7 @@ fieldset.radio-group-fieldset {
     cursor: pointer;
     font-size: 12px;
     margin-left: 8px;
-    transition: background-color 0.2s;
+    transition: background-color 0.2s var(--bb-ease-reveal);
 }
 
 .delete-unit-btn:hover {
@@ -2115,7 +2115,7 @@ fieldset.radio-group-fieldset {
     border-radius: var(--bb-radius);
     text-decoration: none;
     font-weight: 600;
-    transition: all 0.3s ease;
+    transition: all 0.3s var(--bb-ease-reveal);
 }
 
 .empty-course-state .btn-primary:hover {
@@ -2206,7 +2206,7 @@ fieldset.radio-group-fieldset {
     font-size: 0.85rem;
     font-weight: 700;
     cursor: pointer;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    transition: border-color 0.15s var(--bb-ease-reveal), box-shadow 0.15s var(--bb-ease-reveal);
 }
 
 .lms-import-chip:hover,
@@ -2436,7 +2436,7 @@ fieldset.radio-group-fieldset {
 
 .lms-progress-item[data-state="active"] .lms-progress-icon {
     color: var(--primary-color, #2f6fb0);
-    animation: lms-progress-pulse 1.2s ease-in-out infinite;
+    animation: lms-progress-pulse 1.2s var(--bb-ease-reveal) infinite;
 }
 
 .lms-progress-item[data-state="complete"] {

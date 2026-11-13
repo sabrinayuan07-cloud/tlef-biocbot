@@ -50,7 +50,7 @@
     border: 1px solid var(--bb-ink-16);
     border-radius: var(--bb-radius);
     font-size: var(--bb-text-card-kicker);
-    transition: border-color 0.2s;
+    transition: border-color 0.2s var(--bb-ease-reveal);
 }
 
 .form-group input:focus,
@@ -143,7 +143,7 @@
     cursor: pointer;
     padding: 8px;
     border-radius: var(--bb-radius);
-    transition: background-color 0.2s;
+    transition: background-color 0.2s var(--bb-ease-reveal);
 }
 
 .permission-toggle:hover {

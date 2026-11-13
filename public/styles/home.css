@@ -77,7 +77,7 @@
   background-color: white;
   color: var(--bb-ink);
   cursor: pointer;
-  transition: border-color 0.3s ease;
+  transition: border-color 0.3s var(--bb-ease-reveal);
 }
 
 .course-select-dropdown:hover {
@@ -248,7 +248,7 @@
   padding: 15px;
   border-radius: var(--bb-radius);
   background-color: var(--bb-ground);
-  transition: background-color 0.3s ease;
+  transition: background-color 0.3s var(--bb-ease-reveal);
 }
 
 .activity-item:hover {
@@ -281,7 +281,7 @@
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s var(--bb-ease-reveal);
   border: 1px solid var(--bb-ink-16);
   background-color: white;
   color: var(--bb-ink);
@@ -621,8 +621,8 @@
   border: 1px solid var(--bb-ink-16);
   text-align: center;
   transition:
-    transform 0.2s ease,
-    box-shadow 0.2s ease;
+    transform 0.2s var(--bb-ease-reveal),
+    box-shadow 0.2s var(--bb-ease-reveal);
 }
 
 .stat-card:hover {
@@ -694,7 +694,7 @@
 .mode-bar-fill {
   height: 100%;
   border-radius: var(--bb-radius);
-  transition: width 0.5s ease;
+  transition: width 0.5s var(--bb-ease-reveal);
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -874,7 +874,7 @@
 
 .live-struggle-table tbody tr {
   border-bottom: 1px solid var(--bb-ink-16);
-  transition: background-color 0.15s ease;
+  transition: background-color 0.15s var(--bb-ease-reveal);
 }
 
 .live-struggle-table tbody tr:hover {
@@ -930,7 +930,7 @@
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.2s var(--bb-ease-reveal);
 }
 
 .action-btn.secondary:hover {
@@ -1048,7 +1048,7 @@
   line-height: 1.4;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.15s ease;
+  transition: opacity 0.15s var(--bb-ease-reveal);
 }
 
 .chart-tooltip-title {
@@ -1168,7 +1168,7 @@
    COLLAPSIBLE TOPIC CARDS
    =========================== */
 .struggle-topic-item {
-  transition: all 0.3s ease;
+  transition: all 0.3s var(--bb-ease-reveal);
   overflow: hidden; /* Ensure smooth collapse */
   padding-bottom: 0 !important; /* Managed by content padding */
 }
@@ -1195,7 +1195,7 @@
 
 .toggle-icon {
   display: inline-block;
-  transition: transform 0.3s ease;
+  transition: transform 0.3s var(--bb-ease-reveal);
   font-size: 0.8em;
   color: var(--bb-ink-70);
   margin-right: 5px;
@@ -1224,7 +1224,7 @@
 .section-header.clickable {
     cursor: pointer;
     user-select: none;
-    transition: opacity 0.2s;
+    transition: opacity 0.2s var(--bb-ease-reveal);
 }
 
 .section-header.clickable:hover {
@@ -1240,7 +1240,7 @@
     display: inline-block;
     margin-right: 10px;
     font-size: 0.8em;
-    transition: transform 0.3s ease;
+    transition: transform 0.3s var(--bb-ease-reveal);
     color: var(--bb-ink-70);
 }
 
@@ -1277,7 +1277,7 @@
     text-align: center;
     visibility: hidden;
     opacity: 0;
-    transition: opacity 0.2s, visibility 0.2s;
+    transition: opacity 0.2s var(--bb-ease-reveal), visibility 0.2s var(--bb-ease-reveal);
     z-index: 1000;
     pointer-events: none;
     font-weight: normal;
@@ -1294,7 +1294,7 @@
     border-top-color: var(--bb-ink);
     visibility: hidden;
     opacity: 0;
-    transition: opacity 0.2s, visibility 0.2s;
+    transition: opacity 0.2s var(--bb-ease-reveal), visibility 0.2s var(--bb-ease-reveal);
     z-index: 1000;
 }
 
@@ -1329,7 +1329,7 @@
     font-size: 0.9em;
     font-weight: 600;
     line-height: 1.2;
-    transition: background 0.15s, box-shadow 0.15s;
+    transition: background 0.15s var(--bb-ease-reveal), box-shadow 0.15s var(--bb-ease-reveal);
 }
 
 .approved-topic-chip:hover {
@@ -1385,7 +1385,7 @@
     padding: 0;
     line-height: 1;
     opacity: 0.45;
-    transition: opacity 0.15s, background 0.15s, color 0.15s;
+    transition: opacity 0.15s var(--bb-ease-reveal), background 0.15s var(--bb-ease-reveal), color 0.15s var(--bb-ease-reveal);
 }
 
 .topic-chip-remove:hover {
@@ -1427,7 +1427,7 @@
     font-size: 0.9em;
     font-family: inherit;
     outline: none;
-    transition: border-color 0.15s, box-shadow 0.15s;
+    transition: border-color 0.15s var(--bb-ease-reveal), box-shadow 0.15s var(--bb-ease-reveal);
 }
 
 .approved-topic-unit-select,
@@ -1458,7 +1458,7 @@
     font-weight: 600;
     cursor: pointer;
     white-space: nowrap;
-    transition: background 0.15s;
+    transition: background 0.15s var(--bb-ease-reveal);
 }
 
 .approved-topic-add-btn:hover {
@@ -1482,7 +1482,7 @@
 
 .clickable-topic-card {
     cursor: pointer;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    transition: transform 0.15s var(--bb-ease-reveal), box-shadow 0.15s var(--bb-ease-reveal);
 }
 
 .clickable-topic-card:hover,

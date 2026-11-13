@@ -15,7 +15,7 @@
   font-size: var(--bb-text-nav);
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s var(--bb-ease-reveal);
   border: none;
   text-decoration: none;
   display: inline-flex;
@@ -74,7 +74,7 @@
   background: var(--bb-ground);
   border-radius: var(--bb-radius);
   border: 2px solid var(--bb-ink-16);
-  transition: all 0.3s ease;
+  transition: all 0.3s var(--bb-ease-reveal);
   cursor: pointer;
 }
 
@@ -120,7 +120,7 @@
   cursor: pointer;
   font-weight: 500;
   font-size: var(--bb-text-card-body);
-  transition: all 0.2s ease;
+  transition: all 0.2s var(--bb-ease-reveal);
 }
 
 .add-question-btn {
@@ -189,7 +189,7 @@
   justify-content: center;
   cursor: pointer;
   font-size: var(--bb-text-card-kicker);
-  transition: background-color 0.2s ease;
+  transition: background-color 0.2s var(--bb-ease-reveal);
 }
 
 .edit-question-btn {
@@ -217,7 +217,7 @@
   font-size: var(--bb-text-card-body);
   font-weight: 500;
   cursor: pointer;
-  transition: background-color 0.3s ease;
+  transition: background-color 0.3s var(--bb-ease-reveal);
 }
 
 .save-btn:hover {
