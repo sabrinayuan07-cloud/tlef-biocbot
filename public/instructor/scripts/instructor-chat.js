@@ -17,8 +17,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const levelValueLabel = document.getElementById('answer-level-value');
     const levelMenu = document.getElementById('answer-level-menu');
     const levelOptions = levelMenu ? Array.from(levelMenu.querySelectorAll('[role="option"]')) : [];
-    const scopeLabel = document.getElementById('super-course-scope');
     const poolPanel = document.getElementById('super-course-pool-panel');
+    const poolHeading = document.getElementById('super-course-pool-heading');
     const poolList = document.getElementById('super-course-pool-list');
     const historyPanel = document.getElementById('super-course-history-panel');
     const historyList = document.getElementById('super-course-history-list');
@@ -976,17 +976,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderSourcePool(courses);
         } catch (error) {
             console.error('Source pool load error:', error);
-            if (scopeLabel) scopeLabel.textContent = 'Source pool unavailable';
+            if (poolHeading) poolHeading.textContent = 'Sources unavailable';
             poolList.textContent = 'Unable to load source pool.';
             if (poolPanel) poolPanel.classList.add('error');
         }
     }
 
     function renderSourcePool(courses) {
-        if (scopeLabel) {
-            scopeLabel.textContent = courses.length === 1
-                ? formatPoolCourseName(courses[0])
-                : `${courses.length} opted-in courses`;
+        // The pool heading doubles as the scope indicator (courses.length was
+        // previously shown separately, in a "Scope:" line in the header).
+        if (poolHeading) {
+            poolHeading.textContent = courses.length === 1
+                ? `Sources — ${formatPoolCourseName(courses[0])}`
+                : `Sources — ${courses.length} opted-in courses`;
         }
 
         if (!poolList) return;
