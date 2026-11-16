@@ -82,8 +82,8 @@
   --bb-gap-loose: 24px;
 
   /* Radii + borders (the homepage's identity is square corners everywhere;
-     other pages are not required to adopt this) */
-  --bb-radius: 0;
+     instructor pages deliberately diverge with rounded corners + shadows) */
+  --bb-radius: 8px;
   --bb-border-width: 1px;
 
   /* Motion */
