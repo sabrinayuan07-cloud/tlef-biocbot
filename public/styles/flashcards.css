@@ -1,6 +1,6 @@
 .flashcard-state {
     padding: 2rem;
-    border: 1px solid var(--border-color, #e2e8f0);
+    border: 1px solid var(--bb-ink-16);
     border-radius: 10px;
     background: white;
     text-align: center;
@@ -64,13 +64,13 @@
 .deck-card:hover,
 .deck-card:focus-visible {
     transform: translateY(-2px);
-    border-color: var(--primary-color, #0055b7);
+    border-color: var(--bb-steel);
     box-shadow: 0 8px 22px rgba(15, 23, 42, 0.08);
     outline: none;
 }
 
 .deck-card strong {
-    font-size: 1.05rem;
+    font-size: var(--bb-text-lede);
     color: #0f172a;
 }
 
@@ -80,14 +80,14 @@
     padding: 0.2rem 0.55rem;
     border-radius: 999px;
     background: #e8f1fb;
-    color: var(--primary-color, #0055b7);
-    font-size: 0.75rem;
+    color: var(--bb-steel);
+    font-size: var(--bb-text-kicker);
     font-weight: 700;
 }
 
 .deck-mastery {
     color: #166534;
-    font-size: 0.85rem;
+    font-size: var(--bb-text-card-kicker);
 }
 
 .deck-progress-track {
@@ -104,7 +104,7 @@
     display: block;
     height: 100%;
     border-radius: inherit;
-    background: var(--primary-color, #0055b7);
+    background: var(--bb-steel);
 }
 
 .study-area {
@@ -149,7 +149,7 @@
 
 .study-card:hover,
 .study-card:focus-visible {
-    border-color: var(--primary-color, #0055b7);
+    border-color: var(--bb-steel);
     outline: 3px solid rgba(0, 85, 183, 0.14);
 }
 
@@ -163,7 +163,7 @@
     border-radius: 999px;
     background: #e2e8f0;
     color: #475569;
-    font-size: 0.75rem;
+    font-size: var(--bb-text-kicker);
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -173,7 +173,7 @@
     display: block;
     margin: auto 0;
     padding: 2rem 0;
-    font-size: clamp(1.2rem, 2.8vw, 1.7rem);
+    font-size: var(--bb-text-h3-group);
     line-height: 1.55;
     text-align: center;
     white-space: pre-wrap;
@@ -182,14 +182,14 @@
 .card-source {
     align-self: center;
     color: #64748b;
-    font-size: 0.82rem;
+    font-size: var(--bb-text-card-kicker);
 }
 
 .flip-hint {
     align-self: center;
     margin-top: 1rem;
     color: #64748b;
-    font-size: 0.82rem;
+    font-size: var(--bb-text-card-kicker);
 }
 
 .review-actions {
@@ -228,7 +228,7 @@
 .ai-card-note {
     margin-top: 1.5rem;
     color: #64748b;
-    font-size: 0.8rem;
+    font-size: var(--bb-text-card-kicker);
     text-align: center;
 }
 
