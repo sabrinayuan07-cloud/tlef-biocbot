@@ -24,8 +24,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const sendButton = document.getElementById('send-button');
     const newChatButton = document.getElementById('new-super-course-chat');
     const levelSelect = document.getElementById('answer-level');
-    const scopeLabel = document.getElementById('super-course-scope');
     const poolPanel = document.getElementById('super-course-pool-panel');
+    const poolHeading = document.getElementById('super-course-pool-heading');
     const poolList = document.getElementById('super-course-pool-list');
     const historyPanel = document.getElementById('super-course-history-panel');
     const historyList = document.getElementById('super-course-history-list');
@@ -909,17 +909,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             maybeShowLevelNotice(result.hasHigherLevelCourses === true);
         } catch (error) {
             console.error('Source pool load error:', error);
-            if (scopeLabel) scopeLabel.textContent = 'Source pool unavailable';
+            if (poolHeading) poolHeading.textContent = 'Sources unavailable';
             poolList.textContent = 'Unable to load source pool.';
             if (poolPanel) poolPanel.classList.add('error');
         }
     }
 
     function renderSourcePool(courses) {
-        if (scopeLabel) {
-            scopeLabel.textContent = courses.length === 1
-                ? formatPoolCourseName(courses[0])
-                : `${courses.length} opted-in courses`;
+        // The pool heading doubles as the scope indicator (courses.length was
+        // previously shown separately, in a scope note next to the bucket picker).
+        if (poolHeading) {
+            poolHeading.textContent = courses.length === 1
+                ? `Sources — ${formatPoolCourseName(courses[0])}`
+                : `Sources — ${courses.length} opted-in courses`;
         }
 
         if (!poolList) return;
