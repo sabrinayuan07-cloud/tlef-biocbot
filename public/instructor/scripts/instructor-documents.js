@@ -68,7 +68,7 @@ async function loadDocuments() {
                         });
                         
                         // Clear action buttons and cleanup sections to ensure proper reordering
-                        const actionSections = courseMaterialsSection.querySelectorAll('.add-content-section, .save-objectives, .cleanup-section');
+                        const actionSections = courseMaterialsSection.querySelectorAll('.add-content-section, .cleanup-section');
                         actionSections.forEach(section => {
                             section.remove();
                         });
@@ -88,8 +88,8 @@ async function loadDocuments() {
                         
 
                         
-                        // ALWAYS add the "Add Additional Material" button and "Confirm Course Materials" button LAST
-                        // This ensures they stay at the bottom, regardless of whether there are documents
+                        // ALWAYS add the "Add Additional Material" button LAST
+                        // This ensures it stays at the bottom, regardless of whether there are documents
                         addActionButtonsIfMissing(courseMaterialsSection, lectureName);
                     } else {
                         console.error('Course materials section not found for', lectureName);
@@ -123,7 +123,7 @@ async function loadDocuments() {
             
             if (courseMaterialsSection) {
                 // Check if action buttons exist
-                const hasActionButtons = courseMaterialsSection.querySelector('.add-content-section, .save-objectives');
+                const hasActionButtons = courseMaterialsSection.querySelector('.add-content-section');
                 
                 if (!hasActionButtons) {
                     addActionButtonsIfMissing(courseMaterialsSection, unitName);
@@ -675,138 +675,6 @@ async function viewDocument(documentId) {
     } catch (error) {
         console.error('Error viewing document:', error);
         showNotification(`Error viewing document: ${error.message}`, 'error');
-    }
-}
-
-/**
- * Confirm course materials for a week
- * @param {string} week - The week identifier (e.g., 'Week 1')
- */
-async function confirmCourseMaterials(week) {
-    // Find the week element using data-unit-name attribute (internal name like "Unit 1")
-    const weekElement = document.querySelector(`.accordion-item[data-unit-name="${week}"]`);
-    if (!weekElement) {
-        console.error('Could not find week element for:', week);
-        showNotification('Error: Could not find unit element', 'error');
-        return;
-    }
-    const fileItems = weekElement.querySelectorAll('.course-materials-section .file-item');
-    
-    console.log(`🔍 [CONFIRM_MATERIALS] Checking materials for ${week}`);
-    console.log(`🔍 [CONFIRM_MATERIALS] Found ${fileItems.length} file items`);
-    
-    // Debug: Log all file items to see what we're working with
-    fileItems.forEach((item, index) => {
-        const title = item.querySelector('.file-info h3');
-        const documentType = item.dataset.documentType;
-        console.log(`🔍 [CONFIRM_MATERIALS] File item ${index + 1}:`, {
-            title: title ? title.textContent : 'No title',
-            status: getMaterialStatus(item) || 'No status',
-            documentType: documentType || 'No document type',
-            isPlaceholder: item.classList.contains('placeholder-item')
-        });
-    });
-    
-    // Check if mandatory materials are present
-    let hasLectureNotes = false;
-    let hasPracticeQuestions = false;
-    
-    fileItems.forEach((item, index) => {
-        const title = item.querySelector('.file-info h3');
-        const documentType = item.dataset.documentType;
-        
-        if (title) {
-            const titleText = title.textContent;
-            const status = getMaterialStatus(item);
-            
-            console.log(`🔍 [CONFIRM_MATERIALS] Item ${index + 1}: "${titleText}" - Status: "${status}" - Type: "${documentType}"`);
-            console.log(`🔍 [CONFIRM_MATERIALS] Debug - documentType === 'lecture_notes': ${documentType === 'lecture_notes'}, documentType === 'practice_q_tutorials': ${documentType === 'practice_q_tutorials'}`);
-            
-            // Check if this is a lecture notes document that's processed/uploaded
-            // Use document type for more reliable checking, fallback to title text
-            const isLectureNotesType = documentType === 'lecture_notes' || 
-                                     documentType === 'lecture-notes' ||
-                                     titleText.includes('Lecture Notes');
-            const isLectureNotesStatus = ['uploaded', 'parsed', 'processed', 'parsing', 'processing'].includes(status);
-            console.log(`🔍 [CONFIRM_MATERIALS] Lecture Notes check - Type match: ${isLectureNotesType}, Status match: ${isLectureNotesStatus}`);
-            
-            if (isLectureNotesType && isLectureNotesStatus) {
-                hasLectureNotes = true;
-                console.log(`✅ [CONFIRM_MATERIALS] Found valid lecture notes with status: "${status}" and type: "${documentType}"`);
-            }
-            
-            // Check if this is a practice questions document that's processed/uploaded
-            // Use document type for more reliable checking, fallback to title text
-            const isPracticeQuestionsType = documentType === 'practice_q_tutorials' || 
-                                          documentType === 'practice-quiz' ||
-                                          titleText.includes('Practice Questions') || 
-                                          titleText.includes('Practice Questions/Tutorial');
-            const isPracticeQuestionsStatus = ['uploaded', 'parsed', 'processed', 'parsing', 'processing'].includes(status);
-            console.log(`🔍 [CONFIRM_MATERIALS] Practice Questions check - Type match: ${isPracticeQuestionsType}, Status match: ${isPracticeQuestionsStatus}`);
-            
-            if (isPracticeQuestionsType && isPracticeQuestionsStatus) {
-                hasPracticeQuestions = true;
-                console.log(`✅ [CONFIRM_MATERIALS] Found valid practice questions with status: "${status}" and type: "${documentType}"`);
-            }
-        }
-    });
-    
-    console.log(`🔍 [CONFIRM_MATERIALS] Final check - Lecture Notes: ${hasLectureNotes}, Practice Questions: ${hasPracticeQuestions}`);
-    console.log(`🔍 [CONFIRM_MATERIALS] Summary - Found ${fileItems.length} file items, ${hasLectureNotes ? '1' : '0'} lecture notes, ${hasPracticeQuestions ? '1' : '0'} practice questions`);
-    
-    // Validate mandatory materials
-    if (!hasLectureNotes || !hasPracticeQuestions) {
-        let missingItems = [];
-        if (!hasLectureNotes) missingItems.push('Lecture Notes');
-        if (!hasPracticeQuestions) missingItems.push('Practice Questions/Tutorial');
-        
-        const errorMsg = `Missing mandatory materials: ${missingItems.join(', ')}. Please add them before confirming.`;
-        console.warn(`❌ [CONFIRM_MATERIALS] ${errorMsg}`);
-        showNotification(errorMsg, 'error');
-        return;
-    }
-    
-    try {
-        // Try to save to the server
-        console.log(`🔧 [CONFIRM_MATERIALS] Making API call to /api/courses/course-materials/confirm`);
-        console.log(`🔧 [CONFIRM_MATERIALS] Request body:`, { week, instructorId: getCurrentInstructorId() });
-        
-        const response = await fetch('/api/courses/course-materials/confirm', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                week: week,
-                instructorId: getCurrentInstructorId()
-            })
-        });
-        
-        console.log(`🔧 [CONFIRM_MATERIALS] Response status: ${response.status} ${response.statusText}`);
-        console.log(`🔧 [CONFIRM_MATERIALS] Response headers:`, Object.fromEntries(response.headers.entries()));
-        
-        if (response.ok) {
-            const result = await response.json();
-            showNotification(result.message || `Course materials for ${week} confirmed successfully!`, 'success');
-        } else {
-            // If the endpoint doesn't exist yet, show a different message
-            if (response.status === 404) {
-                showNotification(`Course materials for ${week} validated successfully! (Backend endpoint not yet implemented)`, 'info');
-            } else {
-                const errorText = await response.text();
-                throw new Error(`Server error: ${response.status} ${errorText}`);
-            }
-        }
-        
-    } catch (error) {
-        console.error('Error confirming course materials:', error);
-        
-        // Check if it's a network/endpoint not found error
-        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-            showNotification(`Course materials for ${week} validated successfully! (Backend not available)`, 'info');
-        } else {
-            showNotification(`Error confirming course materials: ${error.message}`, 'error');
-        }
     }
 }
 

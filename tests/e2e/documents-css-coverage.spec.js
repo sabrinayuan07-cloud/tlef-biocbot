@@ -403,7 +403,7 @@ test.describe('documents.css harness coverage', () => {
         await expect(page.locator('.add-content-btn.additional-material')).toHaveCSS('display', 'flex');
 
         await expect(page.locator('.objective-display-item')).toHaveCSS('display', 'flex');
-        await expect(page.locator('.objective-input')).toHaveCSS('border-top-right-radius', '0px');
+        await expect(page.locator('.objective-input')).toHaveCSS('border-top-right-radius', '4px');
         await expect(page.locator('.add-objective-btn-inline')).toHaveCSS('height', '36px');
         await page.locator('.add-objective-btn-inline').hover();
         await expect(page.locator('.add-objective-btn-inline')).toHaveCSS('background-color', 'rgb(69, 160, 73)');

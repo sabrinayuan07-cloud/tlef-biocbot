@@ -232,7 +232,6 @@ test.describe('instructor.js deep branch coverage', () => {
             await instructorWindow.loadAssessmentQuestions();
             await instructorWindow.loadPassThresholds();
             await instructorWindow.loadDocuments();
-            await instructorWindow.confirmCourseMaterials('Unit 1');
 
             instructorWindow.openQuestionModal('Unit 1');
             instructorWindow.checkAIGenerationInModal();

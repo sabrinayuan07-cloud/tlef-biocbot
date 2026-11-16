@@ -305,18 +305,6 @@ describe('document removal and material confirmation', () => {
         remove.mockRestore();
     });
 
-    test('course-material confirmation validates fields, DB, and matching course/unit', async () => {
-        expect((await request(app({ db: memoryDb({}) })).post('/course-materials/confirm').send({})).status).toBe(400);
-        expect((await request(app({ db: null })).post('/course-materials/confirm').send({ week: 'Unit 1', instructorId: 'i1' })).status).toBe(503);
-        expect((await request(app({ db: memoryDb({ courses: [] }) })).post('/course-materials/confirm').send({ week: 'Unit 1', instructorId: 'i1' })).status).toBe(404);
-    });
-
-    test('course-material confirmation updates the matching unit', async () => {
-        const db = memoryDb({ courses: [{ courseId: 'C1', instructorId: 'i1', lectures: [{ name: 'Unit 1' }] }] });
-        const res = await request(app({ db })).post('/course-materials/confirm').send({ week: 'Unit 1', instructorId: 'i1' });
-        expect(res.status).toBe(200);
-        expect(res.body.data).toMatchObject({ week: 'Unit 1', courseId: 'C1', materialsConfirmed: true });
-    });
 });
 
 describe('POST /:courseId/transfer', () => {

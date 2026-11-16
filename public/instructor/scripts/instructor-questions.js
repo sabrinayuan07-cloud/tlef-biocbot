@@ -353,7 +353,7 @@ function setupThresholdInputListeners() {
     thresholdInputs.forEach(input => {
         // Add change event listener
         input.addEventListener('change', function(event) {
-            const threshold = parseInt(this.value);
+            let threshold = parseInt(this.value);
 
             // Update the display first
             handleThresholdInputChange(event);
@@ -368,7 +368,17 @@ function setupThresholdInputListeners() {
                 console.warn('Cannot save pass threshold: unit name is missing');
                 return;
             }
-            
+
+            // There's no separate "Save Assessment" step to catch this at,
+            // so a threshold above the current question count is clamped
+            // here instead of silently persisted.
+            const questions = assessmentQuestions[lectureName] || [];
+            if (threshold > questions.length) {
+                threshold = questions.length;
+                this.value = String(threshold);
+                showNotification(`Pass threshold cannot exceed the total number of questions (${questions.length}).`, 'error');
+            }
+
             // Save the threshold to MongoDB
             savePassThreshold(lectureName, threshold);
         });
@@ -1195,43 +1205,6 @@ async function deleteQuestion(week, questionId) {
             console.error('Error deleting question:', error);
         }
     }
-}
-
-/**
- * Save assessment settings for a week
- * @param {string} week - Week identifier
- */
-function saveAssessment(week) {
-    const weekLower = week.toLowerCase().replace(/\s+/g, '-');
-    const thresholdInput = document.getElementById(`pass-threshold-${weekLower}`);
-    
-    if (!thresholdInput) {
-        console.error(`Threshold input not found for week: ${week}, ID: pass-threshold-${weekLower}`);
-        alert('Error: Could not find threshold input for this assessment.');
-        return;
-    }
-    
-    const threshold = parseInt(thresholdInput.value);
-    const questions = assessmentQuestions[week] || [];
-    
-    if (questions.length === 0) {
-        alert('Please add at least one question before saving the assessment.');
-        return;
-    }
-    
-    if (threshold > questions.length) {
-        alert(`Pass threshold cannot be greater than the total number of questions (${questions.length}).`);
-        return;
-    }
-    
-    // Save the pass threshold to the backend
-    savePassThreshold(week, threshold).then(() => {
-        // Show success message
-        alert(`Assessment saved for ${week}!\nTotal Questions: ${questions.length}\nPass Threshold: ${threshold}`);
-    }).catch((error) => {
-        console.error('Error saving assessment:', error);
-        alert(`Error saving assessment: ${error.message}`);
-    });
 }
 
 // Initialize assessment system - this will be called from the main DOMContentLoaded listener

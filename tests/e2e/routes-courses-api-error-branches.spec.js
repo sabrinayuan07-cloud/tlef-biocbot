@@ -29,10 +29,6 @@
  *   - GET /:courseId/ta-permissions: empty {} when course has no tas[]
  *   - GET /:courseId/students: chat-session student path (chatStudents
  *     branch with chatStudents.length > 0)
- *   - POST /course-materials/confirm: 503 path is defensive (skipped),
- *     but exercise the modifiedCount===0 branch via a unit that has already
- *     been confirmed (not actually 0 — modifiedCount is non-zero because
- *     `materialsConfirmedAt: new Date()` always changes; assert success).
  *
  * Branches that are not reachable without bypassing requireAuth / app.locals.db
  * (the `if (!req.user)` 401 and `if (!db)` 503 defensive blocks at the top of

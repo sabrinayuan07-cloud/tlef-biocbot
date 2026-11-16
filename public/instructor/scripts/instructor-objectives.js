@@ -71,10 +71,57 @@ async function loadLearningObjectives() {
 }
 
 /**
- * Add a new learning objective from the input field
+ * Persist the current set of learning objectives shown for a unit to the
+ * server. Called automatically after every add/remove - there's no
+ * separate "Save" step, so this always sends the full current list
+ * (including an empty array, if the instructor has removed them all).
+ * @param {string} week - The week identifier (e.g., 'Week 1')
+ * @returns {Promise<boolean>} Whether the save succeeded
+ */
+async function persistObjectivesForWeek(week) {
+    const weekElement = document.querySelector(`.accordion-item[data-unit-name="${week}"]`);
+    if (!weekElement) {
+        console.error('Could not find week element for:', week);
+        return false;
+    }
+
+    const objectives = Array.from(weekElement.querySelectorAll('.objective-text'))
+        .map(item => item.textContent.trim())
+        .filter(value => value);
+
+    try {
+        const courseId = await getCurrentCourseId();
+        const response = await fetch('/api/learning-objectives', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                lectureName: week,
+                objectives,
+                instructorId: getCurrentInstructorId(),
+                courseId
+            })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Failed to save learning objectives: ${response.status} ${errorText}`);
+        }
+        return true;
+    } catch (error) {
+        console.error('Error saving learning objectives:', error);
+        showNotification('Error saving learning objective. Please try again.', 'error');
+        return false;
+    }
+}
+
+/**
+ * Add a new learning objective from the input field, and immediately save
+ * it - there's no separate Save button, so a failed save rolls the
+ * addition back out of the list rather than leaving the page and the
+ * database out of sync.
  * @param {string} week - The week identifier (e.g., 'Week 1')
  */
-function addObjectiveFromInput(week) {
+async function addObjectiveFromInput(week) {
     // Find the week element using data-unit-name attribute (internal name like "Unit 1")
     const weekElement = document.querySelector(`.accordion-item[data-unit-name="${week}"]`);
     if (!weekElement) {
@@ -82,34 +129,34 @@ function addObjectiveFromInput(week) {
         showNotification('Error: Could not find unit element', 'error');
         return;
     }
-    
+
     // Convert unit name to ID format (e.g., "Unit 1" -> "Unit-1")
     const unitId = week.toLowerCase().replace(/\s+/g, '-');
-    
+
     const inputField = weekElement.querySelector(`#objective-input-${unitId}`);
-    
+
     if (!inputField) {
         console.error('Could not find input field for:', week, 'with ID:', `objective-input-${unitId}`);
         showNotification('Error: Could not find input field', 'error');
         return;
     }
-    
+
     const objectiveText = inputField.value.trim();
-    
+
     if (!objectiveText) {
         showNotification('Please enter a learning objective.', 'error');
         return;
     }
-    
+
     // Get the objectives list
     const objectivesList = weekElement.querySelector(`#objectives-list-${unitId}`);
-    
+
     if (!objectivesList) {
         console.error('Could not find objectives list for:', week);
         showNotification('Error: Could not find objectives list', 'error');
         return;
     }
-    
+
     // Create new objective display item
     const objectiveItem = document.createElement('div');
     objectiveItem.className = 'objective-display-item';
@@ -117,86 +164,38 @@ function addObjectiveFromInput(week) {
         <span class="objective-text">${objectiveText}</span>
         <button class="remove-objective" onclick="removeObjective(this)">×</button>
     `;
-    
+
     // Add to the list
     objectivesList.appendChild(objectiveItem);
-    
+
     // Clear the input field
     inputField.value = '';
     inputField.focus();
-    
+
+    const saved = await persistObjectivesForWeek(week);
+    if (!saved) {
+        objectiveItem.remove();
+        return;
+    }
+
     showNotification('Learning objective added successfully!', 'success');
 }
 
 /**
- * Remove a learning objective
+ * Remove a learning objective, then immediately save the updated list.
  * @param {HTMLElement} button - The remove button element
  */
-function removeObjective(button) {
+async function removeObjective(button) {
     const objectiveItem = button.closest('.objective-display-item');
-    if (objectiveItem) {
-        objectiveItem.remove();
-        showNotification('Learning objective removed.', 'error');
-    } else {
-        console.error('Could not find objective item to remove');
+    const week = button.closest('.accordion-item[data-unit-name]')?.getAttribute('data-unit-name');
+    if (!objectiveItem || !week) {
+        console.error('Could not find objective item or unit to remove from');
+        return;
     }
-}
 
-/**
- * Save learning objectives for a week
- * @param {string} week - The week identifier (e.g., 'Week 1')
- */
-async function saveObjectives(week) {
-    // Find the week element using data-unit-name attribute (internal name like "Unit 1")
-    const weekElement = document.querySelector(`.accordion-item[data-unit-name="${week}"]`);
-    if (!weekElement) {
-        console.error('Could not find week element for:', week);
-        showNotification('Error: Could not find unit element', 'error');
-        return;
-    }
-    
-    const objectiveItems = weekElement.querySelectorAll('.objective-text');
-    
-    // Collect all objectives
-    const objectives = Array.from(objectiveItems).map(item => item.textContent.trim()).filter(value => value);
-    
-    if (objectives.length === 0) {
-        showNotification('Please add at least one learning objective.', 'error');
-        return;
-    }
-    
-    try {
-        // Get the current course ID
-        const courseId = await getCurrentCourseId();
-        
-        const requestBody = {
-            lectureName: week, // Use lectureName for consistency
-            objectives: objectives,
-            instructorId: getCurrentInstructorId(),
-            courseId: courseId
-        };
-        
-        const response = await fetch('/api/learning-objectives', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(requestBody)
-        });
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Error response:', errorText);
-            throw new Error(`Failed to save learning objectives: ${response.status} ${errorText}`);
-        }
-        
-        const result = await response.json();
-        showNotification(result.message, 'success');
-        
-    } catch (error) {
-        console.error('Error saving learning objectives:', error);
-        showNotification('Error saving learning objectives. Please try again.', 'error');
-    }
+    objectiveItem.remove();
+    await persistObjectivesForWeek(week);
+    showNotification('Learning objective removed.', 'error');
 }
 
 function getObjectivesForUnit(unitName) {

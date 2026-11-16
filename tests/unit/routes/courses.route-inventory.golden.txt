@@ -17,7 +17,6 @@ PATCH /:courseId/approved-topics/unit
 POST /:courseId/extract-topics
 POST /:courseId/transfer
 POST /:courseId/remove-document
-POST /course-materials/confirm
 GET /available/all
 GET /available/joinable
 GET /:courseId/instructor-join-status

@@ -28,7 +28,6 @@ const INSTRUCTOR_ID = 'e2e_instructor_id';
  *   removedDocuments: Record<string, any>[],
  *   questionUpdates: Record<string, any>[],
  *   generatedQuestions: Record<string, any>[],
- *   confirmedMaterials: Record<string, any>[],
  *   unitAdds: Record<string, any>[],
  *   unitDeletes: { pathname: string, body: Record<string, any> }[],
  *   cleanupRequests: Record<string, any>[],
@@ -136,7 +135,6 @@ async function installInstructorRoutes(page, options = {}) {
         removedDocuments: [],
         questionUpdates: [],
         generatedQuestions: [],
-        confirmedMaterials: [],
         unitAdds: [],
         unitDeletes: [],
         cleanupRequests: [],
@@ -408,12 +406,6 @@ async function installInstructorRoutes(page, options = {}) {
             return;
         }
 
-        if (pathname === '/api/courses/course-materials/confirm') {
-            captured.confirmedMaterials.push(request.postDataJSON());
-            await route.fulfill({ json: { success: true, message: 'Materials confirmed' } });
-            return;
-        }
-
         if (pathname === '/api/lectures/publish-status') {
             await route.fulfill({
                 json: { success: true, data: { publishStatus: { 'Unit 1': true, 'Unit 2': false } } },
@@ -623,10 +615,12 @@ test.describe('instructor.js focused browser coverage', () => {
         await expect(page.locator('.file-item[data-document-id="doc_file_upload"] .status-text')).toHaveText('Uploaded');
     });
 
-    test('saves objectives, confirms materials, publishes, thresholds, renames, and updates summary', async ({ page }) => {
+    test('auto-saves objectives, publishes, thresholds, renames, and updates summary', async ({ page }) => {
         const captured = await openInstructorDocuments(page);
         page.on('dialog', (dialog) => dialog.accept());
 
+        // Adding and removing a learning objective each auto-save immediately -
+        // there's no separate Save button.
         await page.locator('#objective-input-unit-1').fill('Describe substrate-level phosphorylation');
         await page.locator('.add-objective-btn-inline').first().click();
         await expect(page.locator('#objectives-list-unit-1')).toContainText('Describe substrate-level phosphorylation');
@@ -634,8 +628,6 @@ test.describe('instructor.js focused browser coverage', () => {
         await page.locator('#objectives-list-unit-1 .remove-objective').last().click();
         await expect(page.locator('#objectives-list-unit-1')).not.toContainText('Describe substrate-level phosphorylation');
 
-        await page.locator('.learning-objectives-section .save-btn').first().click();
-        await page.locator('.course-materials-section .save-btn').first().click();
         await page.evaluate(() => {
             const instructorWindow = /** @type {InstructorWindow} */ (window);
             const toggle = /** @type {HTMLInputElement} */ (document.getElementById('publish-unit-2'));
@@ -644,13 +636,13 @@ test.describe('instructor.js focused browser coverage', () => {
             instructorWindow.updatePublishedSummary();
         });
         await page.locator('#pass-threshold-unit-1').fill('1');
-        await page.locator('.assessment-questions-section .save-btn').first().click();
+        await page.locator('#pass-threshold-unit-1').dispatchEvent('change');
         await page.locator('.unit-rename-btn').first().click();
         await page.locator('.unit-rename-input').first().fill('Energy Flow');
         await page.locator('.unit-save-btn').first().click();
 
-        await expect.poll(() => captured.objectiveBodies.length).toBe(1);
-        await expect.poll(() => captured.confirmedMaterials.length).toBe(1);
+        // One save from the add, one from the remove.
+        await expect.poll(() => captured.objectiveBodies.length).toBe(2);
         await expect.poll(() => captured.publishBodies.length).toBeGreaterThan(0);
         await expect.poll(() => captured.thresholdBodies.length).toBe(1);
         expect(captured.thresholdBodies[0]).toMatchObject({
@@ -887,7 +879,6 @@ test.describe('instructor.js focused browser coverage', () => {
             instructorWindow.closeDocumentModal();
             instructorWindow.closeQuestionReviewModal();
             instructorWindow.stopPublishStatusPolling();
-            instructorWindow.saveAssessment('Missing Unit');
         });
 
         await expect(page.locator('#course-title')).toHaveText('No Course Found');
@@ -1032,8 +1023,6 @@ test.describe('instructor.js focused browser coverage', () => {
             bulkError: 0,
             objectiveError: 0,
             thresholdError: 0,
-            materials404: 0,
-            materials500: 0,
             cleanupNone: 0,
             cleanupError: 0,
             renameError: 0,
@@ -1128,16 +1117,6 @@ test.describe('instructor.js focused browser coverage', () => {
                     if (pathname === '/api/lectures/pass-threshold' && method === 'POST' && failures.thresholdError) {
                         failures.thresholdError -= 1;
                         await route.fulfill({ status: 500, body: 'threshold failed' });
-                        return true;
-                    }
-                    if (pathname === '/api/courses/course-materials/confirm' && failures.materials404) {
-                        failures.materials404 -= 1;
-                        await route.fulfill({ status: 404, body: 'missing endpoint' });
-                        return true;
-                    }
-                    if (pathname === '/api/courses/course-materials/confirm' && failures.materials500) {
-                        failures.materials500 -= 1;
-                        await route.fulfill({ status: 500, body: 'confirm failed' });
                         return true;
                     }
                     if (pathname === '/api/documents/cleanup-orphans' && failures.cleanupNone) {
@@ -1337,8 +1316,6 @@ test.describe('instructor.js focused browser coverage', () => {
 
         failures.objectiveError = 1;
         failures.thresholdError = 1;
-        failures.materials404 = 1;
-        failures.materials500 = 1;
         failures.cleanupNone = 1;
         failures.cleanupError = 1;
         failures.renameError = 1;
@@ -1350,10 +1327,8 @@ test.describe('instructor.js focused browser coverage', () => {
         await page.evaluate(async () => {
             const instructorWindow = /** @type {InstructorWindow} */ (window);
 
-            await instructorWindow.saveObjectives('Unit 1');
+            await instructorWindow.persistObjectivesForWeek('Unit 1');
             await instructorWindow.savePassThreshold('Unit 1', 1);
-            await instructorWindow.confirmCourseMaterials('Unit 1');
-            await instructorWindow.confirmCourseMaterials('Unit 1');
             await instructorWindow.cleanupOrphanedDocuments();
             await instructorWindow.cleanupOrphanedDocuments();
 
@@ -1547,14 +1522,13 @@ test.describe('instructor.js focused browser coverage', () => {
             const existingActions = document.createElement('div');
             existingActions.innerHTML = `
                 <div class="add-content-section">Existing add</div>
-                <div class="save-objectives">Confirm Course Materials</div>
             `;
             instructorWindow.addActionButtonsIfMissing(existingActions, 'Unit 1');
 
             const testWindow = /** @type {any} */ (window);
             const originalSavePassThreshold = testWindow.savePassThreshold;
             testWindow.savePassThreshold = () => Promise.reject(new Error('forced threshold save failure'));
-            instructorWindow.saveAssessment('Unit 1');
+            threshold.dispatchEvent(new Event('change', { bubbles: true }));
             await new Promise((resolve) => setTimeout(resolve, 0));
             testWindow.savePassThreshold = originalSavePassThreshold;
 
@@ -1686,10 +1660,6 @@ test.describe('instructor.js focused browser coverage', () => {
             instructorWindow.updateQuestionsDisplay('Unit 2');
             instructorWindow.checkAIGenerationInModal();
             instructorWindow.checkAIGenerationAvailability('Unit 1');
-
-            window.alert = () => {};
-            instructorWindow.saveAssessment('Unit 2');
-            instructorWindow.saveAssessment('Unit 1');
 
             const caseSensitiveMatches = instructorWindow.findElementsContainingText('.folder-name', 'Metabolism', true).length;
             const missingMaterials = instructorWindow.checkCourseMaterialsAvailable('Missing Unit');

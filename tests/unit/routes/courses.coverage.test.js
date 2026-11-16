@@ -276,7 +276,6 @@ describe('remaining public validation and role branches', () => {
         expect((await request(app({ db: null, user: instructor })).get('/available/joinable')).status).toBe(503);
         const broken = { collection: () => { throw new Error('boom'); } };
         expect((await request(app({ db: broken, user: instructor })).delete('/C1?instructorId=i1')).status).toBe(500);
-        expect((await request(app({ db: broken })).post('/course-materials/confirm').send({ week: 'U', instructorId: 'i1' })).status).toBe(500);
         expect((await request(app({ db: broken })).get('/available/all')).status).toBe(500);
         expect((await request(app({ db: broken, user: instructor })).post('/C1/remove-document').send({ documentId: 'd', instructorId: 'i1' })).status).toBe(500);
     });
@@ -531,9 +530,6 @@ describe('last-mile edge and exception coverage', () => {
             updateOne: jest.fn(async () => { throw new Error('retrieval exploded'); }),
         }) };
         expect((await request(app({ db: retrievalDb, user: instructor })).put('/C1/retrieval-mode').send({ isAdditiveRetrieval: true })).status).toBe(500);
-
-        const db = memoryDb({ courses: [{ ...course, lectures: [{ name: 'Different Unit' }] }] });
-        expect((await request(app({ db })).post('/course-materials/confirm').send({ week: 'Missing Unit', instructorId: 'i1' })).status).toBe(404);
     });
 
     test('TA join model failure and removal role update are observable', async () => {

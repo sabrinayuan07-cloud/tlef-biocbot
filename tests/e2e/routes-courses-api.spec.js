@@ -1063,40 +1063,6 @@ test.describe('units endpoints', () => {
 });
 
 // ---------------------------------------------------------------------------
-// course-materials/confirm
-// ---------------------------------------------------------------------------
-test.describe('POST /api/courses/course-materials/confirm', () => {
-    test.use({ storageState: storageStatePath('instructor') });
-
-    test('400 when required fields missing', async ({ request: api }) => {
-        const res = await api.post('/api/courses/course-materials/confirm', {
-            data: { week: 'Unit 1' },
-        });
-        expect(res.status()).toBe(400);
-    });
-
-    test('404 when instructor has no course with that unit', async ({ request: api }) => {
-        const res = await api.post('/api/courses/course-materials/confirm', {
-            data: { week: 'Unit 999', instructorId },
-        });
-        expect(res.status()).toBe(404);
-    });
-
-    test('happy path marks materials confirmed', async ({ request: api }) => {
-        await seedCourse({ courseId: COURSE_A, instructorId });
-        const res = await api.post('/api/courses/course-materials/confirm', {
-            data: { week: 'Unit 1', instructorId },
-        });
-        expect(res.ok()).toBeTruthy();
-        const doc = await withDb((db) =>
-            db.collection('courses').findOne({ courseId: COURSE_A })
-        );
-        const u1 = doc.lectures.find((l) => l.name === 'Unit 1');
-        expect(u1.materialsConfirmed).toBe(true);
-    });
-});
-
-// ---------------------------------------------------------------------------
 // Statistics
 // ---------------------------------------------------------------------------
 test.describe('GET /api/courses/statistics', () => {

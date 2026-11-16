@@ -405,9 +405,6 @@ function createUnitElement(unitName, unitData, isExpanded = false, canDelete = t
                         <input type="text" id="objective-input-${unitId}" class="objective-input" placeholder="Enter learning objective...">
                         <button class="add-objective-btn-inline" onclick="addObjectiveFromInput('${unitName}')">+</button>
                     </div>
-                    <div class="save-objectives">
-                        <button class="save-btn" onclick="saveObjectives('${unitName}')">Save Learning Objectives</button>
-                    </div>
                 </div>
             </div>
             
@@ -518,10 +515,6 @@ function createUnitElement(unitName, unitData, isExpanded = false, canDelete = t
                             <span class="btn-icon">${Icons.wand}</span>
                             Auto-link Questions
                         </button>
-                    </div>
-                    
-                    <div class="save-assessment">
-                        <button class="save-btn" onclick="saveAssessment('${unitName}')">Save Assessment</button>
                     </div>
                 </div>
             </div>
@@ -768,19 +761,9 @@ function addRequiredPlaceholders(container, unitName) {
  * @param {string} unitName - The name of the unit (e.g., 'Unit 1')
  */
 function addActionButtonsIfMissing(container, unitName) {
-    // Check if action buttons already exist
-    let hasAddContentSection = false;
-    let hasConfirmButton = false;
-    
-    container.querySelectorAll('.add-content-section, .save-objectives').forEach(item => {
-        if (item.classList.contains('add-content-section')) {
-            hasAddContentSection = true;
-        }
-        if (item.textContent.includes('Confirm Course Materials')) {
-            hasConfirmButton = true;
-        }
-    });
-    
+    // Check if the action buttons already exist
+    const hasAddContentSection = container.querySelector('.add-content-section');
+
     // Keep every material category repeatable. Required means at least one
     // document of that type, not that the category is a single upload slot.
     if (!hasAddContentSection) {
@@ -802,16 +785,6 @@ function addActionButtonsIfMissing(container, unitName) {
         `;
         container.appendChild(addContentSection);
     }
-    
-    // Add "Confirm Course Materials" button if it doesn't exist
-    if (!hasConfirmButton) {
-        const confirmSection = document.createElement('div');
-        confirmSection.className = 'save-objectives';
-        confirmSection.innerHTML = `
-            <button class="save-btn" onclick="confirmCourseMaterials('${unitName}')">Confirm Course Materials</button>
-        `;
-        container.appendChild(confirmSection);
-    }
 }
 
 /**
@@ -828,8 +801,8 @@ function ensureActionButtonsExist() {
         
         if (courseMaterialsSection) {
             // Check if action buttons already exist
-            const hasActionButtons = courseMaterialsSection.querySelector('.add-content-section, .save-objectives');
-            
+            const hasActionButtons = courseMaterialsSection.querySelector('.add-content-section');
+
             if (!hasActionButtons) {
                 addActionButtonsIfMissing(courseMaterialsSection, unitName);
             }
