@@ -216,7 +216,7 @@
 }
 
 .save-btn {
-  background: #4a90e2;
+  background: var(--primary-color, #4a6fa5);
   color: white;
   border: none;
   padding: 0.75rem 1.5rem;
@@ -228,5 +228,5 @@
 }
 
 .save-btn:hover {
-  background: #3a7bc8;
+  background: var(--accent-color, #3d5a80);
 }
