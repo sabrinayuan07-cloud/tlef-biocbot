@@ -7,6 +7,9 @@ let currentTAs = [];
 let instructorCourses = [];
 let taToRemove = null;
 let taSearchQuery = '';
+// courseId when removing a TA from just one course, null for the
+// remove-from-all-courses flow - both share the same confirmation modal.
+let taRemoveScope = null;
 let taPermissions = {}; // Store TA permissions for each course
 let rolePresets = {}; // { presetName: { materials, questions, ... } }, loaded once from the server
 let taPermissionsLoadFailed = new Set(); // courseIds whose permissions fetch failed this load
@@ -429,6 +432,7 @@ function displayTAs() {
                 </div>
 
                 <div class="ta-actions">
+                    <button class="btn-small btn-secondary" onclick="openRemoveFromCourseModal('${ta.userId}')">Remove from this course</button>
                     <button class="btn-small btn-danger" onclick="openRemoveTAModal('${ta.userId}')">Remove</button>
                 </div>
             </div>
@@ -472,23 +476,43 @@ function displayCourseTAs() {
  */
 function openRemoveTAModal(taId) {
     taToRemove = taId;
+    taRemoveScope = null;
     const ta = currentTAs.find(t => t.userId === taId);
     const taName = ta ? (ta.displayName || ta.username || ta.userId) : taId;
+    showRemoveTAModal(taName, ' from all courses?');
+}
+
+/**
+ * Open the remove-TA modal scoped to just the course this card is showing,
+ * leaving the TA in place in any other course they're assigned to - the
+ * counterpart to the global "Remove" button above it.
+ */
+function openRemoveFromCourseModal(taId) {
+    const ta = currentTAs.find(t => t.userId === taId);
+    if (!ta) return;
+    taToRemove = taId;
+    taRemoveScope = ta.courseId;
+    const taName = ta.displayName || ta.username || ta.userId;
+    showRemoveTAModal(taName, ` from ${ta.courseName || 'this course'}? They will stay a TA in any other courses.`);
+}
+
+/**
+ * Shared by both remove flows - builds the confirmation text via DOM nodes,
+ * not innerHTML, so taName can't inject markup.
+ */
+function showRemoveTAModal(taName, trailingText) {
     const modal = document.getElementById('remove-ta-modal');
-    if (modal) {
-        modal.classList.add('show');
-        a11yModal.open(modal, { onRequestClose: closeRemoveTAModal });
-        // Update modal content with TA name (built via DOM nodes, not innerHTML,
-        // so the name can't inject markup).
-        const modalBody = modal.querySelector('.modal-body p');
-        if (modalBody) {
-            modalBody.textContent = '';
-            modalBody.append('Are you sure you want to remove ');
-            const nameEl = document.createElement('strong');
-            nameEl.textContent = taName;
-            modalBody.append(nameEl);
-            modalBody.append(' from all courses?');
-        }
+    if (!modal) return;
+    modal.classList.add('show');
+    a11yModal.open(modal, { onRequestClose: closeRemoveTAModal });
+    const modalBody = modal.querySelector('.modal-body p');
+    if (modalBody) {
+        modalBody.textContent = '';
+        modalBody.append('Are you sure you want to remove ');
+        const nameEl = document.createElement('strong');
+        nameEl.textContent = taName;
+        modalBody.append(nameEl);
+        modalBody.append(trailingText);
     }
 }
 
@@ -502,6 +526,7 @@ function closeRemoveTAModal() {
         modal.classList.remove('show');
     }
     taToRemove = null;
+    taRemoveScope = null;
 }
 
 /**
@@ -514,17 +539,22 @@ async function handleRemoveTA() {
     }
     
     try {
-        // Remove TA from all courses
-        const response = await authenticatedFetch(`/api/auth/tas/${taToRemove}`, {
+        const endpoint = taRemoveScope
+            ? `/api/courses/${taRemoveScope}/tas/${taToRemove}`
+            : `/api/auth/tas/${taToRemove}`;
+        const response = await authenticatedFetch(endpoint, {
             method: 'DELETE'
         });
-        
+
         if (!response.ok) {
             const errorData = await response.json();
             throw new Error(errorData.message || 'Failed to remove TA');
         }
-        
-        showNotification('TA removed successfully!', 'success');
+
+        showNotification(
+            taRemoveScope ? 'TA removed from course successfully!' : 'TA removed successfully!',
+            'success'
+        );
         closeRemoveTAModal();
         await loadCurrentTAs();
         

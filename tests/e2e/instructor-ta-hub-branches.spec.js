@@ -16,7 +16,9 @@ const COURSE_ID = 'BIOC-E2E-TA-HUB-BRANCHES';
 const COURSE_NAME = 'BIOC E2E TA Hub Branches';
 const EMPTY_COURSE_ID = 'BIOC-E2E-TA-HUB-BRANCHES-EMPTY';
 const EMPTY_COURSE_NAME = 'BIOC E2E TA Hub Branches Empty';
-const COURSE_IDS = [COURSE_ID, EMPTY_COURSE_ID];
+const SECOND_COURSE_ID = 'BIOC-E2E-TA-HUB-BRANCHES-2';
+const SECOND_COURSE_NAME = 'BIOC E2E TA Hub Branches 2';
+const COURSE_IDS = [COURSE_ID, EMPTY_COURSE_ID, SECOND_COURSE_ID];
 
 let instructorId;
 let taId;
@@ -209,7 +211,7 @@ test.describe('Instructor TA Hub branch coverage', () => {
         const card = page.locator('.ta-card', { hasText: taUser.displayName });
         await expect(card).toBeVisible({ timeout: 15_000 });
 
-        await card.getByRole('button', { name: 'Remove' }).click();
+        await card.getByRole('button', { name: 'Remove', exact: true }).click();
         const modal = page.locator('#remove-ta-modal');
         await expect(modal).toHaveClass(/show/);
         await expect(modal.locator('.modal-body')).toContainText(
@@ -221,7 +223,7 @@ test.describe('Instructor TA Hub branch coverage', () => {
         });
         await expect(modal).not.toHaveClass(/show/);
 
-        await card.getByRole('button', { name: 'Remove' }).click();
+        await card.getByRole('button', { name: 'Remove', exact: true }).click();
         await page.locator('#confirm-remove-ta').click();
 
         expect(deleteRequested).toBe(true);
@@ -229,6 +231,43 @@ test.describe('Instructor TA Hub branch coverage', () => {
             'TA removed successfully!'
         );
         await expect(modal).not.toHaveClass(/show/);
+    });
+
+    test('"Remove from this course" removes just the scoped course, leaving the TA assigned elsewhere', async ({ page }) => {
+        await seedTAHubCourse({ tas: [taId] });
+        await seedTAHubCourse({
+            courseId: SECOND_COURSE_ID,
+            courseName: SECOND_COURSE_NAME,
+            tas: [taId],
+        });
+
+        await openTAHub(page);
+
+        const card = page.locator('.ta-card', { hasText: taUser.displayName });
+        await expect(card).toBeVisible({ timeout: 15_000 });
+
+        await card.getByRole('button', { name: 'Remove from this course' }).click();
+        const modal = page.locator('#remove-ta-modal');
+        await expect(modal).toHaveClass(/show/);
+        await expect(modal.locator('.modal-body')).toContainText(
+            `Are you sure you want to remove ${taUser.displayName} from ${COURSE_NAME}? They will stay a TA in any other courses.`
+        );
+
+        await page.locator('#confirm-remove-ta').click();
+
+        await expect(page.locator('.notification.success')).toContainText(
+            'TA removed from course successfully!'
+        );
+        await expect(modal).not.toHaveClass(/show/);
+        await expect(page.locator('.ta-card')).toHaveCount(0);
+
+        // Scoped to this course only - the TA should stay assigned to the other one.
+        const [removedFrom, stillIn] = await Promise.all([
+            withDb((db) => db.collection('courses').findOne({ courseId: COURSE_ID })),
+            withDb((db) => db.collection('courses').findOne({ courseId: SECOND_COURSE_ID })),
+        ]);
+        expect(removedFrom.tas || []).not.toContain(taId);
+        expect(stillIn.tas).toContain(taId);
     });
 
     test('falls back to the TA username when displayName is missing', async ({ page }) => {

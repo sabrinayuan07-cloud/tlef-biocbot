@@ -1305,7 +1305,7 @@ function renderStudents(courseId) {
                         </span>
                         <span>Enrolled</span>
                     </label>
-                    <button class="btn-small btn-secondary btn-accent" id="save-${s.userId}" disabled
+                    <button class="btn-small btn-secondary btn-accent" id="save-${s.userId}" ${isEnrollmentDirty(s.userId) ? '' : 'disabled'}
                             onclick="saveEnrollment('${courseId}','${s.userId}')">Save</button>
 
                     ${hasPendingTAInvite ? `
@@ -1412,16 +1412,24 @@ window.demoteFromTA = async function(studentId, studentName, courseId) {
     }
 };
 
+/**
+ * Whether studentId's pending toggle actually differs from its last-persisted
+ * enrolled state - toggling off and back on (or vice versa) lands back on the
+ * original state, so there's nothing to save. Shared by toggleEnrollment
+ * (same-render DOM update) and renderStudents (a later re-render, e.g. from
+ * typing in the search box, must reach the same disabled/enabled verdict).
+ */
+function isEnrollmentDirty(studentId) {
+    if (!dirtyEnrollment.has(studentId)) return false;
+    const original = currentStudents.find(s => s.userId === studentId);
+    return !!dirtyEnrollment.get(studentId) !== !!(original && original.enrolled);
+}
+
 window.toggleEnrollment = function(courseId, studentId, value) {
     dirtyEnrollment.set(studentId, !!value);
     const btn = document.getElementById(`save-${studentId}`);
     if (!btn) return;
-    // Only enable Save when the toggle actually differs from the
-    // last-persisted value - toggling off and back on (or vice versa)
-    // lands back on the original state, so there's nothing to save.
-    const original = currentStudents.find(s => s.userId === studentId);
-    const isDirty = !!value !== !!(original && original.enrolled);
-    btn.disabled = !isDirty;
+    btn.disabled = !isEnrollmentDirty(studentId);
 };
 
 window.saveEnrollment = async function(courseId, studentId) {
