@@ -289,6 +289,42 @@ test.describe('Student Hub UI', () => {
         expect(course.studentEnrollment[HUB_ACTIVE_STUDENT.userId].enrolled).toBe(false);
     });
 
+    test('keeps Save enabled across a search-triggered re-render until the change is actually saved', async ({ page }) => {
+        await openStudentHub(page);
+
+        const activeCard = studentCard(page, HUB_ACTIVE_STUDENT.displayName);
+        const checkbox = activeCard.locator('input[type="checkbox"]');
+        const saveButton = activeCard.locator(`#save-${HUB_ACTIVE_STUDENT.userId}`);
+
+        await expect(checkbox).toBeChecked();
+        await activeCard.locator('.enroll-toggle .toggle-slider').click();
+        await expect(checkbox).not.toBeChecked();
+        await expect(saveButton).toBeEnabled();
+
+        // Typing in the search box re-renders every card from scratch. The
+        // unsaved toggle must not look saved just because the card was rebuilt.
+        await page.locator('#student-search-input').fill(HUB_ACTIVE_STUDENT.displayName);
+        const rerenderedCard = studentCard(page, HUB_ACTIVE_STUDENT.displayName);
+        await expect(rerenderedCard.locator('input[type="checkbox"]')).not.toBeChecked();
+        await expect(rerenderedCard.locator(`#save-${HUB_ACTIVE_STUDENT.userId}`)).toBeEnabled();
+
+        await rerenderedCard.locator(`#save-${HUB_ACTIVE_STUDENT.userId}`).click();
+        await expect(page.locator('.notification.success')).toContainText(
+            `Enrollment disabled for ${HUB_ACTIVE_STUDENT.userId}`,
+            { timeout: 10_000 }
+        );
+
+        // Saved: the button goes back to disabled, and clearing the search
+        // (another re-render) must not make it look unsaved again.
+        await expect(rerenderedCard.locator(`#save-${HUB_ACTIVE_STUDENT.userId}`)).toBeDisabled();
+        await page.locator('#student-search-clear').click();
+        await expect(studentCard(page, HUB_ACTIVE_STUDENT.displayName).locator(`#save-${HUB_ACTIVE_STUDENT.userId}`))
+            .toBeDisabled();
+
+        const course = await getHubCourse();
+        expect(course.studentEnrollment[HUB_ACTIVE_STUDENT.userId].enrolled).toBe(false);
+    });
+
     test('escapes student display names instead of injecting markup', async ({ page }) => {
         await page.addInitScript(() => {
             (/** @type {Window & typeof globalThis & { __studentHubXss?: boolean }} */ (window)).__studentHubXss = false;
