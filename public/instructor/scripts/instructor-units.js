@@ -597,6 +597,11 @@ function createUnitElement(unitName, unitData, isExpanded = false, canDelete = t
                     <span class="toggle-label" aria-hidden="true">Published</span>
                 </div>
 
+                <button class="duplicate-unit-btn" type="button"
+                        onclick="event.stopPropagation(); duplicateUnit('${unitName}')"
+                        title="Duplicate ${unitName} into a new unit"
+                        aria-label="Duplicate ${unitName} into a new unit">Duplicate</button>
+
                 <button type="button" class="delete-unit-btn" id="unit-delete-${unitId}" onclick="openDeleteUnitModal('${unitName}')"
                         title="${canDelete ? 'Delete Unit' : 'A course must have at least one unit'}"
                         ${canDelete ? '' : 'disabled'}

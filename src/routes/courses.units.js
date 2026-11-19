@@ -9,6 +9,11 @@ const DocumentModel = require('../models/Document');
 const { deleteDocumentFromAllCollections } = require('../services/embeddingIndexService');
 const qdrantMaintenance = require('../services/qdrantMaintenance');
 const { hasCourseManagementAccess } = require('./courses.shared');
+const { createId } = require('../services/id');
+
+function deepClone(value) {
+    return JSON.parse(JSON.stringify(value));
+}
 
 /**
  * POST /api/courses/:courseId/units
@@ -121,6 +126,130 @@ router.post('/:courseId/units', async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Internal server error while adding new unit'
+        });
+    }
+});
+
+/**
+ * POST /api/courses/:courseId/units/:unitName/duplicate
+ * Create a new unit seeded from an existing unit's learning objectives,
+ * pass threshold, and assessment questions (#693). Documents/materials are
+ * deliberately NOT copied - they're real uploaded file bytes with a matching
+ * Qdrant vector index, not "settings", and duplicating them would require
+ * re-embedding. Assessment questions get fresh questionIds so the two units
+ * don't share identifiers.
+ */
+router.post('/:courseId/units/:unitName/duplicate', async (req, res) => {
+    try {
+        const { courseId, unitName } = req.params;
+        const { instructorId } = req.body;
+
+        if (!instructorId) {
+            return res.status(400).json({
+                success: false,
+                message: 'instructorId is required'
+            });
+        }
+
+        const db = req.app.locals.db;
+        if (!db) {
+            return res.status(503).json({
+                success: false,
+                message: 'Database connection not available'
+            });
+        }
+
+        const user = req.user;
+        if (!user) {
+            return res.status(401).json({ success: false, message: 'Authentication required' });
+        }
+
+        if (user.role === 'instructor' && instructorId !== user.userId) {
+            return res.status(403).json({
+                success: false,
+                message: 'You do not have permission to modify this course'
+            });
+        }
+
+        const { hasPermission } = require('../services/permissions');
+        const hasAccess = await hasPermission(db, user, courseId, 'materials');
+        if (!hasAccess) {
+            return res.status(403).json({
+                success: false,
+                message: 'You do not have permission to modify this course'
+            });
+        }
+
+        const collection = db.collection('courses');
+        const course = await collection.findOne({ courseId });
+
+        if (!course) {
+            return res.status(404).json({
+                success: false,
+                message: 'Course not found'
+            });
+        }
+
+        const existingUnits = course.lectures || [];
+        const sourceUnit = existingUnits.find(lecture => lecture.name === unitName);
+        if (!sourceUnit) {
+            return res.status(404).json({
+                success: false,
+                message: `Unit "${unitName}" not found`
+            });
+        }
+
+        // Same numbering logic as plain unit creation above, so a duplicate
+        // never collides with an existing or previously-deleted unit name.
+        const highestUnitNum = existingUnits.reduce((highest, lecture) => {
+            const match = /\d+/.exec(lecture?.name || '');
+            return match ? Math.max(highest, parseInt(match[0], 10)) : highest;
+        }, 0);
+        const structureUnitsCount = course.courseStructure ? course.courseStructure.totalUnits : 0;
+        const newUnitNum = Math.max(highestUnitNum, structureUnitsCount) + 1;
+        const newUnitName = `Unit ${newUnitNum}`;
+
+        const now = new Date();
+        const duplicatedQuestions = deepClone(sourceUnit.assessmentQuestions || []).map(question => ({
+            ...question,
+            questionId: createId('q')
+        }));
+        const newUnit = {
+            name: newUnitName,
+            isPublished: false,
+            learningObjectives: deepClone(sourceUnit.learningObjectives || []),
+            passThreshold: typeof sourceUnit.passThreshold === 'number' ? sourceUnit.passThreshold : 2,
+            createdAt: now,
+            updatedAt: now,
+            documents: [],
+            assessmentQuestions: duplicatedQuestions
+        };
+
+        const newTotalUnits = existingUnits.length + 1;
+        await collection.updateOne(
+            { courseId },
+            {
+                $push: { lectures: newUnit },
+                $set: { 'courseStructure.totalUnits': newTotalUnits, updatedAt: now }
+            }
+        );
+
+        console.log(`Duplicated ${unitName} into ${newUnitName} for course ${courseId}`);
+
+        res.json({
+            success: true,
+            message: `${newUnitName} created from ${unitName}`,
+            data: {
+                unit: newUnit,
+                totalUnits: newTotalUnits
+            }
+        });
+
+    } catch (error) {
+        console.error('Error duplicating unit:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error while duplicating unit'
         });
     }
 });
