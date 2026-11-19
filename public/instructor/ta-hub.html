@@ -96,6 +96,24 @@
                     </div>
                 </form>
 
+                <!-- Bulk permission-preset assignment (#690) -->
+                <div class="batch-ta-controls" id="batch-ta-controls">
+                    <div class="batch-select-all-group">
+                        <label class="batch-select-all-label">
+                            <input type="checkbox" id="batch-select-all-tas">
+                            <span>Select all</span>
+                        </label>
+                        <span id="batch-ta-selection-count" class="batch-selection-count">0 selected</span>
+                    </div>
+                    <div class="batch-ta-actions">
+                        <select id="batch-ta-preset-select" aria-label="Permission preset to apply to selected TAs"></select>
+                        <button type="button" id="batch-apply-ta-preset" class="primary-button" disabled
+                                title="Applies the chosen preset to every selected TA">Apply to Selected</button>
+                        <button type="button" id="batch-cancel-ta-selection" class="secondary-button" disabled
+                                title="Clear the current selection">Cancel</button>
+                    </div>
+                </div>
+
                 <div id="tas-container" class="tas-grid">
                     <!-- TAs will be loaded here -->
                 </div>

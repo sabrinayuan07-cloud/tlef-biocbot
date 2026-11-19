@@ -70,6 +70,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Load role presets and current TAs
     await loadRolePresets();
+    populateBatchTAPresetOptions();
     await loadCurrentTAs();
 });
 
@@ -116,6 +117,20 @@ function initializeFormHandlers() {
             taSearchClear.hidden = true;
             displayTAs();
         });
+    }
+
+    // Bulk permission-preset controls (#690)
+    const selectAllTAs = document.getElementById('batch-select-all-tas');
+    if (selectAllTAs) {
+        selectAllTAs.addEventListener('change', () => handleSelectAllTAsChange(selectAllTAs.checked));
+    }
+    const batchApplyBtn = document.getElementById('batch-apply-ta-preset');
+    if (batchApplyBtn) {
+        batchApplyBtn.addEventListener('click', batchApplyPresetToSelectedTAs);
+    }
+    const batchCancelTABtn = document.getElementById('batch-cancel-ta-selection');
+    if (batchCancelTABtn) {
+        batchCancelTABtn.addEventListener('click', cancelTASelection);
     }
 }
 
@@ -358,6 +373,7 @@ function displayTAs() {
                 <p>Create TA accounts to get started with course management.</p>
             </div>
         `;
+        updateBatchTAControlsUI();
         return;
     }
 
@@ -368,6 +384,7 @@ function displayTAs() {
 
     if (tasToRender.length === 0) {
         tasContainer.innerHTML = '<p>No TAs match your search.</p>';
+        updateBatchTAControlsUI();
         return;
     }
 
@@ -400,6 +417,8 @@ function displayTAs() {
         return `
             <div class="ta-card" data-ta-id="${ta.userId}">
                 <div class="ta-header">
+                    <input type="checkbox" class="ta-select-checkbox" data-ta-id="${ta.userId}" data-course-id="${escapeHTML(ta.courseId)}"
+                           aria-label="Select ${displayLabel} for a bulk action" onchange="toggleTASelection(this.checked)">
                     <h3 class="ta-name">${displayLabel}</h3>
                     <span class="ta-role">TA</span>
                 </div>
@@ -434,6 +453,8 @@ function displayTAs() {
             </div>
         `;
     }).join('');
+
+    updateBatchTAControlsUI();
 }
 
 /**
@@ -664,6 +685,107 @@ function applyPermissionsToCache(courseId, taId, permissions, roleLabel) {
 function renderRolePickerForTA(taId, roleLabel) {
     const select = document.querySelector(`.ta-card[data-ta-id="${taId}"] .role-preset-picker select`);
     if (select) select.value = roleLabel;
+}
+
+/**
+ * Bulk permission-preset assignment (#690): selection + "select all" + a
+ * preset dropdown + Apply to Selected / Cancel. Mirrors the Flagged Content
+ * batch-resolve pattern - fans out over the existing single-TA
+ * ta-permissions endpoint (the same one applyRolePreset uses) rather than a
+ * new bulk route, then does one full reload instead of N individual
+ * per-TA success toasts.
+ */
+function toggleTASelection() {
+    updateBatchTAControlsUI();
+}
+
+function getSelectedTAs() {
+    return Array.from(document.querySelectorAll('.ta-select-checkbox:checked'))
+        .map(checkbox => ({ taId: checkbox.dataset.taId, courseId: checkbox.dataset.courseId }));
+}
+
+function updateBatchTAControlsUI() {
+    const checkboxes = Array.from(document.querySelectorAll('.ta-select-checkbox'));
+    const checkedCount = checkboxes.filter(checkbox => checkbox.checked).length;
+
+    const countEl = document.getElementById('batch-ta-selection-count');
+    if (countEl) countEl.textContent = `${checkedCount} selected`;
+
+    const applyBtn = document.getElementById('batch-apply-ta-preset');
+    const cancelBtn = document.getElementById('batch-cancel-ta-selection');
+    if (applyBtn) applyBtn.disabled = checkedCount === 0;
+    if (cancelBtn) cancelBtn.disabled = checkedCount === 0;
+
+    const selectAll = document.getElementById('batch-select-all-tas');
+    if (selectAll) {
+        selectAll.checked = checkboxes.length > 0 && checkedCount === checkboxes.length;
+        selectAll.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
+    }
+}
+
+function handleSelectAllTAsChange(checked) {
+    document.querySelectorAll('.ta-select-checkbox').forEach(checkbox => {
+        checkbox.checked = checked;
+    });
+    updateBatchTAControlsUI();
+}
+
+function cancelTASelection() {
+    document.querySelectorAll('.ta-select-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    updateBatchTAControlsUI();
+}
+
+function populateBatchTAPresetOptions() {
+    const select = document.getElementById('batch-ta-preset-select');
+    if (!select) return;
+    select.innerHTML = Object.keys(rolePresets).map(presetName =>
+        `<option value="${presetName}">${ROLE_PRESET_LABELS[presetName] || presetName}</option>`
+    ).join('');
+}
+
+async function batchApplyPresetToSelectedTAs() {
+    const selected = getSelectedTAs();
+    if (selected.length === 0) return;
+
+    const presetSelect = document.getElementById('batch-ta-preset-select');
+    const presetName = presetSelect ? presetSelect.value : '';
+    if (!presetName) return;
+
+    const presetLabel = ROLE_PRESET_LABELS[presetName] || presetName;
+    const confirmed = confirm(`Apply "${presetLabel}" to ${selected.length} selected TA${selected.length === 1 ? '' : 's'}?`);
+    if (!confirmed) return;
+
+    const applyBtn = document.getElementById('batch-apply-ta-preset');
+    const cancelBtn = document.getElementById('batch-cancel-ta-selection');
+    if (applyBtn) applyBtn.disabled = true;
+    if (cancelBtn) cancelBtn.disabled = true;
+
+    const results = await Promise.allSettled(selected.map(({ taId, courseId }) =>
+        authenticatedFetch(`/api/courses/${courseId}/ta-permissions/${taId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ role: presetName })
+        }).then(response => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+        })
+    ));
+
+    const succeeded = results.filter(result => result.status === 'fulfilled').length;
+    const failed = results.length - succeeded;
+
+    if (failed === 0) {
+        showNotification(`Applied "${presetLabel}" to ${succeeded} TA${succeeded === 1 ? '' : 's'}.`, 'success');
+    } else if (succeeded === 0) {
+        showNotification(`Failed to apply "${presetLabel}" to the selected TAs. Please try again.`, 'error');
+    } else {
+        showNotification(`Applied to ${succeeded}, ${failed} failed. Please retry the failed ones.`, 'warning');
+    }
+
+    await loadCurrentTAs();
+    updateBatchTAControlsUI();
 }
 
 

@@ -18,6 +18,7 @@ let currentRosterMatch = null;
 // LMS grades keyed by BiocBot user id so a student card can find its own row.
 let gradesByLocalUserId = new Map();
 const dirtyEnrollment = new Map(); // studentId -> boolean (enrolled)
+const selectedStudentIds = new Set(); // bulk enroll/unenroll selection (#690)
 
 document.addEventListener('DOMContentLoaded', async function() {
     await waitForAuth();
@@ -250,6 +251,25 @@ function downloadPseudonymMapping() {
 function initializeStudentHub() {
     // Course selection is now handled by the home page
     // No need for dropdown change handler
+
+    // Bulk enroll/unenroll controls (#690)
+    const selectAllStudents = document.getElementById('batch-select-all-students');
+    if (selectAllStudents) {
+        selectAllStudents.addEventListener('change', () => handleSelectAllStudentsChange(selectAllStudents.checked));
+    }
+    const batchEnrollBtn = document.getElementById('batch-enroll-students');
+    if (batchEnrollBtn) {
+        batchEnrollBtn.addEventListener('click', () => batchSetEnrollment(true));
+    }
+    const batchUnenrollBtn = document.getElementById('batch-unenroll-students');
+    if (batchUnenrollBtn) {
+        batchUnenrollBtn.addEventListener('click', () => batchSetEnrollment(false));
+    }
+    const batchCancelBtn = document.getElementById('batch-cancel-student-selection');
+    if (batchCancelBtn) {
+        batchCancelBtn.addEventListener('click', cancelStudentSelection);
+    }
+
     const surveyStatusFilter = document.getElementById('survey-status-filter');
     if (surveyStatusFilter) {
         addKeyboardPickerActivation(surveyStatusFilter);
@@ -1384,6 +1404,7 @@ function renderStudents(courseId) {
             <div class="student-card ${isTA ? 'ta-card' : ''}" style="${isTA ? 'border-left: 4px solid #17a2b8;' : ''}">
                 <div class="student-header">
                     <div style="display: flex; align-items: center; gap: 10px;">
+                        ${isTA ? '' : `<input type="checkbox" class="student-select-checkbox" data-student-id="${escapeHTML(s.userId)}" aria-label="Select ${escapeHTML(s.displayName || s.username || s.userId)} for a bulk action" onchange="toggleStudentSelection('${escapeHTML(s.userId)}', this.checked)">`}
                         <h3 class="student-name">${escapeHTML(s.displayName || s.username || s.userId)}</h3>
                         ${isTA ? '<span class="badge badge-info" style="background: #117a8b; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8em;">TA</span>' : ''}
                     </div>
@@ -1433,7 +1454,130 @@ function renderStudents(courseId) {
             checkbox.click();
         });
     });
+
+    updateBatchStudentControlsUI();
 }
+
+/**
+ * Bulk enroll/unenroll (#690): selection + "select all" + Enroll/Unenroll
+ * Selected + Cancel. Mirrors the Flagged Content batch-resolve pattern -
+ * fans out over the existing single-student enrollment endpoint rather than
+ * a new bulk route.
+ */
+function toggleStudentSelection(studentId, checked) {
+    if (checked) {
+        selectedStudentIds.add(studentId);
+    } else {
+        selectedStudentIds.delete(studentId);
+    }
+    updateBatchStudentControlsUI();
+}
+
+function getSelectedStudentIds() {
+    return Array.from(document.querySelectorAll('.student-select-checkbox:checked'))
+        .map(checkbox => checkbox.dataset.studentId);
+}
+
+function updateBatchStudentControlsUI() {
+    const checkboxes = Array.from(document.querySelectorAll('.student-select-checkbox'));
+    const checkedCount = checkboxes.filter(checkbox => checkbox.checked).length;
+
+    const countEl = document.getElementById('batch-student-selection-count');
+    if (countEl) countEl.textContent = `${checkedCount} selected`;
+
+    const enrollBtn = document.getElementById('batch-enroll-students');
+    const unenrollBtn = document.getElementById('batch-unenroll-students');
+    const cancelBtn = document.getElementById('batch-cancel-student-selection');
+    if (enrollBtn) enrollBtn.disabled = checkedCount === 0;
+    if (unenrollBtn) unenrollBtn.disabled = checkedCount === 0;
+    if (cancelBtn) cancelBtn.disabled = checkedCount === 0;
+
+    const selectAll = document.getElementById('batch-select-all-students');
+    if (selectAll) {
+        selectAll.checked = checkboxes.length > 0 && checkedCount === checkboxes.length;
+        selectAll.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
+    }
+}
+
+function handleSelectAllStudentsChange(checked) {
+    document.querySelectorAll('.student-select-checkbox').forEach(checkbox => {
+        checkbox.checked = checked;
+        if (checked) {
+            selectedStudentIds.add(checkbox.dataset.studentId);
+        } else {
+            selectedStudentIds.delete(checkbox.dataset.studentId);
+        }
+    });
+    updateBatchStudentControlsUI();
+}
+
+function cancelStudentSelection() {
+    selectedStudentIds.clear();
+    document.querySelectorAll('.student-select-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    updateBatchStudentControlsUI();
+}
+
+async function batchSetEnrollment(enrolled) {
+    const studentIds = getSelectedStudentIds();
+    if (studentIds.length === 0) return;
+
+    const actionLabel = enrolled ? 'Enroll' : 'Unenroll';
+    const confirmed = confirm(`${actionLabel} ${studentIds.length} selected student${studentIds.length === 1 ? '' : 's'}?`);
+    if (!confirmed) return;
+
+    const courseId = document.getElementById('student-course-select')?.value || localStorage.getItem('selectedCourseId');
+    if (!courseId) {
+        showNotification('No course selected.', 'error');
+        return;
+    }
+
+    const enrollBtn = document.getElementById('batch-enroll-students');
+    const unenrollBtn = document.getElementById('batch-unenroll-students');
+    const cancelBtn = document.getElementById('batch-cancel-student-selection');
+    if (enrollBtn) enrollBtn.disabled = true;
+    if (unenrollBtn) unenrollBtn.disabled = true;
+    if (cancelBtn) cancelBtn.disabled = true;
+
+    const results = await Promise.allSettled(studentIds.map(studentId =>
+        authenticatedFetch(`/api/courses/${courseId}/student-enrollment/${studentId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enrolled })
+        }).then(response => {
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+        })
+    ));
+
+    const succeeded = results.filter(result => result.status === 'fulfilled').length;
+    const failed = results.length - succeeded;
+
+    // Keep the cached student list in sync so re-renders (e.g. switching the
+    // sort order) reflect the new state without a full reload.
+    studentIds.forEach((studentId, index) => {
+        selectedStudentIds.delete(studentId);
+        if (results[index].status !== 'fulfilled') return;
+        const student = currentStudents.find(s => s.userId === studentId);
+        if (student) student.enrolled = enrolled;
+        dirtyEnrollment.delete(studentId);
+    });
+
+    const actionText = enrolled ? 'enrolled' : 'unenrolled';
+    if (failed === 0) {
+        showNotification(`${succeeded} student${succeeded === 1 ? '' : 's'} ${actionText}.`, 'success');
+    } else if (succeeded === 0) {
+        showNotification(`Failed to ${actionLabel.toLowerCase()} the selected students. Please try again.`, 'error');
+    } else {
+        showNotification(`${succeeded} ${actionText}, ${failed} failed. Please retry the failed ones.`, 'warning');
+    }
+
+    const courseIdForRender = document.getElementById('student-course-select')?.value || courseId;
+    renderStudents(courseIdForRender);
+}
+
+window.toggleStudentSelection = toggleStudentSelection;
 
 window.promoteToTA = async function(studentId, studentName, courseId) {
     if (!courseId) {

@@ -730,3 +730,55 @@ body.pseudonym-modal-open {
 .download-dropdown-menu button:not(:last-child) {
     border-bottom: 1px solid #f1f5f9;
 }
+
+/* Bulk enroll/unenroll controls (#690) */
+.batch-student-controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding: 0.75rem 1rem;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.batch-select-all-group {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    min-width: 0;
+}
+
+.batch-select-all-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: #374151;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.batch-selection-count {
+    font-size: 0.875rem;
+    color: #6b7280;
+    white-space: nowrap;
+}
+
+.batch-student-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+.batch-student-actions button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.student-select-checkbox {
+    margin-right: 0.5rem;
+}

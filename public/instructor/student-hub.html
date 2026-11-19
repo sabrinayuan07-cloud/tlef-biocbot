@@ -108,6 +108,25 @@
                     <div id="lms-unmatched-body"></div>
                 </details>
 
+                <!-- Bulk enroll/unenroll controls (#690) -->
+                <div class="batch-student-controls" id="batch-student-controls">
+                    <div class="batch-select-all-group">
+                        <label class="batch-select-all-label">
+                            <input type="checkbox" id="batch-select-all-students">
+                            <span>Select all</span>
+                        </label>
+                        <span id="batch-student-selection-count" class="batch-selection-count">0 selected</span>
+                    </div>
+                    <div class="batch-student-actions">
+                        <button type="button" id="batch-enroll-students" class="primary-button" disabled
+                                title="Enrolls every selected student">Enroll Selected</button>
+                        <button type="button" id="batch-unenroll-students" class="secondary-button" disabled
+                                title="Unenrolls every selected student">Unenroll Selected</button>
+                        <button type="button" id="batch-cancel-student-selection" class="secondary-button" disabled
+                                title="Clear the current selection">Cancel</button>
+                    </div>
+                </div>
+
                 <div id="students-container" class="students-grid"></div>
             </div>
 
