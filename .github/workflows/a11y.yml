@@ -60,6 +60,12 @@ jobs:
 
       - name: Install dependencies
         run: npm install
+        env:
+          # onnxruntime-node (via fastembed) tries to download optional CUDA
+          # GPU binaries from GitHub releases on Linux x64 installs. This app
+          # only ever uses the CPU execution provider, so skip it - this also
+          # sidesteps the upstream onnxruntime repo currently returning 404.
+          ONNXRUNTIME_NODE_INSTALL_CUDA: skip
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium

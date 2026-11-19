@@ -38,6 +38,11 @@ jobs:
         run: npm install
         env:
           NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # onnxruntime-node (via fastembed) tries to download optional CUDA
+          # GPU binaries from GitHub releases on Linux x64 installs. This app
+          # only ever uses the CPU execution provider, so skip it - this also
+          # sidesteps the upstream onnxruntime repo currently returning 404.
+          ONNXRUNTIME_NODE_INSTALL_CUDA: skip
 
       - name: Run unit tests with coverage
         run: npm run test:unit:coverage
