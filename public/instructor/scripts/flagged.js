@@ -26,6 +26,59 @@ let courseIdPromise = null;
 let redirectInProgress = false;
 const SUPER_COURSE_FLAG_COURSE_ID = 'SUPER_COURSE';
 
+// Canned resolution notes (#694): quick-pick text an instructor/TA can insert
+// into an approve or dismiss note instead of typing one from scratch each
+// time. Free-text entry is still always available alongside these.
+const CANNED_RESPONSES = [
+    'Reviewed and approved — the content is accurate as written.',
+    'Not inappropriate, just a sensitive topic. No change needed.',
+    'Duplicate of an existing flag; already addressed.',
+    'Content corrected based on your report. Thank you for flagging this!',
+    'Unable to reproduce the issue as described.'
+];
+
+// Attribute-safe escape (escapeHtml only covers text-node content, not the
+// quote characters a data-* attribute value needs escaped).
+function escapeAttr(text) {
+    return escapeHtml(text).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function renderCannedResponseChips(textareaId) {
+    return `
+        <div class="canned-response-chips" role="group" aria-label="Insert a canned resolution note">
+            ${CANNED_RESPONSES.map(text => `
+                <button type="button" class="canned-response-chip"
+                        data-textarea-id="${escapeAttr(textareaId)}" data-canned-text="${escapeAttr(text)}">
+                    ${escapeHtml(text.length > 42 ? `${text.slice(0, 39)}...` : text)}
+                </button>
+            `).join('')}
+        </div>
+    `;
+}
+
+/**
+ * Insert a canned response into a note textarea. Replaces the textarea's
+ * current content (including the approve form's pre-filled default message)
+ * rather than appending, so picking a chip gives a clean starting point the
+ * instructor can still freely edit on top of.
+ */
+function insertCannedResponse(textareaId, text) {
+    const textarea = document.getElementById(textareaId);
+    if (!textarea) return;
+    textarea.value = text;
+    textarea.focus();
+}
+
+// Event delegation for canned-response chips: these are re-rendered on every
+// list refresh, so a single document-level listener avoids having to rebind
+// per-button handlers (and sidesteps embedding free text inside an inline
+// onclick, which is fragile to quote characters).
+document.addEventListener('click', event => {
+    const chip = event.target.closest('.canned-response-chip');
+    if (!chip) return;
+    insertCannedResponse(chip.dataset.textareaId, chip.dataset.cannedText);
+});
+
 // superchatId -> bucket name, for labeling super-course flags by their bucket.
 const superchatNameById = new Map();
 
@@ -1005,7 +1058,10 @@ function createActionButtons(flag) {
             <button class="action-btn dismiss-btn" onclick="handleFlagAction('${flag.flagId}', 'rejected')">
                 Dismiss
             </button>
-            
+            <button class="action-btn dismiss-with-note-btn" onclick="showDismissForm('${flag.flagId}')">
+                Dismiss with note
+            </button>
+
             <div id="approval-form-${flag.flagId}" class="approval-form" style="display: none;">
                 <div class="form-header">
                     <h4>Send Follow-up to ${reporterLabel}</h4>
@@ -1013,6 +1069,7 @@ function createActionButtons(flag) {
                 </div>
                 <div class="form-group">
                     <label for="message-content-${flag.flagId}">Message:</label>
+                    ${renderCannedResponseChips(`message-content-${flag.flagId}`)}
                     <textarea id="message-content-${flag.flagId}" class="message-textarea" rows="4">${escapeHtml(defaultMessage)}</textarea>
                 </div>
                 <div class="form-actions-row">
@@ -1025,6 +1082,26 @@ function createActionButtons(flag) {
                 </div>
                 <input type="hidden" id="flag-recipient-role-${flag.flagId}" value="${reporterRole}">
                 <input type="hidden" id="student-email-${flag.flagId}" value="student.${flag.studentId}@university.edu">
+            </div>
+
+            <div id="dismiss-form-${flag.flagId}" class="approval-form" style="display: none;">
+                <div class="form-header">
+                    <h4>Dismiss Flag</h4>
+                    <p class="form-description">Optionally add a note explaining why (not sent to the ${reporterRole}).</p>
+                </div>
+                <div class="form-group">
+                    <label for="dismiss-note-${flag.flagId}">Note (optional):</label>
+                    ${renderCannedResponseChips(`dismiss-note-${flag.flagId}`)}
+                    <textarea id="dismiss-note-${flag.flagId}" class="message-textarea" rows="3"></textarea>
+                </div>
+                <div class="form-actions-row">
+                    <button class="action-btn send-dismiss-btn" onclick="sendDismissal('${flag.flagId}')">
+                        Confirm Dismiss
+                    </button>
+                    <button class="action-btn cancel-btn" onclick="hideDismissForm('${flag.flagId}')">
+                        Cancel
+                    </button>
+                </div>
             </div>
         `;
     } else {
@@ -1045,14 +1122,16 @@ function showApprovalForm(flagId) {
     const approvalForm = document.getElementById(`approval-form-${flagId}`);
     const approveButton = document.querySelector(`[data-flag-id="${flagId}"] .approve-btn`);
     const dismissButton = document.querySelector(`[data-flag-id="${flagId}"] .dismiss-btn`);
-    
+    const dismissWithNoteButton = document.querySelector(`[data-flag-id="${flagId}"] .dismiss-with-note-btn`);
+
     if (approvalForm) {
         approvalForm.style.display = 'block';
         approvalForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        
+
         // Hide the action buttons while form is open
         if (approveButton) approveButton.style.display = 'none';
         if (dismissButton) dismissButton.style.display = 'none';
+        if (dismissWithNoteButton) dismissWithNoteButton.style.display = 'none';
     }
 }
 
@@ -1064,13 +1143,127 @@ function hideApprovalForm(flagId) {
     const approvalForm = document.getElementById(`approval-form-${flagId}`);
     const approveButton = document.querySelector(`[data-flag-id="${flagId}"] .approve-btn`);
     const dismissButton = document.querySelector(`[data-flag-id="${flagId}"] .dismiss-btn`);
-    
+    const dismissWithNoteButton = document.querySelector(`[data-flag-id="${flagId}"] .dismiss-with-note-btn`);
+
     if (approvalForm) {
         approvalForm.style.display = 'none';
-        
+
         // Show the action buttons again
         if (approveButton) approveButton.style.display = 'inline-block';
         if (dismissButton) dismissButton.style.display = 'inline-block';
+        if (dismissWithNoteButton) dismissWithNoteButton.style.display = 'inline-block';
+    }
+}
+
+/**
+ * Show the dismiss form for a specific flag (#694: optional note + canned responses)
+ * @param {string} flagId - The flag ID
+ */
+function showDismissForm(flagId) {
+    const dismissForm = document.getElementById(`dismiss-form-${flagId}`);
+    const approveButton = document.querySelector(`[data-flag-id="${flagId}"] .approve-btn`);
+    const dismissButton = document.querySelector(`[data-flag-id="${flagId}"] .dismiss-btn`);
+    const dismissWithNoteButton = document.querySelector(`[data-flag-id="${flagId}"] .dismiss-with-note-btn`);
+
+    if (dismissForm) {
+        dismissForm.style.display = 'block';
+        dismissForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+        if (approveButton) approveButton.style.display = 'none';
+        if (dismissButton) dismissButton.style.display = 'none';
+        if (dismissWithNoteButton) dismissWithNoteButton.style.display = 'none';
+    }
+}
+
+/**
+ * Hide the dismiss form for a specific flag
+ * @param {string} flagId - The flag ID
+ */
+function hideDismissForm(flagId) {
+    const dismissForm = document.getElementById(`dismiss-form-${flagId}`);
+    const approveButton = document.querySelector(`[data-flag-id="${flagId}"] .approve-btn`);
+    const dismissButton = document.querySelector(`[data-flag-id="${flagId}"] .dismiss-btn`);
+    const dismissWithNoteButton = document.querySelector(`[data-flag-id="${flagId}"] .dismiss-with-note-btn`);
+
+    if (dismissForm) {
+        dismissForm.style.display = 'none';
+        if (dismissWithNoteButton) dismissWithNoteButton.style.display = 'inline-block';
+
+        if (approveButton) approveButton.style.display = 'inline-block';
+        if (dismissButton) dismissButton.style.display = 'inline-block';
+    }
+}
+
+/**
+ * Confirm dismissal, with an optional note (#694). Routes through the same
+ * /response endpoint the approve flow uses (rather than the note-less
+ * /status endpoint) so the note is stored when one is given.
+ * @param {string} flagId - The flag ID
+ */
+async function sendDismissal(flagId) {
+    try {
+        const noteTextarea = document.getElementById(`dismiss-note-${flagId}`);
+        const note = noteTextarea ? noteTextarea.value.trim() : '';
+
+        const sendButton = document.querySelector(`[data-flag-id="${flagId}"] .send-dismiss-btn`);
+        const cancelButton = document.querySelector(`#dismiss-form-${flagId} .cancel-btn`);
+        if (sendButton) {
+            sendButton.textContent = 'Dismissing...';
+            sendButton.disabled = true;
+        }
+        if (cancelButton) cancelButton.disabled = true;
+
+        const instructorId = getCurrentInstructorId();
+        if (!instructorId) {
+            console.error('No instructor ID found. User not authenticated.');
+            return;
+        }
+        const currentUser = getCurrentUser();
+        const instructorName = currentUser ? (currentUser.displayName || currentUser.username) : 'Instructor';
+
+        const response = await fetch(`/api/flags/${flagId}/response`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                response: note,
+                instructorId,
+                instructorName,
+                flagStatus: 'dismissed'
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        if (!result.success) {
+            throw new Error(result.message || 'Failed to dismiss flag');
+        }
+
+        const flagIndex = appState.flags.findIndex(flag => flag.flagId === flagId);
+        if (flagIndex !== -1) {
+            appState.flags[flagIndex].flagStatus = 'dismissed';
+            appState.flags[flagIndex].instructorResponse = note;
+            appState.flags[flagIndex].instructorId = instructorId;
+            appState.flags[flagIndex].instructorName = instructorName;
+            appState.flags[flagIndex].updatedAt = new Date().toISOString();
+        }
+
+        hideDismissForm(flagId);
+        applyFilters();
+        renderFlaggedContent();
+        loadFlagStats();
+        showSuccessMessage('Flag dismissed successfully');
+    } catch (error) {
+        console.error('Error dismissing flag:', error);
+        showErrorMessage('Failed to dismiss flag. Please try again.');
+
+        const sendButton = document.querySelector(`[data-flag-id="${flagId}"] .send-dismiss-btn`);
+        if (sendButton) {
+            sendButton.textContent = 'Confirm Dismiss';
+            sendButton.disabled = false;
+        }
     }
 }
 
