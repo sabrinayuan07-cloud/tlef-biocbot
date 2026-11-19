@@ -1395,7 +1395,11 @@ function sortedStudentsForRender() {
     const tas = currentStudents.filter(s => s.isTA);
     const students = currentStudents.filter(s => !s.isTA);
     const score = s => (hasActiveStruggle(s) ? 2 : 0) + ((outstandingFlagCountByStudentId[s.userId] || 0) > 0 ? 1 : 0);
-    const sortedStudents = [...students].sort((a, b) => score(b) - score(a));
+    const nameOf = s => (s.displayName || s.username || s.userId || '').toLowerCase();
+    // Explicit alphabetical tiebreaker so that when nobody (or everybody)
+    // needs attention, the list still reads A-Z instead of relying on
+    // whatever order the API happened to return.
+    const sortedStudents = [...students].sort((a, b) => score(b) - score(a) || nameOf(a).localeCompare(nameOf(b)));
     return [...tas, ...sortedStudents];
 }
 
