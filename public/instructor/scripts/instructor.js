@@ -179,45 +179,110 @@ async function addNewUnit() {
     }
 }
 
+// Duplicate Unit Modal Logic (#693)
+let unitToDuplicate = null;
+
 /**
- * Duplicate a unit's learning objectives, pass threshold, and assessment
- * questions into a new unit (#693). Materials/documents are intentionally
- * left out - they're real uploaded files with a Qdrant vector index, not
- * "settings", so re-copying them isn't part of this.
+ * Open the duplicate-unit modal, with a dropdown for where the new unit
+ * should land, built from the course's current unit order.
  * @param {string} unitName - Stable internal unit name to duplicate
  */
-async function duplicateUnit(unitName) {
-    const confirmed = confirm(
-        `Duplicate "${unitName}" into a new unit? This copies its learning objectives, ` +
-        'pass threshold, and assessment questions as a starting point. Uploaded materials are not copied.'
-    );
-    if (!confirmed) return;
+function openDuplicateUnitModal(unitName) {
+    if (window.event) {
+        window.event.stopPropagation();
+    }
 
-    const duplicateBtn = document.querySelector(`[data-unit-name="${unitName}"] .duplicate-unit-btn`);
-    if (duplicateBtn) duplicateBtn.disabled = true;
+    unitToDuplicate = unitName;
+    const modal = document.getElementById('duplicate-unit-modal');
+    const sourceNameDisplay = document.getElementById('duplicate-unit-source-name');
+    const positionSelect = document.getElementById('duplicate-unit-position-select');
+
+    if (sourceNameDisplay) sourceNameDisplay.textContent = unitName;
+
+    if (positionSelect) {
+        const lectures = Array.isArray(window.currentCourseData?.lectures) ? window.currentCourseData.lectures : [];
+        positionSelect.innerHTML = '';
+
+        const firstOption = document.createElement('option');
+        firstOption.value = '';
+        firstOption.textContent = 'At the beginning';
+        positionSelect.appendChild(firstOption);
+
+        lectures.forEach(lecture => {
+            const option = document.createElement('option');
+            option.value = lecture.name;
+            option.textContent = `After ${lecture.name}`;
+            positionSelect.appendChild(option);
+        });
+
+        // Default to the end of the list, matching where a plain "Add New Unit" lands.
+        if (lectures.length > 0) {
+            positionSelect.value = lectures[lectures.length - 1].name;
+        }
+    }
+
+    if (modal) {
+        modal.style.display = '';
+        modal.classList.add('show');
+        a11yModal.open(modal, { onRequestClose: closeDuplicateUnitModal });
+    }
+}
+
+function closeDuplicateUnitModal() {
+    unitToDuplicate = null;
+    const modal = document.getElementById('duplicate-unit-modal');
+    if (modal) {
+        a11yModal.close(modal);
+        modal.classList.remove('show');
+        modal.style.display = 'none';
+    }
+}
+
+/**
+ * Duplicate a unit's learning objectives, pass threshold, and assessment
+ * questions into a new unit, placed where the modal's dropdown says.
+ * Materials/documents are intentionally left out - they're real uploaded
+ * files with a Qdrant vector index, not "settings", so re-copying them
+ * isn't part of this.
+ */
+async function confirmDuplicateUnit() {
+    if (!unitToDuplicate) return;
+
+    const confirmBtn = document.getElementById('confirm-duplicate-unit-btn');
+    const positionSelect = document.getElementById('duplicate-unit-position-select');
+    if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.textContent = 'Duplicating...';
+    }
 
     try {
         const courseId = await getCurrentCourseId();
         const instructorId = getCurrentInstructorId();
+        const insertAfterUnitName = positionSelect ? positionSelect.value : undefined;
 
-        const response = await fetch(`/api/courses/${courseId}/units/${encodeURIComponent(unitName)}/duplicate`, {
+        const response = await fetch(`/api/courses/${courseId}/units/${encodeURIComponent(unitToDuplicate)}/duplicate`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ instructorId })
+            body: JSON.stringify({ instructorId, insertAfterUnitName })
         });
 
-        const result = await response.json();
+        const result = await response.json().catch(() => ({}));
         if (!response.ok || !result.success) {
             throw new Error(result.message || 'Failed to duplicate unit');
         }
 
         showNotification(result.message, 'success');
+        closeDuplicateUnitModal();
         window.pendingFocusUnitName = result?.data?.unit?.name || null;
         await loadSpecificCourse(courseId);
     } catch (error) {
         console.error('Error duplicating unit:', error);
         showNotification('Failed to duplicate unit: ' + error.message, 'error');
-        if (duplicateBtn) duplicateBtn.disabled = false;
+    } finally {
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.textContent = 'Duplicate';
+        }
     }
 }
 
@@ -347,6 +412,9 @@ window.moveUnit = moveUnit;
 window.openDeleteUnitModal = openDeleteUnitModal;
 window.closeDeleteUnitModal = closeDeleteUnitModal;
 window.confirmDeleteUnit = confirmDeleteUnit;
+window.openDuplicateUnitModal = openDuplicateUnitModal;
+window.closeDuplicateUnitModal = closeDuplicateUnitModal;
+window.confirmDuplicateUnit = confirmDuplicateUnit;
 
     
     // Load the saved publish status from the database

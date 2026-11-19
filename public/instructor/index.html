@@ -588,7 +588,34 @@
             </div>
         </div>
     </div>
-    
+
+    <!-- Duplicate Unit Modal (#693) -->
+    <div id="duplicate-unit-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Duplicate Unit</h2>
+                <button class="modal-close" onclick="closeDuplicateUnitModal()" aria-label="Close"><span aria-hidden="true">×</span></button>
+            </div>
+
+            <div class="modal-body">
+                <p>Duplicate <strong id="duplicate-unit-source-name">this unit</strong>'s learning objectives, pass
+                   threshold, and assessment questions into a new unit. Uploaded materials are not copied.</p>
+
+                <label for="duplicate-unit-position-select" style="display: block; margin-top: 1rem; font-weight: 600;">
+                    Place the new unit:
+                </label>
+                <select id="duplicate-unit-position-select" style="width: 100%; margin-top: 0.5rem;"></select>
+            </div>
+
+            <div class="modal-footer">
+                <div class="modal-actions">
+                    <button class="btn-secondary" onclick="closeDuplicateUnitModal()">Cancel</button>
+                    <button class="btn-primary" id="confirm-duplicate-unit-btn" onclick="confirmDuplicateUnit()">Duplicate</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Calibration Quiz Modal -->
     <div id="calibration-modal" class="modal">
         <div class="modal-content">
