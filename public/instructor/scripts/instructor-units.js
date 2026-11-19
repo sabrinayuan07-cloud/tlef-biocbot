@@ -598,7 +598,7 @@ function createUnitElement(unitName, unitData, isExpanded = false, canDelete = t
                 </div>
 
                 <button class="duplicate-unit-btn" type="button"
-                        onclick="event.stopPropagation(); duplicateUnit('${unitName}')"
+                        onclick="event.stopPropagation(); openDuplicateUnitModal('${unitName}')"
                         title="Duplicate ${unitName} into a new unit"
                         aria-label="Duplicate ${unitName} into a new unit">Duplicate</button>
 

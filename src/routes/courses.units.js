@@ -142,7 +142,9 @@ router.post('/:courseId/units', async (req, res) => {
 router.post('/:courseId/units/:unitName/duplicate', async (req, res) => {
     try {
         const { courseId, unitName } = req.params;
-        const { instructorId } = req.body;
+        // insertAfterUnitName: name of the unit the duplicate should be placed
+        // directly after, '' to place it first, or omitted to place it last.
+        const { instructorId, insertAfterUnitName } = req.body;
 
         if (!instructorId) {
             return res.status(400).json({
@@ -199,15 +201,20 @@ router.post('/:courseId/units/:unitName/duplicate', async (req, res) => {
             });
         }
 
-        // Same numbering logic as plain unit creation above, so a duplicate
-        // never collides with an existing or previously-deleted unit name.
-        const highestUnitNum = existingUnits.reduce((highest, lecture) => {
-            const match = /\d+/.exec(lecture?.name || '');
-            return match ? Math.max(highest, parseInt(match[0], 10)) : highest;
-        }, 0);
-        const structureUnitsCount = course.courseStructure ? course.courseStructure.totalUnits : 0;
-        const newUnitNum = Math.max(highestUnitNum, structureUnitsCount) + 1;
-        const newUnitName = `Unit ${newUnitNum}`;
+        // The unit's "name" field doubles as its display label whenever no
+        // custom displayName is set (see formatUnitLabel), so instructors see
+        // this exact string. It also has to stay unique - lectures.name is
+        // how every other route looks a unit up - so append a counter if
+        // "Duplicate of X" is already taken (e.g. duplicating the same unit
+        // twice, or duplicating a duplicate).
+        const existingNames = new Set(existingUnits.map(lecture => lecture?.name));
+        const baseNewName = `Duplicate of ${unitName}`;
+        let newUnitName = baseNewName;
+        let suffix = 2;
+        while (existingNames.has(newUnitName)) {
+            newUnitName = `${baseNewName} (${suffix})`;
+            suffix += 1;
+        }
 
         const now = new Date();
         const duplicatedQuestions = deepClone(sourceUnit.assessmentQuestions || []).map(question => ({
@@ -225,16 +232,27 @@ router.post('/:courseId/units/:unitName/duplicate', async (req, res) => {
             assessmentQuestions: duplicatedQuestions
         };
 
+        // Work out where in the array the duplicate should land. '' means
+        // "first"; a unit name means "right after that unit"; anything else
+        // (including omitted) falls back to the end.
+        let insertIndex = existingUnits.length;
+        if (insertAfterUnitName === '') {
+            insertIndex = 0;
+        } else if (typeof insertAfterUnitName === 'string' && insertAfterUnitName) {
+            const afterIndex = existingUnits.findIndex(lecture => lecture.name === insertAfterUnitName);
+            if (afterIndex !== -1) insertIndex = afterIndex + 1;
+        }
+
         const newTotalUnits = existingUnits.length + 1;
         await collection.updateOne(
             { courseId },
             {
-                $push: { lectures: newUnit },
+                $push: { lectures: { $each: [newUnit], $position: insertIndex } },
                 $set: { 'courseStructure.totalUnits': newTotalUnits, updatedAt: now }
             }
         );
 
-        console.log(`Duplicated ${unitName} into ${newUnitName} for course ${courseId}`);
+        console.log(`Duplicated ${unitName} into ${newUnitName} for course ${courseId} at index ${insertIndex}`);
 
         res.json({
             success: true,
