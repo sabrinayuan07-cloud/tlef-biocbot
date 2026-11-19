@@ -2123,6 +2123,29 @@ fieldset.radio-group-fieldset {
     margin-top: 18px;
 } 
 
+/* Duplicate Unit Button (#693) */
+.duplicate-unit-btn {
+    background: white;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    border-radius: var(--bb-radius);
+    padding: 4px 10px;
+    cursor: pointer;
+    font-size: 12px;
+    margin-right: 8px;
+    transition: background-color 0.2s var(--bb-ease-reveal), border-color 0.2s var(--bb-ease-reveal);
+}
+
+.duplicate-unit-btn:hover {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+}
+
+.duplicate-unit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 /* Delete Unit Button */
 .delete-unit-btn {
     background: #dc3545;

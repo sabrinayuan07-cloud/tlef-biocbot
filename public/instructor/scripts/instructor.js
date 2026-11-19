@@ -180,6 +180,48 @@ async function addNewUnit() {
 }
 
 /**
+ * Duplicate a unit's learning objectives, pass threshold, and assessment
+ * questions into a new unit (#693). Materials/documents are intentionally
+ * left out - they're real uploaded files with a Qdrant vector index, not
+ * "settings", so re-copying them isn't part of this.
+ * @param {string} unitName - Stable internal unit name to duplicate
+ */
+async function duplicateUnit(unitName) {
+    const confirmed = confirm(
+        `Duplicate "${unitName}" into a new unit? This copies its learning objectives, ` +
+        'pass threshold, and assessment questions as a starting point. Uploaded materials are not copied.'
+    );
+    if (!confirmed) return;
+
+    const duplicateBtn = document.querySelector(`[data-unit-name="${unitName}"] .duplicate-unit-btn`);
+    if (duplicateBtn) duplicateBtn.disabled = true;
+
+    try {
+        const courseId = await getCurrentCourseId();
+        const instructorId = getCurrentInstructorId();
+
+        const response = await fetch(`/api/courses/${courseId}/units/${encodeURIComponent(unitName)}/duplicate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ instructorId })
+        });
+
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+            throw new Error(result.message || 'Failed to duplicate unit');
+        }
+
+        showNotification(result.message, 'success');
+        window.pendingFocusUnitName = result?.data?.unit?.name || null;
+        await loadSpecificCourse(courseId);
+    } catch (error) {
+        console.error('Error duplicating unit:', error);
+        showNotification('Failed to duplicate unit: ' + error.message, 'error');
+        if (duplicateBtn) duplicateBtn.disabled = false;
+    }
+}
+
+/**
  * Move a unit one slot up or down in the course.
  * @param {string} unitName - Stable internal unit name
  * @param {'up'|'down'} direction - Direction to move the unit
