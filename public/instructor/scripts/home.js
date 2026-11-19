@@ -1669,6 +1669,26 @@ function animateFieldError(input) {
     input.classList.add('field-error-shake');
 }
 
+/**
+ * When a duplicate-topic-name check fails, briefly flash + nudge the
+ * existing topic's chip so the instructor can see where it already lives
+ * (#685), alongside the "already exists" notification.
+ * @param {number} index - Index of the existing topic in the approved-topics array
+ */
+function highlightExistingTopicChip(index) {
+    const section = document.getElementById('approved-topics-section');
+    if (section) section.classList.remove('section-collapsed');
+
+    const chip = document.querySelector(`.approved-topic-chip[data-index="${index}"]`);
+    if (!chip) return;
+
+    chip.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    chip.classList.remove('topic-chip-highlight-flash');
+    void chip.offsetWidth; // force reflow so the animation restarts if triggered again
+    chip.classList.add('topic-chip-highlight-flash');
+    setTimeout(() => chip.classList.remove('topic-chip-highlight-flash'), 1800);
+}
+
 function setJoinCourseCodeFeedback(message) {
     const codeInput = document.getElementById('instructor-course-code-input');
     const feedback = document.getElementById('instructor-course-code-feedback');
@@ -2798,8 +2818,10 @@ async function addApprovedTopic() {
     const topics = window.courseApprovedTopicDetails || [];
 
     // Check for duplicates (case-insensitive)
-    if (topics.some(t => t.topic.toLowerCase() === value.toLowerCase())) {
+    const duplicateIndex = topics.findIndex(t => t.topic.toLowerCase() === value.toLowerCase());
+    if (duplicateIndex !== -1) {
         showErrorMessage('This topic already exists.');
+        highlightExistingTopicChip(duplicateIndex);
         input.focus();
         input.select();
         return;
@@ -2937,8 +2959,10 @@ async function commitEditTopic(chip, index, newValue) {
     }
 
     // Check for duplicates
-    if (topics.some((t, i) => i !== index && t.topic.toLowerCase() === newValue.toLowerCase())) {
+    const duplicateIndex = topics.findIndex((t, i) => i !== index && t.topic.toLowerCase() === newValue.toLowerCase());
+    if (duplicateIndex !== -1) {
         showErrorMessage('A topic with that name already exists.');
+        highlightExistingTopicChip(duplicateIndex);
         cancelEditTopic(chip, oldValue);
         return;
     }

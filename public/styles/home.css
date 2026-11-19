@@ -1418,6 +1418,29 @@
     box-shadow: 0 0 0 2px rgba(74,144,217,0.25);
 }
 
+/* Flash + nudge an existing topic's chip when a duplicate-name warning
+   fires, so the instructor can see where it already lives (#685). */
+.topic-chip-highlight-flash {
+    animation: topic-chip-highlight 1.8s ease-out;
+}
+
+@keyframes topic-chip-highlight {
+    0%, 8% {
+        background: #fde68a;
+        border-color: #d97706;
+        box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.35);
+        transform: translateX(0);
+    }
+    2% { transform: translateX(-4px); }
+    5% { transform: translateX(4px); }
+    100% {
+        background: #eef6ff;
+        border-color: #cfe2ff;
+        box-shadow: 0 2px 10px var(--shadow-color, rgba(0,0,0,0.1));
+        transform: translateX(0);
+    }
+}
+
 .topic-chip-label {
     cursor: default;
     user-select: none;
