@@ -574,11 +574,11 @@ function initializeEventListeners() {
     }
     const batchApproveBtn = document.getElementById('batch-approve-flags');
     if (batchApproveBtn) {
-        batchApproveBtn.addEventListener('click', () => batchResolveFlags('resolved'));
+        batchApproveBtn.addEventListener('click', batchApproveSelectedFlags);
     }
-    const batchDismissBtn = document.getElementById('batch-dismiss-flags');
-    if (batchDismissBtn) {
-        batchDismissBtn.addEventListener('click', () => batchResolveFlags('dismissed'));
+    const batchCancelBtn = document.getElementById('batch-cancel-selection');
+    if (batchCancelBtn) {
+        batchCancelBtn.addEventListener('click', cancelFlagSelection);
     }
 }
 
@@ -867,9 +867,9 @@ function updateBatchControlsUI() {
     if (countEl) countEl.textContent = `${checkedCount} selected`;
 
     const approveBtn = document.getElementById('batch-approve-flags');
-    const dismissBtn = document.getElementById('batch-dismiss-flags');
+    const cancelBtn = document.getElementById('batch-cancel-selection');
     if (approveBtn) approveBtn.disabled = checkedCount === 0;
-    if (dismissBtn) dismissBtn.disabled = checkedCount === 0;
+    if (cancelBtn) cancelBtn.disabled = checkedCount === 0;
 
     const selectAll = document.getElementById('batch-select-all-flags');
     if (selectAll) {
@@ -890,18 +890,30 @@ function handleSelectAllFlagsChange(checked) {
     updateBatchControlsUI();
 }
 
-async function batchResolveFlags(newStatus) {
+// Clears the current batch selection without touching any flag (#692: the
+// "Cancel" button next to Approve Selected is just a clear-selection action,
+// not a batch dismiss - dismissing stays a per-flag action on each card).
+function cancelFlagSelection() {
+    selectedFlagIds.clear();
+    document.querySelectorAll('.flag-select-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    updateBatchControlsUI();
+}
+
+// Approves and resolves every selected flag (no reply message is sent -
+// that's still only available per-flag via Approve & Reply).
+async function batchApproveSelectedFlags() {
     const flagIds = getVisibleSelectedFlagIds();
     if (flagIds.length === 0) return;
 
-    const actionLabel = newStatus === 'resolved' ? 'Approve' : 'Dismiss';
-    const confirmed = confirm(`${actionLabel} ${flagIds.length} selected flag${flagIds.length === 1 ? '' : 's'}?`);
+    const confirmed = confirm(`Approve ${flagIds.length} selected flag${flagIds.length === 1 ? '' : 's'}?`);
     if (!confirmed) return;
 
     const approveBtn = document.getElementById('batch-approve-flags');
-    const dismissBtn = document.getElementById('batch-dismiss-flags');
+    const cancelBtn = document.getElementById('batch-cancel-selection');
     if (approveBtn) approveBtn.disabled = true;
-    if (dismissBtn) dismissBtn.disabled = true;
+    if (cancelBtn) cancelBtn.disabled = true;
 
     const instructorId = getCurrentInstructorId();
 
@@ -909,7 +921,7 @@ async function batchResolveFlags(newStatus) {
         fetch(`/api/flags/${flagId}/status`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: newStatus, instructorId })
+            body: JSON.stringify({ status: 'resolved', instructorId })
         }).then(response => {
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             return response.json();
@@ -921,13 +933,12 @@ async function batchResolveFlags(newStatus) {
 
     flagIds.forEach(flagId => selectedFlagIds.delete(flagId));
 
-    const actionText = newStatus === 'resolved' ? 'approved' : 'dismissed';
     if (failed === 0) {
-        showSuccessMessage(`${succeeded} flag${succeeded === 1 ? '' : 's'} ${actionText}.`);
+        showSuccessMessage(`${succeeded} flag${succeeded === 1 ? '' : 's'} approved.`);
     } else if (succeeded === 0) {
-        showErrorMessage(`Failed to ${newStatus === 'resolved' ? 'approve' : 'dismiss'} the selected flags. Please try again.`);
+        showErrorMessage('Failed to approve the selected flags. Please try again.');
     } else {
-        showErrorMessage(`${succeeded} ${actionText}, ${failed} failed. Please retry the failed ones.`);
+        showErrorMessage(`${succeeded} approved, ${failed} failed. Please retry the failed ones.`);
     }
 
     loadFlagStats();
