@@ -26,11 +26,13 @@ POST /:courseId/tas
 DELETE /:courseId/tas/:taId
 GET /ta/:taId
 PUT /:courseId/ta-permissions/:taId
+PUT /:courseId/ta-permissions
 GET /:courseId/ta-permissions/:taId
 GET /:courseId/ta-permissions
 GET /permissions/presets
 GET /:courseId/students
 PUT /:courseId/student-enrollment/:studentId
+PUT /:courseId/student-enrollment
 GET /:courseId/student-enrollment
 POST /:courseId/units
 PATCH /:courseId/units/:unitName/order
