@@ -619,6 +619,14 @@
 /* Super Course bucket management controls */
 .superchat-manage-controls {
     gap: 8px;
+    flex-wrap: wrap;
+}
+
+/* Create-bucket form: the platform choice and its help text each take a full
+   row; the name, key and button share the row between them. */
+.superchat-manage-controls > .llm-platform-choice,
+.superchat-manage-controls > .llm-platform-help {
+    flex: 0 0 100%;
 }
 
 .text-input,

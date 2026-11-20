@@ -638,15 +638,31 @@
                                             <div id="course-superchat-checklist" class="superchat-checklist" role="group" aria-labelledby="course-superchats-label" aria-describedby="course-superchats-desc">Loading buckets...</div>
                                         </div>
                                     </div>
-                                    <div class="setting-item">
+                                    <div class="setting-item vertical">
                                         <div class="setting-info">
                                             <h4 id="new-superchat-label">Create a new bucket</h4>
                                             <p id="new-superchat-desc">New buckets appear in the list above right away and are checked for this course - save to confirm membership.</p>
                                         </div>
-                                        <div class="setting-controls superchat-manage-controls">
+                                        <div class="setting-controls full-width-control superchat-manage-controls">
+                                            <fieldset class="llm-platform-choice" id="new-superchat-llm-platform">
+                                                <legend>AI platform for new bucket</legend>
+                                                <label class="llm-platform-option">
+                                                    <input type="radio" name="new-superchat-llm-provider" id="new-superchat-llm-provider-openai" value="openai" checked>
+                                                    <span>OpenAI Chat GPT</span>
+                                                </label>
+                                                <label class="llm-platform-option">
+                                                    <input type="radio" name="new-superchat-llm-provider" id="new-superchat-llm-provider-ubc-llm-sandbox" value="ubc-llm-sandbox">
+                                                    <span>UBC On-Premise LLM</span>
+                                                </label>
+                                                <label class="llm-platform-option">
+                                                    <input type="radio" name="new-superchat-llm-provider" id="new-superchat-llm-provider-ubc-llm-proxy" value="ubc-llm-proxy">
+                                                    <span>UBC LLM Proxy</span>
+                                                </label>
+                                            </fieldset>
                                             <input type="text" id="new-superchat-name" class="text-input" placeholder="New bucket name" aria-labelledby="new-superchat-label" aria-describedby="new-superchat-desc">
-                                            <input type="password" id="new-superchat-key" class="text-input llm-key-input" placeholder="sk-..." autocomplete="off" aria-label="New bucket API key">
+                                            <input type="password" id="new-superchat-key" class="text-input llm-key-input" placeholder="sk-..." autocomplete="off" aria-label="OpenAI Chat GPT API key for new bucket" aria-describedby="new-superchat-llm-platform-help">
                                             <button type="button" id="new-superchat-btn" class="secondary-button">Create bucket</button>
+                                            <small id="new-superchat-llm-platform-help" class="llm-platform-help">Feel free to use your own OpenAI API key, or contact the support team for assistance.</small>
                                         </div>
                                     </div>
                                 </div>

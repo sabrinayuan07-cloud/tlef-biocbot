@@ -1693,6 +1693,32 @@ document.addEventListener('DOMContentLoaded', async () => {
             select.addEventListener('change', () => loadSuperchatIntoForm(select.value || null));
         }
 
+        // The create form picks the platform up front; the server validates the
+        // key against it and stores it under that provider.
+        function selectedNewBucketProvider() {
+            const checked = document.querySelector('input[name="new-superchat-llm-provider"]:checked');
+            return checked ? checked.value : 'openai';
+        }
+
+        function refreshNewBucketProviderUi() {
+            const provider = selectedNewBucketProvider();
+            const meta = window.LlmPlatform
+                ? window.LlmPlatform.providerMeta(provider)
+                : { label: 'OpenAI Chat GPT', helpText: '', keyPlaceholder: 'sk-...' };
+            if (newKeyInput) {
+                newKeyInput.placeholder = meta.keyPlaceholder;
+                newKeyInput.setAttribute('aria-label', `${meta.label} API key for new bucket`);
+            }
+            const help = document.getElementById('new-superchat-llm-platform-help');
+            if (help && meta.helpText) help.textContent = meta.helpText;
+            return { provider, label: meta.label };
+        }
+
+        document.querySelectorAll('input[name="new-superchat-llm-provider"]').forEach(radio => {
+            radio.addEventListener('change', refreshNewBucketProviderUi);
+        });
+        refreshNewBucketProviderUi();
+
         async function createBucket() {
             const name = (newNameInput?.value || '').trim();
             if (!name) {
@@ -1701,8 +1727,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
             const apiKey = (newKeyInput?.value || '').trim();
+            const { provider: llmProvider, label: providerLabel } = refreshNewBucketProviderUi();
             if (!apiKey) {
-                showNotification('Enter an OpenAI API key for the new bucket first.', 'error');
+                showNotification(`Enter a ${providerLabel} API key for the new bucket first.`, 'error');
                 newKeyInput?.focus();
                 return;
             }
@@ -1712,7 +1739,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
-                    body: JSON.stringify({ name, apiKey })
+                    body: JSON.stringify({ name, apiKey, llmProvider })
                 });
                 const result = await response.json();
                 if (!response.ok || !result.success) throw new Error(result.message || 'Failed to create bucket');
