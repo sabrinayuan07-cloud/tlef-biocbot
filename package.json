@@ -63,7 +63,7 @@
     "ubc-genai-toolkit-core": "^0.1.0",
     "ubc-genai-toolkit-document-parsing": "^0.3.1",
     "ubc-genai-toolkit-embeddings": "^0.2.0",
-    "ubc-genai-toolkit-llm": "^0.7.0"
+    "ubc-genai-toolkit-llm": "^0.7.1"
   },
   "optionalDependencies": {
     "@ubc/genai-toolkit-agents-chat": "0.4.0",
