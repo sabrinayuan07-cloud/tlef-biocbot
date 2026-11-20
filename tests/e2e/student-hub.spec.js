@@ -265,7 +265,10 @@ test.describe('Student Hub UI', () => {
         await openStudentHub(page);
 
         const activeCard = studentCard(page, HUB_ACTIVE_STUDENT.displayName);
-        const checkbox = activeCard.locator('input[type="checkbox"]');
+        // Scoped to .enroll-toggle: the card also has a row-selection
+        // checkbox (bulk actions, #690) that a bare input[type="checkbox"]
+        // would ambiguously match too.
+        const checkbox = activeCard.locator('.enroll-toggle input[type="checkbox"]');
         const saveButton = activeCard.locator(`#save-${HUB_ACTIVE_STUDENT.userId}`);
 
         await expect(checkbox).toBeChecked();
