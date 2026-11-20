@@ -210,6 +210,61 @@ router.put('/:courseId/student-enrollment/:studentId', async (req, res) => {
 });
 
 /**
+ * PUT /api/courses/:courseId/student-enrollment
+ * Bulk-update enrollment for many students at once (#690) in a single
+ * request/write instead of one PUT per student.
+ */
+router.put('/:courseId/student-enrollment', async (req, res) => {
+    try {
+        const { courseId } = req.params;
+        const { studentIds, enrolled } = req.body;
+
+        // Validate
+        if (!Array.isArray(studentIds) || studentIds.length === 0) {
+            return res.status(400).json({ success: false, message: 'studentIds must be a non-empty array' });
+        }
+        if (typeof enrolled !== 'boolean') {
+            return res.status(400).json({ success: false, message: 'enrolled must be a boolean' });
+        }
+
+        // Auth
+        const user = req.user;
+        if (!user) {
+            return res.status(401).json({ success: false, message: 'Authentication required' });
+        }
+        if (user.role !== 'instructor') {
+            return res.status(403).json({ success: false, message: 'Only instructors can update enrollment' });
+        }
+
+        // DB
+        const db = req.app.locals.db;
+        if (!db) {
+            return res.status(503).json({ success: false, message: 'Database connection not available' });
+        }
+
+        // Access check
+        const hasAccess = await CourseModel.userHasCourseAccess(db, courseId, user.userId, 'instructor');
+        if (!hasAccess) {
+            return res.status(403).json({ success: false, message: 'Access denied. You can only manage your own courses.' });
+        }
+
+        const result = await CourseModel.updateStudentEnrollmentBulk(db, courseId, studentIds, enrolled);
+        if (!result.success) {
+            return res.status(400).json({ success: false, message: result.error || 'Failed to update enrollment' });
+        }
+
+        return res.json({
+            success: true,
+            message: `Enrollment updated for ${studentIds.length} student${studentIds.length === 1 ? '' : 's'}`,
+            data: { courseId, studentIds, enrolled }
+        });
+    } catch (error) {
+        console.error('Error bulk-updating student enrollment:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error while updating enrollment' });
+    }
+});
+
+/**
  * GET /api/courses/:courseId/student-enrollment
  * Get current student's enrollment status for the course
  */

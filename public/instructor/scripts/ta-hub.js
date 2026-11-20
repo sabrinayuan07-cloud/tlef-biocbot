@@ -765,19 +765,39 @@ async function batchApplyPresetToSelectedTAs() {
     if (applyBtn) applyBtn.disabled = true;
     if (cancelBtn) cancelBtn.disabled = true;
 
-    const results = await Promise.allSettled(selected.map(({ taId, courseId }) =>
-        authenticatedFetch(`/api/courses/${courseId}/ta-permissions/${taId}`, {
+    // The bulk endpoint is scoped to one course, but a selection can span
+    // several courses a TA is assigned to - group by course so the common
+    // case (one course selected) collapses to exactly one request, while a
+    // mixed selection is still bounded by the number of distinct courses
+    // instead of the number of TAs.
+    const taIdsByCourseId = new Map();
+    selected.forEach(({ taId, courseId }) => {
+        if (!taIdsByCourseId.has(courseId)) taIdsByCourseId.set(courseId, []);
+        taIdsByCourseId.get(courseId).push(taId);
+    });
+
+    const results = await Promise.allSettled(Array.from(taIdsByCourseId.entries()).map(([courseId, taIds]) =>
+        authenticatedFetch(`/api/courses/${courseId}/ta-permissions`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ role: presetName })
-        }).then(response => {
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            return response.json();
+            body: JSON.stringify({ taIds, role: presetName })
+        }).then(async response => {
+            const result = await response.json().catch(() => ({}));
+            if (!response.ok || !result.success) throw new Error(result.message || `HTTP ${response.status}`);
+            return result.data;
         })
     ));
 
-    const succeeded = results.filter(result => result.status === 'fulfilled').length;
-    const failed = results.length - succeeded;
+    let succeeded = 0;
+    let failed = 0;
+    results.forEach(result => {
+        if (result.status === 'fulfilled') {
+            succeeded += result.value.succeeded.length;
+            failed += result.value.failed.length;
+        } else {
+            failed += 1; // whole course-group request failed (network/auth error, not a per-TA one)
+        }
+    });
 
     if (failed === 0) {
         showNotification(`Applied "${presetLabel}" to ${succeeded} TA${succeeded === 1 ? '' : 's'}.`, 'success');

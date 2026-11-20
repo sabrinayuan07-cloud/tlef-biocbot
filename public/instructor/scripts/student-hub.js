@@ -1543,37 +1543,32 @@ async function batchSetEnrollment(enrolled) {
     if (unenrollBtn) unenrollBtn.disabled = true;
     if (cancelBtn) cancelBtn.disabled = true;
 
-    const results = await Promise.allSettled(studentIds.map(studentId =>
-        authenticatedFetch(`/api/courses/${courseId}/student-enrollment/${studentId}`, {
+    const actionText = enrolled ? 'enrolled' : 'unenrolled';
+
+    try {
+        const response = await authenticatedFetch(`/api/courses/${courseId}/student-enrollment`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ enrolled })
-        }).then(response => {
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            return response.json();
-        })
-    ));
+            body: JSON.stringify({ studentIds, enrolled })
+        });
+        const result = await response.json().catch(() => ({}));
+        if (!response.ok || !result.success) {
+            throw new Error(result.message || `HTTP ${response.status}`);
+        }
 
-    const succeeded = results.filter(result => result.status === 'fulfilled').length;
-    const failed = results.length - succeeded;
+        // Keep the cached student list in sync so re-renders (e.g. switching
+        // the sort order) reflect the new state without a full reload.
+        studentIds.forEach(studentId => {
+            selectedStudentIds.delete(studentId);
+            const student = currentStudents.find(s => s.userId === studentId);
+            if (student) student.enrolled = enrolled;
+            dirtyEnrollment.delete(studentId);
+        });
 
-    // Keep the cached student list in sync so re-renders (e.g. switching the
-    // sort order) reflect the new state without a full reload.
-    studentIds.forEach((studentId, index) => {
-        selectedStudentIds.delete(studentId);
-        if (results[index].status !== 'fulfilled') return;
-        const student = currentStudents.find(s => s.userId === studentId);
-        if (student) student.enrolled = enrolled;
-        dirtyEnrollment.delete(studentId);
-    });
-
-    const actionText = enrolled ? 'enrolled' : 'unenrolled';
-    if (failed === 0) {
-        showNotification(`${succeeded} student${succeeded === 1 ? '' : 's'} ${actionText}.`, 'success');
-    } else if (succeeded === 0) {
-        showNotification(`Failed to ${actionLabel.toLowerCase()} the selected students. Please try again.`, 'error');
-    } else {
-        showNotification(`${succeeded} ${actionText}, ${failed} failed. Please retry the failed ones.`, 'warning');
+        showNotification(`${studentIds.length} student${studentIds.length === 1 ? '' : 's'} ${actionText}.`, 'success');
+    } catch (error) {
+        console.error('Error bulk-updating enrollment:', error);
+        showNotification(`Failed to ${actionLabel.toLowerCase()} the selected students: ${error.message}`, 'error');
     }
 
     const courseIdForRender = document.getElementById('student-course-select')?.value || courseId;

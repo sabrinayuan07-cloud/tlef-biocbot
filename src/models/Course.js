@@ -2095,6 +2095,45 @@ async function updateStudentEnrollment(db, courseId, studentId, enrolled) {
 }
 
 /**
+ * Update enrollment for many students at once, in a single document write
+ * instead of one per student (#690).
+ * @param {Object} db - MongoDB database instance
+ * @param {string} courseId - Course identifier
+ * @param {string[]} studentIds - Student identifiers to update
+ * @param {boolean} enrolled - Whether the students are enrolled (true) or blocked (false)
+ * @returns {Promise<Object>} Update result
+ */
+async function updateStudentEnrollmentBulk(db, courseId, studentIds, enrolled) {
+    const collection = getCoursesCollection(db);
+    const now = new Date();
+
+    const course = await collection.findOne({ courseId });
+    if (!course) {
+        return { success: false, error: 'Course not found' };
+    }
+
+    const setFields = { updatedAt: now };
+    studentIds.forEach(studentId => {
+        setFields[`studentEnrollment.${studentId}`] = {
+            enrolled: !!enrolled,
+            updatedAt: now
+        };
+    });
+
+    const result = await collection.updateOne({ courseId }, { $set: setFields });
+
+    // matchedCount (not modifiedCount) is the right success check here: with
+    // many students in one $set, the document may already match some of the
+    // target values (e.g. re-enrolling someone already enrolled), which can
+    // leave modifiedCount at 0 on Mongo's end even though the write is
+    // correct and every requested student now has that value.
+    if (result.matchedCount > 0) {
+        return { success: true, updatedCount: studentIds.length };
+    }
+    return { success: false, error: 'Failed to update student enrollment' };
+}
+
+/**
  * Get student enrollment override for a course (defaults to enrolled=false)
  * @param {Object} db - MongoDB database instance
  * @param {string} courseId - Course identifier
@@ -2629,6 +2668,7 @@ module.exports = {
     isLegacyTAPermissions,
     migrateLegacyTAPermissions,
     updateStudentEnrollment,
+    updateStudentEnrollmentBulk,
     getStudentEnrollment,
     joinCourse,
     joinCourseAsInstructor,

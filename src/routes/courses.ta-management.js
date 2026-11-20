@@ -393,6 +393,94 @@ router.put('/:courseId/ta-permissions/:taId', async (req, res) => {
 });
 
 /**
+ * PUT /api/courses/:courseId/ta-permissions
+ * Apply a role preset to many TAs at once (#690), in a single request
+ * instead of one PUT per TA. Internally this still writes each TA's
+ * permissions document separately - updateTAPermissions has its own
+ * optimistic-concurrency retry loop for a legacy-permissions-shape race
+ * that isn't safe to flatten into one multi-document query - but the
+ * frontend only waits on one round trip, and partial failures are
+ * reported per TA instead of silently dropped.
+ */
+router.put('/:courseId/ta-permissions', async (req, res) => {
+    try {
+        const { courseId } = req.params;
+        const { taIds, role } = req.body;
+
+        if (!Array.isArray(taIds) || taIds.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: 'taIds must be a non-empty array'
+            });
+        }
+        if (!role || !Object.prototype.hasOwnProperty.call(ROLE_PRESETS, role)) {
+            return res.status(400).json({
+                success: false,
+                message: `Unknown role preset '${role}'`
+            });
+        }
+
+        const user = req.user;
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: 'Authentication required'
+            });
+        }
+        if (user.role !== 'instructor') {
+            return res.status(403).json({
+                success: false,
+                message: 'Only instructors can manage TA permissions'
+            });
+        }
+
+        const db = req.app.locals.db;
+        if (!db) {
+            return res.status(503).json({
+                success: false,
+                message: 'Database connection not available'
+            });
+        }
+
+        const hasAccess = await CourseModel.userHasCourseAccess(db, courseId, user.userId, 'instructor');
+        if (!hasAccess) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. You can only manage permissions for your own courses.'
+            });
+        }
+
+        const permissions = { ...ROLE_PRESETS[role] };
+        const succeeded = [];
+        const failed = [];
+
+        for (const taId of taIds) {
+            const result = await CourseModel.updateTAPermissions(db, courseId, taId, permissions);
+            if (result.success) {
+                succeeded.push(taId);
+            } else {
+                failed.push({ taId, error: result.error || 'Failed to update' });
+            }
+        }
+
+        console.log(`Applied role '${role}' to ${succeeded.length}/${taIds.length} TAs in course ${courseId}`);
+
+        res.json({
+            success: true,
+            message: `Applied "${role}" to ${succeeded.length} of ${taIds.length} TA(s)`,
+            data: { courseId, role, succeeded, failed }
+        });
+
+    } catch (error) {
+        console.error('Error bulk-updating TA permissions:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error while updating TA permissions'
+        });
+    }
+});
+
+/**
  * GET /api/courses/:courseId/ta-permissions/:taId
  * Get TA permissions for a specific course
  */
