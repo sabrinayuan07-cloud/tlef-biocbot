@@ -754,7 +754,10 @@ async function batchApplyPresetToSelectedTAs() {
     if (!presetName) return;
 
     const presetLabel = ROLE_PRESET_LABELS[presetName] || presetName;
-    const confirmed = confirm(`Apply "${presetLabel}" to ${selected.length} selected TA${selected.length === 1 ? '' : 's'}?`);
+    const confirmed = await showConfirmDialog(
+        `Apply "${presetLabel}" to ${selected.length} selected TA${selected.length === 1 ? '' : 's'}?`,
+        { title: 'Apply Permission Preset', confirmLabel: 'Apply' }
+    );
     if (!confirmed) return;
 
     const applyBtn = document.getElementById('batch-apply-ta-preset');

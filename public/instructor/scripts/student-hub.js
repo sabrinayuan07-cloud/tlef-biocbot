@@ -1524,7 +1524,10 @@ async function batchSetEnrollment(enrolled) {
     if (studentIds.length === 0) return;
 
     const actionLabel = enrolled ? 'Enroll' : 'Unenroll';
-    const confirmed = confirm(`${actionLabel} ${studentIds.length} selected student${studentIds.length === 1 ? '' : 's'}?`);
+    const confirmed = await showConfirmDialog(
+        `${actionLabel} ${studentIds.length} selected student${studentIds.length === 1 ? '' : 's'}?`,
+        { title: `${actionLabel} Selected Students`, confirmLabel: actionLabel }
+    );
     if (!confirmed) return;
 
     const courseId = document.getElementById('student-course-select')?.value || localStorage.getItem('selectedCourseId');

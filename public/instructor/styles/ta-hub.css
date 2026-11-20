@@ -491,5 +491,10 @@
 }
 
 .ta-select-checkbox {
+    /* style.css's global `input, select, textarea { width: 100% }` reaches
+       checkboxes too and inflates them in a flex row - pin it back down. */
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
     margin-right: 0.5rem;
 }
