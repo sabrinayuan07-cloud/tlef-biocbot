@@ -307,7 +307,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 indicator.id = 'directive-mode-indicator';
                 indicator.className = 'directive-mode-badge';
                 indicator.innerHTML = `
-                    <span class="icon">⚠️</span>
+                    <span class="icon">${Icons.warning}</span>
                     <span>Directive Mode Active</span>
                 `;
                 indicator.title = `Directive Mode is active for: ${activeTopics.map(t => t.topic).join(', ')}`;

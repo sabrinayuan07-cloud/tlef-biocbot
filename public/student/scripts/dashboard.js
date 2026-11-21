@@ -344,9 +344,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div class="topic-item-card">
                     <div class="topic-header">
                         <h3 class="topic-title">${displayTitle}</h3>
-                        ${isChatted 
-                            ? '<span class="topic-status-icon" title="Completed">✅</span>' 
-                            : '<span class="topic-status-icon" title="Not Started">⚪️</span>'
+                        ${isChatted
+                            ? `<span class="topic-status-icon" title="Completed">${Icons.checkCircle}</span>`
+                            : '<span class="topic-status-icon not-started" title="Not Started"></span>'
                         }
                     </div>
                     <div class="topic-footer">

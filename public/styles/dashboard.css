@@ -286,6 +286,23 @@ dialog.modal-overlay::backdrop {
   margin-left: 10px;
   min-width: 24px;
   text-align: center;
+  color: #27ae60;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.topic-status-icon .icon-inline {
+  width: 20px;
+  height: 20px;
+}
+
+.topic-status-icon.not-started {
+  width: 14px;
+  height: 14px;
+  min-width: 14px;
+  border: 2px solid var(--border-color);
+  border-radius: 50%;
 }
 
 .topic-footer {
