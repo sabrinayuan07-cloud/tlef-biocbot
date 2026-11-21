@@ -402,13 +402,22 @@
 }
 
 /* Published state styling */
-.accordion-item.published {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 1px var(--primary-color);
-}
-
 .accordion-item.published .accordion-header {
     background-color: #f0f4f8;
+}
+
+/* Brief flash when a unit is published/unpublished (#662): the blue ring
+   used to be a permanent box-shadow on .accordion-item.published, which
+   stayed lit around the unit indefinitely and never cleared on click
+   elsewhere. Make it a transient success indicator instead, matching the
+   .settings-section-highlight flash pattern. */
+.accordion-item.just-published {
+    animation: unit-publish-flash 1.5s ease-out;
+}
+
+@keyframes unit-publish-flash {
+    0%, 15% { box-shadow: 0 0 0 3px var(--primary-color); }
+    100% { box-shadow: 0 0 0 0 transparent; }
 }
 
 .accordion-item.published .folder-name {
