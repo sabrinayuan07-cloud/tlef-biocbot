@@ -856,7 +856,7 @@ function toggleFlagSelection(flagId, checked) {
 
 function getVisibleSelectedFlagIds() {
     return Array.from(document.querySelectorAll('.flag-select-checkbox:checked'))
-        .map(checkbox => checkbox.dataset.flagId);
+        .map(checkbox => checkbox.dataset.selectFlagId);
 }
 
 function updateBatchControlsUI() {
@@ -882,9 +882,9 @@ function handleSelectAllFlagsChange(checked) {
     document.querySelectorAll('.flag-select-checkbox').forEach(checkbox => {
         checkbox.checked = checked;
         if (checked) {
-            selectedFlagIds.add(checkbox.dataset.flagId);
+            selectedFlagIds.add(checkbox.dataset.selectFlagId);
         } else {
-            selectedFlagIds.delete(checkbox.dataset.flagId);
+            selectedFlagIds.delete(checkbox.dataset.selectFlagId);
         }
     });
     updateBatchControlsUI();
@@ -984,7 +984,7 @@ function createFlagElement(flag) {
     let headerHtml = `
         <div class="flag-card-header">
             <div class="flag-header-left">
-                <input type="checkbox" class="flag-select-checkbox" data-flag-id="${flag.flagId}"
+                <input type="checkbox" class="flag-select-checkbox" data-select-flag-id="${flag.flagId}"
                        aria-label="Select this flag for a batch action"
                        ${selectedFlagIds.has(flag.flagId) ? 'checked' : ''}
                        onchange="toggleFlagSelection('${flag.flagId}', this.checked)">
