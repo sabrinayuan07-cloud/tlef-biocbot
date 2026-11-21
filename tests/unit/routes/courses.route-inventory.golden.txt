@@ -33,6 +33,7 @@ GET /:courseId/students
 PUT /:courseId/student-enrollment/:studentId
 GET /:courseId/student-enrollment
 POST /:courseId/units
+POST /:courseId/units/:unitName/duplicate
 PATCH /:courseId/units/:unitName/order
 DELETE /:courseId/units/:unitName
 PUT /:courseId/units/:unitName/rename
