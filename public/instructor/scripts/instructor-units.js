@@ -361,14 +361,14 @@ function createUnitElement(unitName, unitData, isExpanded = false, canDelete = t
             </div>
             <div class="header-actions">
                 <div class="unit-order-controls" role="group" aria-label="Change position of ${unitName}">
-                    <button class="unit-move-btn" type="button"
+                    <button class="unit-move-btn tooltip" type="button"
                             onclick="event.stopPropagation(); moveUnit('${unitName}', 'up')"
-                            title="Move ${formattedName} up"
+                            data-tooltip="Move unit up"
                             aria-label="Move ${unitName} up"
                             ${unitIndex === 0 ? 'disabled' : ''}>↑</button>
-                    <button class="unit-move-btn" type="button"
+                    <button class="unit-move-btn tooltip" type="button"
                             onclick="event.stopPropagation(); moveUnit('${unitName}', 'down')"
-                            title="Move ${formattedName} down"
+                            data-tooltip="Move unit down"
                             aria-label="Move ${unitName} down"
                             ${unitIndex === unitCount - 1 ? 'disabled' : ''}>↓</button>
                 </div>
