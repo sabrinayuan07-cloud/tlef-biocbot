@@ -1368,24 +1368,18 @@ function showModeResult(mode, score) {
  * @param {string} mode - Current mode (tutor or protege)
  */
 function showModeToggleResult(mode) {
+    // Rendered as a centered system notice rather than a bot-message bubble,
+    // so a mode switch reads as a UI event, not something BiocBot "said".
     const modeMessage = document.createElement('div');
-    modeMessage.classList.add('message', 'bot-message', 'mode-toggle-result');
-
-    const avatarDiv = document.createElement('div');
-    avatarDiv.classList.add('message-avatar');
-    avatarDiv.textContent = 'B';
+    modeMessage.classList.add('message', 'bot-message', 'system-notice', 'mode-toggle-result');
 
     const contentDiv = document.createElement('div');
     contentDiv.classList.add('message-content');
 
     const resultText = document.createElement('p');
-    if (mode === 'protege') {
-        resultText.innerHTML = `<strong>BiocBot is now in protégé mode</strong><br>
-        I'm ready to be your study partner! Ask me questions about the course material and I'll help you explore topics together.`;
-    } else {
-        resultText.innerHTML = `<strong>BiocBot is now in tutor mode</strong><br>
-        I'm ready to guide your learning! I can help explain concepts, provide examples, and answer your questions about the course material.`;
-    }
+    resultText.textContent = mode === 'protege'
+        ? 'You have now entered protégé mode'
+        : 'You have now entered tutor mode';
 
     contentDiv.appendChild(resultText);
 
@@ -1413,7 +1407,6 @@ function showModeToggleResult(mode) {
 
     contentDiv.appendChild(timestamp);
 
-    modeMessage.appendChild(avatarDiv);
     modeMessage.appendChild(contentDiv);
 
     // Add to chat
