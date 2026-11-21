@@ -295,7 +295,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'flag-button';
-        button.innerHTML = '⚑';
+        button.innerHTML = Icons.flag;
         button.title = 'Flag this message';
         button.setAttribute('aria-label', 'Flag this message');
         button.setAttribute('aria-expanded', 'false');

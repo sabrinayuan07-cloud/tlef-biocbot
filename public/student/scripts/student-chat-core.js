@@ -578,7 +578,7 @@ function addMessage(content, sender, withSource = false, skipAutoSave = false, s
         const flagButton = document.createElement('button');
         flagButton.type = 'button';
         flagButton.classList.add('flag-button');
-        flagButton.innerHTML = '⚑';
+        flagButton.innerHTML = Icons.flag;
         flagButton.title = 'Flag this message';
         flagButton.setAttribute('aria-label', 'Flag this message');
         flagButton.setAttribute('aria-expanded', 'false');

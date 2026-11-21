@@ -388,6 +388,13 @@
     font-size: var(--bb-text-nav);
     line-height: 1;
     transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+}
+
+.flag-button .icon-inline {
+    width: 16px;
+    height: 16px;
 }
 
 .flag-button:hover {
@@ -1088,6 +1095,12 @@
 
 .directive-mode-badge .icon {
     font-size: var(--bb-text-nav);
+    display: inline-flex;
+}
+
+.directive-mode-badge .icon .icon-inline {
+    width: 16px;
+    height: 16px;
 }
 
 @keyframes fadeIn {

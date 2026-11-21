@@ -490,7 +490,7 @@ function loadChatData(chatData) {
 
     } catch (error) {
         console.error('Error loading chat data:', error);
-        addMessage('❌ Error loading chat history. Please try again.', 'bot', false, true, null);
+        addMessage('Error loading chat history. Please try again.', 'bot', false, true, null);
     }
 }
 

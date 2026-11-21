@@ -1207,7 +1207,7 @@ async function submitShortAnswer(answer, questionIndex) {
                 feedbackDiv.style.border = isCorrect ? '1px solid #c3e6cb' : '1px solid #f5c6cb';
                 
                 feedbackDiv.innerHTML = `
-                    <div style="font-weight:600; margin-bottom:4px;">${isCorrect ? '✅ Correct' : '❌ Needs Improvement'}</div>
+                    <div style="font-weight:600; margin-bottom:4px; display:flex; align-items:center; gap:6px;"><span style="width:18px; height:18px; display:inline-flex;">${isCorrect ? Icons.checkCircle : Icons.xCircle}</span>${isCorrect ? 'Correct' : 'Needs Improvement'}</div>
                     <div>${evaluation.feedback}</div>
                 `;
             }

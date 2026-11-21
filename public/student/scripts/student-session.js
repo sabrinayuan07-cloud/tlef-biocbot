@@ -733,10 +733,9 @@ function showAutoContinueNotification() {
         // Create notification element
         const notification = document.createElement('div');
         notification.className = 'notification success'; // Green for success
-        
+
         notification.innerHTML = `
             <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 16px;">🔄</span>
                 <span>Chat continued from where you left off</span>
             </div>
             <button class="notification-close" aria-label="Close notification">&times;</button>
@@ -1145,10 +1144,9 @@ function showNewSessionNotification(reason = 'manual') {
         // Create notification element
         const notification = document.createElement('div');
         notification.className = 'notification info'; // Info color (teal)
-        
+
         notification.innerHTML = `
             <div style="display: flex; align-items: center; gap: 8px;">
-                <span style="font-size: 16px;">✨</span>
                 <span>${reason === 'inactivity'
                     ? 'Previous session expired — new chat session started'
                     : 'New chat session started'}</span>
