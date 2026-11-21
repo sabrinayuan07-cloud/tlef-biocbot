@@ -58,12 +58,67 @@ async function loadFlashcardDecks() {
     }
 }
 
+/**
+ * Visually hidden text that finishes a repeated control's name with the unit
+ * it belongs to ("Save Draft" + " for 1. Cell Structure"), so no two controls
+ * on the page share a name. See unitContext() in instructor-units.js.
+ * @param {string} unitName - Internal unit name (e.g. "Unit 1")
+ * @param {string} [lead] - Words between the control's text and the unit title
+ * @returns {string} HTML for the hidden span
+ */
+function flashcardContext(unitName, lead) {
+    const label = typeof getUnitLabel === 'function' ? getUnitLabel(unitName) : unitName;
+    return typeof unitContext === 'function'
+        ? unitContext(flashcardEscapeHtml(label), lead)
+        : `<span class="visually-hidden"> for ${flashcardEscapeHtml(label)}</span>`;
+}
+
+/**
+ * Describe the focused control inside a deck editor so focus can be put back
+ * after the editor's markup is rebuilt.
+ * @param {Element} editor - The deck editor container
+ * @returns {{id: string, rowIndex: number, className: string}|null}
+ */
+function captureFlashcardFocus(editor) {
+    const active = document.activeElement;
+    if (!active || !editor.contains(active)) return null;
+    const row = active.closest('.flashcard-editor-row');
+    const rows = Array.from(editor.querySelectorAll('.flashcard-editor-row'));
+    return { id: active.id, rowIndex: row ? rows.indexOf(row) : -1, className: active.classList[0] || '' };
+}
+
+/**
+ * Put focus back after a deck editor re-render: on the same control if it
+ * still exists, otherwise on the equivalent control of the card now in that
+ * position (or the last card), otherwise on the first action button.
+ * @param {Element} editor - The deck editor container
+ * @param {{id: string, rowIndex: number, className: string}|null} focus - From captureFlashcardFocus
+ */
+function restoreFlashcardFocus(editor, focus) {
+    if (!focus) return;
+    const usable = element => element && !element.disabled && element.getClientRects().length > 0;
+    let target = focus.id ? document.getElementById(focus.id) : null;
+    if (!usable(target) && focus.rowIndex >= 0 && focus.className) {
+        const rows = Array.from(editor.querySelectorAll('.flashcard-editor-row'));
+        const row = rows[Math.min(focus.rowIndex, rows.length - 1)];
+        target = row ? row.querySelector(`.${focus.className}`) : null;
+    }
+    if (!usable(target)) {
+        target = Array.from(editor.querySelectorAll('.flashcard-editor-actions button')).find(usable)
+            || document.getElementById(`flashcard-generate-${editor.id.replace('flashcard-editor-', '')}`);
+    }
+    if (usable(target)) target.focus({ preventScroll: true });
+}
+
 function renderInstructorFlashcardSection(unitName) {
     const unitId = flashcardUnitId(unitName);
     const deck = flashcardDecksByUnit.get(unitName);
     const status = document.getElementById(`flashcard-status-${unitId}`);
     const editor = document.getElementById(`flashcard-editor-${unitId}`);
     if (!status || !editor) return;
+    // Everything in the editor is about to be replaced, including whichever
+    // button the instructor just pressed.
+    const focusBefore = captureFlashcardFocus(editor);
 
     if (!deck) {
         status.textContent = 'Not generated';
@@ -71,6 +126,7 @@ function renderInstructorFlashcardSection(unitName) {
         editor.style.display = 'none';
         editor.innerHTML = '';
         setFlashcardSectionMessage(unitName, 'Generate a draft after uploading material for this unit.');
+        restoreFlashcardFocus(editor, focusBefore);
         return;
     }
 
@@ -102,49 +158,73 @@ function renderInstructorFlashcardSection(unitName) {
     editor.style.display = '';
     editor.innerHTML = `
         <div class="flashcard-editor-heading">
-            <h4>${isEditableDraft ? 'Draft cards' : 'Published cards'}</h4>
+            <h5 id="flashcard-list-heading-${unitId}" tabindex="-1">${isEditableDraft ? 'Draft cards' : 'Published cards'}</h5>
             <span>${cards.length} card${cards.length === 1 ? '' : 's'}</span>
         </div>
-        <div class="flashcard-editor-list">
-            ${cards.map((card, index) => renderFlashcardEditorRow(card, index, !isEditableDraft)).join('')}
-        </div>
+        <ul class="flashcard-editor-list">
+            ${cards.map((card, index) => renderFlashcardEditorRow(card, index, !isEditableDraft, unitName)).join('')}
+        </ul>
         <div class="flashcard-editor-actions">
             ${isEditableDraft ? `
-                <button type="button" class="secondary-button" onclick="addManualFlashcard('${unitName}')">Add Card</button>
-                <button type="button" class="secondary-button" onclick="saveFlashcardDraft('${unitName}')">Save Draft</button>
-                <button type="button" class="flashcard-publish-btn" onclick="publishFlashcardDeck('${unitName}', this)">Publish to Students</button>
+                <button type="button" class="secondary-button flashcard-add-btn" id="flashcard-add-${unitId}" onclick="addManualFlashcard('${unitName}')">Add Card${flashcardContext(unitName, ' to ')}</button>
+                <button type="button" class="secondary-button flashcard-save-btn" id="flashcard-save-${unitId}" onclick="saveFlashcardDraft('${unitName}')">Save Draft${flashcardContext(unitName)}</button>
+                <button type="button" class="flashcard-publish-btn" id="flashcard-publish-${unitId}" onclick="publishFlashcardDeck('${unitName}', this)">Publish to Students<span class="visually-hidden">: the deck</span>${flashcardContext(unitName)}</button>
             ` : ''}
-            ${deck.isPublished ? `<button type="button" class="flashcard-unpublish-btn" onclick="unpublishFlashcardDeck('${unitName}', this)">Unpublish</button>` : ''}
+            ${deck.isPublished ? `<button type="button" class="flashcard-unpublish-btn" id="flashcard-unpublish-${unitId}" onclick="unpublishFlashcardDeck('${unitName}', this)">Unpublish<span class="visually-hidden"> the deck</span>${flashcardContext(unitName)}</button>` : ''}
         </div>
     `;
     initializeInstructorFlashcardPreviews(editor);
+    restoreFlashcardFocus(editor, focusBefore);
 }
 
-function renderFlashcardEditorRow(card, index, readOnly) {
+function renderFlashcardEditorRow(card, index, readOnly, unitName) {
     const sourceData = encodeURIComponent(JSON.stringify(card.source || null));
+    // Ids are positional ("card 2 of this unit"), which is exactly what the
+    // heading says, so they stay right after a card is added or removed and
+    // the list is re-rendered.
+    const key = `${flashcardUnitId(unitName)}-${index + 1}`;
+    const which = `<span class="visually-hidden"> of card ${index + 1}${flashcardContext(unitName, ', ')}</span>`;
     return `
-        <article class="flashcard-editor-row" data-card-id="${flashcardEscapeHtml(card.cardId || '')}" data-source="${sourceData}">
+        <li class="flashcard-editor-row" data-card-id="${flashcardEscapeHtml(card.cardId || '')}" data-source="${sourceData}">
             <div class="flashcard-editor-row-heading">
-                <strong>Card ${index + 1}</strong>
-                ${readOnly ? '' : '<button type="button" class="flashcard-remove-btn" onclick="removeFlashcardEditorRow(this)">Remove</button>'}
+                <h6 class="flashcard-card-title" id="flashcard-title-${key}" tabindex="-1">Card ${index + 1}</h6>
+                ${readOnly ? '' : `<button type="button" class="flashcard-remove-btn" id="flashcard-remove-${key}" onclick="removeFlashcardEditorRow(this)">Remove<span class="visually-hidden"> card ${index + 1}${flashcardContext(unitName, ', ')}</span></button>`}
             </div>
-            <label>Front
-                <textarea class="flashcard-front-input" rows="2" maxlength="300" ${readOnly ? 'readonly' : ''}>${flashcardEscapeHtml(card.front)}</textarea>
-            </label>
+            <label for="flashcard-front-${key}">Front${which}</label>
+            <textarea class="flashcard-front-input" id="flashcard-front-${key}" rows="2" maxlength="300" ${readOnly ? 'readonly' : ''}>${flashcardEscapeHtml(card.front)}</textarea>
             <div class="flashcard-preview-group">
                 <span class="flashcard-preview-label">Student preview · Front</span>
-                <div class="flashcard-rendered-preview" data-flashcard-preview="front" aria-label="Rendered preview of card front"></div>
+                <div class="flashcard-rendered-preview" data-flashcard-preview="front"></div>
             </div>
-            <label>Back
-                <textarea class="flashcard-back-input" rows="3" maxlength="1200" ${readOnly ? 'readonly' : ''}>${flashcardEscapeHtml(card.back)}</textarea>
-            </label>
+            <label for="flashcard-back-${key}">Back${which}</label>
+            <textarea class="flashcard-back-input" id="flashcard-back-${key}" rows="3" maxlength="1200" ${readOnly ? 'readonly' : ''}>${flashcardEscapeHtml(card.back)}</textarea>
             <div class="flashcard-preview-group">
                 <span class="flashcard-preview-label">Student preview · Back</span>
-                <div class="flashcard-rendered-preview" data-flashcard-preview="back" aria-label="Rendered preview of card back"></div>
+                <div class="flashcard-rendered-preview" data-flashcard-preview="back"></div>
             </div>
             <p class="flashcard-source">Source: ${flashcardEscapeHtml(flashcardSourceLabel(card.source))}</p>
-        </article>
+        </li>
     `;
+}
+
+/**
+ * Disable a button for the length of a request without losing keyboard focus.
+ * A focused button that becomes `disabled` drops focus to the page body, and
+ * re-enabling it does not bring focus back, so this hands it back afterwards
+ * (unless focus has since been moved somewhere deliberate).
+ * @param {HTMLButtonElement} button - The button that was pressed
+ * @param {() => Promise<void>} work - The request to run while it is disabled
+ */
+async function withBusyFlashcardButton(button, work) {
+    const hadFocus = document.activeElement === button;
+    button.disabled = true;
+    try {
+        await work();
+    } finally {
+        button.disabled = false;
+        const focusDropped = !document.activeElement || document.activeElement === document.body;
+        if (hadFocus && focusDropped && button.isConnected) button.focus({ preventScroll: true });
+    }
 }
 
 /**
@@ -192,37 +272,39 @@ function initializeInstructorFlashcardPreviews(root) {
 
 async function generateFlashcardDraft(unitName, button) {
     const original = button.innerHTML;
-    button.disabled = true;
-    button.textContent = 'Generating…';
+    const unitLabel = typeof getUnitLabel === 'function' ? getUnitLabel(unitName) : unitName;
     setFlashcardSectionMessage(unitName, 'Generating a source-grounded draft. This may take a moment.');
 
-    try {
-        const courseId = await getCurrentCourseId();
-        const unitId = flashcardUnitId(unitName);
-        const count = Number(document.getElementById(`flashcard-count-${unitId}`)?.value || 10);
-        // Ticked by default in the markup; a missing checkbox means an older
-        // rendering of the section, which should keep the notation rules.
-        const chemistryCheckbox = document.getElementById(`flashcard-chemistry-${unitId}`);
-        const chemistryNotation = chemistryCheckbox ? chemistryCheckbox.checked : true;
-        const response = await fetch('/api/flashcards/instructor/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ courseId, lectureName: unitName, cardCount: count, chemistryNotation })
-        });
-        const result = await response.json();
-        if (!response.ok || !result.success) throw new Error(result.message || 'Generation failed');
+    await withBusyFlashcardButton(button, async () => {
+        button.textContent = 'Generating…';
+        try {
+            const courseId = await getCurrentCourseId();
+            const unitId = flashcardUnitId(unitName);
+            const count = Number(document.getElementById(`flashcard-count-${unitId}`)?.value || 10);
+            // Ticked by default in the markup; a missing checkbox means an older
+            // rendering of the section, which should keep the notation rules.
+            const chemistryCheckbox = document.getElementById(`flashcard-chemistry-${unitId}`);
+            const chemistryNotation = chemistryCheckbox ? chemistryCheckbox.checked : true;
+            const response = await fetch('/api/flashcards/instructor/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ courseId, lectureName: unitName, cardCount: count, chemistryNotation })
+            });
+            const result = await response.json();
+            if (!response.ok || !result.success) throw new Error(result.message || 'Generation failed');
 
-        flashcardDecksByUnit.set(unitName, result.data);
-        renderInstructorFlashcardSection(unitName);
-        showNotification(result.message || 'Flashcard draft generated.', 'success');
-    } catch (error) {
-        console.error('Error generating flashcards:', error);
-        setFlashcardSectionMessage(unitName, error.message, 'error');
-        showNotification(error.message, 'error');
-    } finally {
-        button.disabled = false;
-        button.innerHTML = original;
-    }
+            flashcardDecksByUnit.set(unitName, result.data);
+            renderInstructorFlashcardSection(unitName);
+            // Say which unit the draft is for: every unit has its own Generate button.
+            showNotification(`${unitLabel}: ${result.message || 'Flashcard draft generated.'}`, 'success');
+        } catch (error) {
+            console.error('Error generating flashcards:', error);
+            setFlashcardSectionMessage(unitName, error.message, 'error');
+            showNotification(error.message, 'error');
+        } finally {
+            button.innerHTML = original;
+        }
+    });
 }
 
 function collectFlashcardDraftCards(unitName) {
@@ -271,7 +353,7 @@ function addManualFlashcard(unitName) {
         showNotification('A deck can contain at most 20 cards.', 'warning');
         return;
     }
-    editor.insertAdjacentHTML('beforeend', renderFlashcardEditorRow({ front: '', back: '', source: null }, count, false));
+    editor.insertAdjacentHTML('beforeend', renderFlashcardEditorRow({ front: '', back: '', source: null }, count, false, unitName));
     const row = editor.lastElementChild;
     if (row) initializeInstructorFlashcardPreviews(row);
     row?.querySelector('.flashcard-front-input')?.focus();
@@ -289,7 +371,12 @@ async function removeFlashcardEditorRow(button) {
         return;
     }
 
+    // Removing the row takes the focused button with it. Park focus on the
+    // neighbouring card's Remove button until the save re-renders the list
+    // (which then restores focus to the card in the same position).
+    const neighbour = row.nextElementSibling || row.previousElementSibling;
     row.remove();
+    neighbour?.querySelector('.flashcard-remove-btn')?.focus({ preventScroll: true });
     try {
         await saveFlashcardDraft(unitName, { quiet: true });
         showNotification('Flashcard removed.', 'success');
@@ -300,7 +387,10 @@ async function removeFlashcardEditorRow(button) {
 }
 
 async function publishFlashcardDeck(unitName, button) {
-    button.disabled = true;
+    // Not disabled while it runs: disabling the focused button drops keyboard
+    // focus, and the re-render that follows needs to know where focus was.
+    if (button.getAttribute('aria-busy') === 'true') return;
+    button.setAttribute('aria-busy', 'true');
     try {
         const deck = await saveFlashcardDraft(unitName, { quiet: true });
         const response = await fetch(`/api/flashcards/instructor/${encodeURIComponent(deck.deckId)}/publish`, { method: 'POST' });
@@ -313,14 +403,15 @@ async function publishFlashcardDeck(unitName, button) {
     } catch (error) {
         showNotification(error.message, 'error');
     } finally {
-        button.disabled = false;
+        button.removeAttribute('aria-busy');
     }
 }
 
 async function unpublishFlashcardDeck(unitName, button) {
     const deck = flashcardDecksByUnit.get(unitName);
     if (!deck?.deckId) return;
-    button.disabled = true;
+    if (button.getAttribute('aria-busy') === 'true') return;
+    button.setAttribute('aria-busy', 'true');
     try {
         const response = await fetch(`/api/flashcards/instructor/${encodeURIComponent(deck.deckId)}/unpublish`, { method: 'POST' });
         const result = await response.json();
@@ -331,6 +422,6 @@ async function unpublishFlashcardDeck(unitName, button) {
     } catch (error) {
         showNotification(error.message, 'error');
     } finally {
-        button.disabled = false;
+        button.removeAttribute('aria-busy');
     }
 }

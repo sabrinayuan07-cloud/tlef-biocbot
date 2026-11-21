@@ -188,12 +188,24 @@
 
             const marker = document.createElement('span');
             marker.className = 'lms-stepper-marker';
-            marker.textContent = item.dataset.state === 'complete' ? '✓' : String(index + 1);
+            // The tick is a picture of "done"; say it in words for screen readers.
+            if (item.dataset.state === 'complete') {
+                marker.setAttribute('aria-hidden', 'true');
+                marker.textContent = '✓';
+            } else {
+                marker.textContent = String(index + 1);
+            }
             const label = document.createElement('span');
             label.className = 'lms-stepper-label';
             label.textContent = step.title;
 
             item.append(marker, label);
+            if (item.dataset.state === 'complete') {
+                const done = document.createElement('span');
+                done.className = 'visually-hidden';
+                done.textContent = ' (completed)';
+                item.append(done);
+            }
             stepper.appendChild(item);
         });
     }

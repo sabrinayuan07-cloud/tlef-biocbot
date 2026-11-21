@@ -615,7 +615,7 @@ header.sidebar {
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     animation: slide-in 0.3s ease-out;
     position: relative;
-    padding-right: 30px;
+    padding-right: 36px;
     /* Flex items default to min-width:auto, so a long word with no break
        opportunities (e.g. a raw JSON error body with no spaces) forces this
        wider than the container instead of wrapping. */
@@ -651,10 +651,16 @@ header.sidebar {
     color: white;
 }
 
+/* Announcement text for screen readers (see notifications.js). Kept out of the
+   flex flow so it adds no gap above the visible toasts. */
+.notification-container .notification-live {
+    position: absolute;
+}
+
 .notification-close {
     position: absolute;
-    top: 8px;
-    right: 8px;
+    top: 6px;
+    right: 6px;
     background: transparent;
     border: none;
     /* Matches each notification's own text color (white on the three dark
@@ -666,13 +672,19 @@ header.sidebar {
     font-weight: bold;
     cursor: pointer;
     padding: 0;
-    width: 20px;
-    height: 20px;
+    /* 24 by 24 minimum pointer target. */
+    width: 24px;
+    height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
-    opacity: 0.85;
+    border-radius: 4px;
     text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.notification-close:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 1px;
 }
 
 .notification-close:hover {

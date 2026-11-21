@@ -19,7 +19,7 @@ test.describe('onboarding save and upload modal branches', () => {
 
         await page.locator('.save-btn', { hasText: 'Save Assessment' }).click();
 
-        await expect(page.getByText('Please add at least one assessment question before saving.')).toBeVisible();
+        await expect(page.locator('.notification-message', { hasText: 'Please add at least one assessment question before saving.' }).last()).toBeVisible();
     });
 
     test('blocks final completion when objectives, materials, or questions are missing', async ({ page }) => {
@@ -28,18 +28,18 @@ test.describe('onboarding save and upload modal branches', () => {
 
         await page.locator('.progress-card[data-substep="questions"]').click();
         await page.locator('#substep-questions button.btn-primary', { hasText: 'Complete Unit 1 & Continue' }).click();
-        await expect(page.getByText('Please add at least one learning objective before continuing.')).toBeVisible();
+        await expect(page.locator('.notification-message', { hasText: 'Please add at least one learning objective before continuing.' }).last()).toBeVisible();
 
         await page.locator('.progress-card[data-substep="objectives"]').click();
         await addObjective(page);
         await page.locator('.progress-card[data-substep="questions"]').click();
         await page.locator('#substep-questions button.btn-primary', { hasText: 'Complete Unit 1 & Continue' }).click();
-        await expect(page.getByText('Please upload required materials (Lecture Notes and Practice Questions) before continuing.')).toBeVisible();
+        await expect(page.locator('.notification-message', { hasText: 'Please upload required materials (Lecture Notes and Practice Questions) before continuing.' }).last()).toBeVisible();
 
         await page.locator('#lecture-status').evaluate(element => { /** @type {HTMLElement} */ (element).dataset.status = 'uploaded'; });
         await page.locator('#practice-status').evaluate(element => { /** @type {HTMLElement} */ (element).dataset.status = 'uploaded'; });
         await page.locator('#substep-questions button.btn-primary', { hasText: 'Complete Unit 1 & Continue' }).click();
-        await expect(page.getByText('Please add at least one assessment question before continuing.')).toBeVisible();
+        await expect(page.locator('.notification-message', { hasText: 'Please add at least one assessment question before continuing.' }).last()).toBeVisible();
     });
 
     test('prevents closing upload modal while loading indicator is active', async ({ page }) => {
@@ -52,7 +52,7 @@ test.describe('onboarding save and upload modal branches', () => {
         });
         await page.locator('#upload-modal .modal-close').click();
 
-        await expect(page.getByText('Please wait for the upload to complete before closing.')).toBeVisible();
+        await expect(page.locator('.notification-message', { hasText: 'Please wait for the upload to complete before closing.' }).last()).toBeVisible();
         await expect(page.locator('#upload-modal')).toHaveClass(/show/);
     });
 
@@ -76,12 +76,12 @@ test.describe('onboarding save and upload modal branches', () => {
             testWindow.openUploadModal('Unit 1', 'lecture-notes');
         });
         await page.locator('#upload-btn').click();
-        await expect(page.getByText('Please provide content via file upload or direct text input')).toBeVisible();
+        await expect(page.locator('.notification-message', { hasText: 'Please provide content via file upload or direct text input' }).last()).toBeVisible();
 
         await page.locator('#material-name').fill('Lecture Notes Without Course');
         await page.locator('#text-input').fill('Lecture text without a course.');
         await page.locator('#upload-btn').click();
-        await expect(page.getByText(/No course ID available/)).toBeVisible();
+        await expect(page.locator('.notification-message', { hasText: /No course ID available/ }).last()).toBeVisible();
     });
 
     test('uploads direct text and saves reviewed topics for additional material', async ({ page }) => {
@@ -126,7 +126,7 @@ test.describe('onboarding save and upload modal branches', () => {
         });
         await page.locator('#upload-btn').click();
 
-        await expect(page.getByText(/Error uploading content: Failed to save document/)).toBeVisible();
+        await expect(page.locator('.notification-message', { hasText: /Error uploading content: Failed to save document/ }).last()).toBeVisible();
         await expect(page.locator('#upload-section')).toBeVisible();
         await expect(page.locator('#upload-btn')).toBeEnabled();
     });

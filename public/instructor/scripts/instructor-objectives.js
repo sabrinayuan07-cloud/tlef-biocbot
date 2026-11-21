@@ -3,6 +3,45 @@
  */
 
 /**
+ * Build one learning objective list item.
+ *
+ * The remove control is named after the objective it removes ("Remove
+ * objective: Explain osmosis") so the controls in a list can be told apart,
+ * and its "×" is hidden from assistive technology so it is not read out.
+ * The objective is set as text, never as HTML.
+ * @param {string} objectiveText - The objective as the instructor wrote it
+ * @returns {HTMLLIElement}
+ */
+function createObjectiveItem(objectiveText) {
+    const item = document.createElement('li');
+    item.className = 'objective-display-item';
+
+    const text = document.createElement('span');
+    text.className = 'objective-text';
+    text.textContent = objectiveText;
+
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'remove-objective';
+    const icon = document.createElement('span');
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = '×';
+    const name = document.createElement('span');
+    name.className = 'visually-hidden';
+    name.textContent = `Remove objective: ${objectiveText}`;
+    remove.append(icon, name);
+    remove.addEventListener('click', () => removeObjective(remove));
+
+    // The list item keeps its list-item display (which is what makes it a list
+    // item to Safari); the row inside it does the flex layout.
+    const row = document.createElement('div');
+    row.className = 'objective-display-row';
+    row.append(text, remove);
+    item.append(row);
+    return item;
+}
+
+/**
  * Load the saved learning objectives for all lectures from the database
  */
 async function loadLearningObjectives() {
@@ -42,13 +81,7 @@ async function loadLearningObjectives() {
                         // Add each objective
                         objectives.forEach((objective, index) => {
                             console.log(`📚 [LEARNING_OBJECTIVES] Adding objective ${index + 1} to UI: ${objective}`);
-                            const objectiveItem = document.createElement('div');
-                            objectiveItem.className = 'objective-display-item';
-                            objectiveItem.innerHTML = `
-                                <span class="objective-text">${objective}</span>
-                                <button class="remove-objective" onclick="removeObjective(this)">×</button>
-                            `;
-                            objectivesList.appendChild(objectiveItem);
+                            objectivesList.appendChild(createObjectiveItem(objective));
                         });
                         console.log(`✅ [LEARNING_OBJECTIVES] Successfully added ${objectives.length} objectives to UI for ${lectureName}`);
                     } else {
@@ -158,12 +191,7 @@ async function addObjectiveFromInput(week) {
     }
 
     // Create new objective display item
-    const objectiveItem = document.createElement('div');
-    objectiveItem.className = 'objective-display-item';
-    objectiveItem.innerHTML = `
-        <span class="objective-text">${objectiveText}</span>
-        <button class="remove-objective" onclick="removeObjective(this)">×</button>
-    `;
+    const objectiveItem = createObjectiveItem(objectiveText);
 
     // Add to the list
     objectivesList.appendChild(objectiveItem);
@@ -193,9 +221,17 @@ async function removeObjective(button) {
         return;
     }
 
+    // Removing the item takes the focused button with it. Move focus to the
+    // neighbouring objective's remove button, or to the "new objective" field
+    // when the list is now empty, so a keyboard user keeps their place.
+    const neighbour = objectiveItem.nextElementSibling || objectiveItem.previousElementSibling;
+    const nextFocus = neighbour?.querySelector('.remove-objective')
+        || button.closest('.section-content')?.querySelector('.objective-input');
+
     objectiveItem.remove();
+    nextFocus?.focus();
     await persistObjectivesForWeek(week);
-    showNotification('Learning objective removed.', 'error');
+    showNotification('Learning objective removed.', 'info');
 }
 
 function getObjectivesForUnit(unitName) {

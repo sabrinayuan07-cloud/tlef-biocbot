@@ -114,16 +114,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             toggleSection(header, e);
         });
         
-        // Make sure toggle icon matches initial state
-        const sectionContent = header.nextElementSibling;
-        const toggleIcon = header.querySelector('.toggle-section');
-        if (sectionContent && toggleIcon) {
-            if (sectionContent.classList.contains('collapsed')) {
-                toggleIcon.textContent = '▶';
-            } else {
-                toggleIcon.textContent = '▼';
-            }
-        }
+        // Make sure the toggle's caret and aria-expanded match the initial state
+        syncSectionToggle(header);
     });
 
 // Unit Management Functions
@@ -186,6 +178,11 @@ async function addNewUnit() {
  */
 async function moveUnit(unitName, direction) {
     const moveButtons = document.querySelectorAll('.unit-move-btn');
+    // Disabling the pressed button (below) and then rebuilding the unit list
+    // would both throw keyboard focus away. Note which button was used so the
+    // re-render can put focus back on it (see restoreUnitFocus).
+    const pressedButtonId = `unit-move-${direction}-${unitName.toLowerCase().replace(/\s+/g, '-')}`;
+    const hadFocus = document.activeElement && document.activeElement.id === pressedButtonId;
     moveButtons.forEach(button => { button.disabled = true; });
 
     try {
@@ -206,12 +203,21 @@ async function moveUnit(unitName, direction) {
         }
 
         window.pendingFocusUnitName = unitName;
+        if (hadFocus) window.pendingFocusId = pressedButtonId;
         showNotification(result.message, 'success');
         await loadSpecificCourse(courseId);
     } catch (error) {
         console.error('Error moving unit:', error);
         showNotification('Failed to move unit: ' + error.message, 'error');
-        moveButtons.forEach(button => { button.disabled = false; });
+        // Restore each button to the state it was rendered in (the first unit
+        // cannot move up, the last cannot move down), then give focus back.
+        const items = Array.from(document.querySelectorAll('.accordion-item[data-unit-name]'));
+        items.forEach((item, index) => {
+            const [up, down] = item.querySelectorAll('.unit-move-btn');
+            if (up) up.disabled = index === 0;
+            if (down) down.disabled = index === items.length - 1;
+        });
+        if (hadFocus) document.getElementById(pressedButtonId)?.focus();
     }
 }
 
@@ -282,9 +288,17 @@ async function confirmDeleteUnit() {
         }
 
         showNotification(result.message, 'success');
-        
+
+        // Closing the modal hands focus back to the Delete button of a unit
+        // that is about to disappear. Point the re-render at the neighbouring
+        // unit instead (or at "Add New Unit") so focus is not lost.
+        const deletedItem = document.querySelector(`.accordion-item[data-unit-name="${unitToDelete}"]`);
+        const neighbour = deletedItem?.nextElementSibling || deletedItem?.previousElementSibling;
+        const nextFocusId = neighbour?.querySelector('.accordion-trigger')?.id || 'add-unit-btn';
+
         closeDeleteUnitModal();
-        
+        window.pendingFocusId = nextFocusId;
+
         // Reload course data
         await loadSpecificCourse(courseId);
         

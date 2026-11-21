@@ -217,11 +217,11 @@ test.describe('instructor unit expansion state across add and delete', () => {
         const course = await openDocumentsPage(page);
         const unitItems = page.locator('#dynamic-units-container .accordion-item[data-unit-name]');
 
-        await expect(unitItems.first().getByRole('button', { name: 'Move Unit 1 up' })).toBeDisabled();
-        await expect(unitItems.last().getByRole('button', { name: 'Move Unit 3 down' })).toBeDisabled();
+        await expect(unitItems.first().getByRole('button', { name: 'Move 1. Unit 1 up' })).toBeDisabled();
+        await expect(unitItems.last().getByRole('button', { name: 'Move 3. Unit 3 down' })).toBeDisabled();
 
         await page.locator('.accordion-item[data-unit-name="Unit 3"]')
-            .getByRole('button', { name: 'Move Unit 3 up' })
+            .getByRole('button', { name: 'Move 3. Unit 3 up' })
             .click();
 
         await expect.poll(async () => unitItems.evaluateAll((items) =>

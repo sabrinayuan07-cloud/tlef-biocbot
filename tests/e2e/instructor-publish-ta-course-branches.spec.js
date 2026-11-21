@@ -534,16 +534,25 @@ test.describe('instructor publish, TA, course, and polling branches', () => {
             );
 
             const content = /** @type {HTMLElement} */ (accordion.querySelector('.section-content'));
-            const children = Array.from(content.children).map((element) => {
+            // New material items live in the section's materials list, which sits
+            // above the action controls. Read the rows in document order.
+            const rows = content.querySelectorAll(':scope > .file-item, :scope > .materials-list > .file-item, :scope > .add-content-section');
+            // A button's visible label, without the visually hidden document title.
+            const visibleText = (/** @type {Element} */ button) => {
+                const copy = /** @type {HTMLElement} */ (button.cloneNode(true));
+                copy.querySelectorAll('.visually-hidden').forEach((hidden) => hidden.remove());
+                return copy.textContent?.trim();
+            };
+            const children = Array.from(rows).map((element) => {
                 const row = /** @type {HTMLElement} */ (element);
                 return {
                     className: row.className,
-                    title: row.querySelector('.file-info h3')?.textContent || row.querySelector('button')?.textContent || '',
+                    title: row.querySelector('.file-info .file-title, .file-info h3')?.textContent || row.querySelector('button')?.textContent || '',
                     documentId: row.dataset.documentId || null,
                     documentType: row.dataset.documentType || null,
                     statusText: row.querySelector('.status-text')?.textContent || null,
                     statusClass: row.querySelector('.status-text')?.className || null,
-                    actions: Array.from(row.querySelectorAll('.action-button')).map((button) => button.textContent?.trim()),
+                    actions: Array.from(row.querySelectorAll('.action-button')).map(visibleText),
                     isPlaceholder: row.classList.contains('placeholder-item'),
                 };
             });

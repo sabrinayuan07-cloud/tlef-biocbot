@@ -366,7 +366,7 @@ test.describe('instructor onboarding', () => {
         // Product requirement: Unit 1 setup must not continue to materials without a learning objective.
         await page.locator('#substep-objectives button.btn-primary', { hasText: 'Continue to Course Materials' }).click();
         await expect(page.locator('#substep-objectives.guided-substep.active')).toBeVisible();
-        await expect(page.getByText('Please add at least one learning objective before continuing.')).toBeVisible();
+        await expect(page.locator('.notification-message', { hasText: 'Please add at least one learning objective before continuing.' }).last()).toBeVisible();
 
         await addLearningObjective(page);
         await page.locator('#substep-objectives button.btn-primary', { hasText: 'Continue to Course Materials' }).click();
@@ -375,7 +375,7 @@ test.describe('instructor onboarding', () => {
         // Product requirement: Unit 1 setup must not continue to questions until both required uploads exist.
         await page.locator('#substep-materials button.btn-primary', { hasText: 'Continue to Probing Questions' }).click();
         await expect(page.locator('#substep-materials.guided-substep.active')).toBeVisible();
-        await expect(page.getByText('Please upload required materials (Lecture Notes and Practice Questions) before continuing.')).toBeVisible();
+        await expect(page.locator('.notification-message', { hasText: 'Please upload required materials (Lecture Notes and Practice Questions) before continuing.' }).last()).toBeVisible();
 
         // Product requirement: question modal must reject incomplete question answers.
         await page.locator('.progress-card[data-substep="questions"]').click();
@@ -387,7 +387,7 @@ test.describe('instructor onboarding', () => {
         await page.locator('.mcq-input[data-option="A"]').fill('Carbohydrates');
         await page.locator('#question-modal button.btn-primary', { hasText: 'Save Question' }).click();
         await expect(page.locator('#question-modal')).toBeVisible();
-        await expect(page.getByText('Please provide at least 2 answer options.')).toBeVisible();
+        await expect(page.locator('.notification-message', { hasText: 'Please provide at least 2 answer options.' }).last()).toBeVisible();
     });
 
     test('resumes an incomplete course instead of creating a duplicate', async ({ page }) => {
@@ -604,7 +604,7 @@ test.describe('instructor onboarding', () => {
         // Product requirement: an empty upload attempt stays in the modal and does not mark the material uploaded.
         await expect(page.locator('#upload-modal')).toBeVisible();
         await expect(page.locator('#lecture-status')).toHaveText(/Not Uploaded/i);
-        await expect(page.getByText('Please provide content via file upload or direct text input')).toBeVisible();
+        await expect(page.locator('.notification-message', { hasText: 'Please provide content via file upload or direct text input' }).last()).toBeVisible();
     });
 
     test('keeps required upload unset when the upload API fails', async ({ page }) => {
@@ -636,7 +636,7 @@ test.describe('instructor onboarding', () => {
         await expect(page.locator('#upload-section')).toBeVisible();
         await expect(page.locator('#upload-loading-indicator')).toBeHidden();
         await expect(page.locator('#lecture-status')).toHaveText(/Not Uploaded/i);
-        await expect(page.getByText(/Error uploading content:/)).toBeVisible();
+        await expect(page.locator('.notification-message', { hasText: /Error uploading content:/ }).last()).toBeVisible();
     });
 
     test('does not complete onboarding without at least one assessment question', async ({ page }) => {
@@ -658,7 +658,7 @@ test.describe('instructor onboarding', () => {
         // Product requirement: final completion is blocked until at least one assessment question exists.
         await expect(page.locator('#substep-questions.guided-substep.active')).toBeVisible();
         await expect(page).toHaveURL(/\/instructor\/onboarding/);
-        await expect(page.getByText('Please add at least one assessment question before continuing.')).toBeVisible();
+        await expect(page.locator('.notification-message', { hasText: 'Please add at least one assessment question before continuing.' }).last()).toBeVisible();
 
         const apiCtx = await apiContextFromPage(page);
         try {
@@ -870,7 +870,7 @@ test.describe('instructor onboarding', () => {
         // Product requirement: threshold cannot exceed the number of questions and cannot be persisted as complete.
         await expect(page.locator('#substep-questions.guided-substep.active')).toBeVisible();
         await expect(page).toHaveURL(/\/instructor\/onboarding/);
-        await expect(page.getByText('Pass threshold cannot exceed the number of assessment questions.')).toBeVisible();
+        await expect(page.locator('.notification-message', { hasText: 'Pass threshold cannot exceed the number of assessment questions.' }).last()).toBeVisible();
 
         const apiCtx = await apiContextFromPage(page);
         try {
