@@ -73,6 +73,9 @@ test('the picker offers both accessible buckets and switching swaps the source p
 
     const picker = page.locator('#superchat-picker');
     await expect(picker).toBeVisible({ timeout: 10_000 });
+    // Regression check for #645: .superchat-picker's own padding shorthand
+    // must leave room for the global select chevron.
+    await expect(picker).toHaveCSS('padding-right', '34px');
     // Both seeded buckets are offered (other residual buckets may also appear).
     await expect(picker.locator(`option[value="${BUCKET_A}"]`)).toHaveCount(1);
     await expect(picker.locator(`option[value="${BUCKET_B}"]`)).toHaveCount(1);

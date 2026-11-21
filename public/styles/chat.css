@@ -911,6 +911,8 @@
     padding: 4px 10px;
     cursor: pointer;
     max-width: 240px;
+    /* Shared padding above is too tight for the global select chevron (#645). */
+    padding-right: 34px;
 }
 
 .superchat-picker:disabled {
