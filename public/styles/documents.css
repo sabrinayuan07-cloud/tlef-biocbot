@@ -2711,3 +2711,19 @@ fieldset.radio-group-fieldset {
     visibility: visible;
     opacity: 1;
 }
+
+/* The unit reorder arrows sit right at the top edge of .accordion-container,
+   which has overflow:hidden for its rounded corners. An upward-opening
+   tooltip on the first unit has nowhere to go and gets clipped off, so show
+   these specific tooltips below the button instead. */
+.unit-move-btn.tooltip::after {
+    bottom: auto;
+    top: 125%;
+}
+
+.unit-move-btn.tooltip::before {
+    bottom: auto;
+    top: 115%;
+    border-top-color: transparent;
+    border-bottom-color: var(--bb-ink, #1f2937);
+}
