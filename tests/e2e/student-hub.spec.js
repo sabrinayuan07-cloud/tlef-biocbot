@@ -282,7 +282,7 @@ test.describe('Student Hub UI', () => {
         await saveButton.click();
 
         await expect(page.locator('.notification.success')).toContainText(
-            `Enrollment disabled for ${HUB_ACTIVE_STUDENT.userId}`,
+            `Enrollment disabled for ${HUB_ACTIVE_STUDENT.displayName}`,
             { timeout: 10_000 }
         );
         await expect(saveButton).toBeDisabled();
