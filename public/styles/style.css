@@ -917,6 +917,18 @@ header.sidebar {
     inset-inline-start: 0;
 }
 
+/* Visually hidden text is absolutely positioned, so it is laid out against its
+   nearest positioned ancestor. With none nearby that is the <body>, outside
+   .main-content (which is what scrolls): the hidden text then stretches the
+   whole document, and the page scrolls past the end of the layout once enough
+   of it is on screen (an expanded unit on Course Upload carries dozens).
+   Anchoring it to its own parent keeps it inside whatever scrolls or clips
+   that parent. :where() adds no specificity, so any element that already sets
+   its own `position` keeps it. */
+:where(:has(> .visually-hidden)) {
+    position: relative;
+}
+
 .visually-hidden {
     position: absolute;
     width: 1px;

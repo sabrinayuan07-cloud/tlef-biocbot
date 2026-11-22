@@ -631,12 +631,46 @@
         });
     }
 
+    /**
+     * Visually hidden text is absolutely positioned. If nothing between it and
+     * the container that scrolls (or clips) its surroundings is positioned, it
+     * is laid out against the page instead: it does not scroll with its
+     * content, it is not clipped, and it stretches the document, so the whole
+     * page scrolls past the end of the layout. One finding per container.
+     */
+    function ruleHiddenTextEscapes(root, out) {
+        var escaped = new Map();
+        Array.prototype.forEach.call(root.querySelectorAll('*'), function (el) {
+            var style = styleOf(el);
+            if (style.position !== 'absolute' || !el.isConnected) return;
+            var rect = el.getBoundingClientRect();
+            if (rect.width > 1 || rect.height > 1 || style.display === 'none') return;
+            var container = el.offsetParent;
+            if (!container) return;
+            for (var node = el.parentElement; node && node !== container; node = node.parentElement) {
+                var s = styleOf(node);
+                if (s.overflowY === 'visible' && s.overflowX === 'visible') continue;
+                if (!escaped.has(node)) escaped.set(node, []);
+                escaped.get(node).push(el);
+                break;
+            }
+        });
+        escaped.forEach(function (els, scroller) {
+            out.push(finding('hidden-text-escapes-scroller', 'fail', 'layout (caused by visually hidden text)', scroller,
+                els.length + ' visually hidden element(s) inside this scrolling or clipping container are positioned against <' +
+                els[0].offsetParent.tagName.toLowerCase() + '> outside it. They stretch the page beyond the container. ' +
+                'Give an ancestor inside the container position: relative.',
+                { count: els.length, example: selectorFor(els[0]), positionedAgainst: selectorFor(els[0].offsetParent) }));
+        });
+    }
+
     var OPTIONS = { largeTextAt3: false };
 
     var RULES = {
         'control-named-by-aria': ruleNamedByAria,
         'list-markup': ruleListMarkup,
         'heading-attributes': ruleHeadingAttributes,
+        'hidden-text-escapes-scroller': ruleHiddenTextEscapes,
         'control-names': ruleControlNames,
         'control-name-duplicate': ruleDuplicateNames,
         'nested-interactive': ruleNestedInteractive,
