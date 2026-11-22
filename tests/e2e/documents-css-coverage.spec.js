@@ -395,7 +395,9 @@ test.describe('documents.css harness coverage', () => {
         await expect(page.locator('.document-tabs')).toHaveCSS('overflow', 'hidden');
         await expect(page.locator('.tab-header')).toHaveCSS('display', 'flex');
         await expect(page.locator('.tab-btn.active')).toHaveCSS('border-bottom-color', 'rgb(74, 111, 165)');
-        await expect(page.locator('.accordion-item.published')).toHaveCSS('border-color', 'rgb(74, 111, 165)');
+        // .accordion-item.published's border/box-shadow is now a transient flash
+        // (#662) rather than a persistent style, so there's no steady-state
+        // border-color to assert here anymore.
         await expect(page.locator('.accordion-item.published .folder-name')).toHaveCSS('color', 'rgb(74, 111, 165)');
         await expect(page.locator('.accordion-content.collapsed')).toHaveCSS('max-height', '0px');
 
