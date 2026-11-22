@@ -719,6 +719,15 @@ test.describe('Course Upload: generic sweep of every state', () => {
 
         await openCourseUpload(page);
         await capture('page');
+        // The page scrolls inside .main-content. The document itself must stay
+        // exactly one viewport tall, or the whole layout scrolls away (which is
+        // what visually hidden text did once every control carried some).
+        const documentHeight = await page.evaluate(() => ({
+            scrollHeight: document.scrollingElement ? document.scrollingElement.scrollHeight : 0,
+            viewport: window.innerHeight,
+        }));
+        fs.writeFileSync(path.join(EVIDENCE_DIR, 'document-height.json'), JSON.stringify(documentHeight));
+        expect.soft(documentHeight.scrollHeight, 'the document must not be taller than the viewport').toBeLessThanOrEqual(documentHeight.viewport + 1);
         // Close-ups for the write-up: each part of the first unit as rendered.
         const firstUnit = page.locator('.accordion-item').first();
         for (const [name, selector] of [
