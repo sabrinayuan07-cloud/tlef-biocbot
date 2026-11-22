@@ -350,10 +350,13 @@ function displayTAs() {
 
         const checkboxes = window.TA_PERMISSION_KEYS.map(key => `
                         <label class="permission-toggle">
-                            <input type="checkbox"
-                                   id="${key}-permission-${ta.userId}"
-                                   ${permissions[key] ? 'checked' : ''}
-                                   onchange="updateTAPermission('${ta.courseId}', '${ta.userId}', '${key}', this.checked)">
+                            <span class="toggle-switch">
+                                <input type="checkbox"
+                                       id="${key}-permission-${ta.userId}"
+                                       ${permissions[key] ? 'checked' : ''}
+                                       onchange="updateTAPermission('${ta.courseId}', '${ta.userId}', '${key}', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </span>
                             <span class="toggle-label">${PERMISSION_LABELS[key]}</span>
                         </label>`).join('');
 
