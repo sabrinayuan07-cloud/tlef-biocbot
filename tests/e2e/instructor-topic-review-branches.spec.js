@@ -136,7 +136,7 @@ test.describe('onboarding topic review branches', () => {
         });
         await page.locator('#save-topics-btn').click();
 
-        await expect(page.getByText('Could not save topics. Please try again.')).toBeVisible();
+        await expect(page.locator('.notification-message', { hasText: 'Could not save topics. Please try again.' }).last()).toBeVisible();
         await expect(page.locator('#upload-modal')).toBeHidden();
     });
 });

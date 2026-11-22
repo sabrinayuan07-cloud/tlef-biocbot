@@ -290,7 +290,7 @@ async function generateAIQuestionContent() {
         const materials = [];
         const fileItems = weekAccordionItem.querySelectorAll('.course-materials-section .file-item');
         fileItems.forEach(item => {
-            const title = item.querySelector('.file-info h3')?.textContent;
+            const title = item.querySelector('.file-info .file-title, .file-info h3')?.textContent;
             const status = item.querySelector('.status-text')?.textContent;
             const docId = item.dataset.documentId;
             materials.push({ title, status, documentId: docId });

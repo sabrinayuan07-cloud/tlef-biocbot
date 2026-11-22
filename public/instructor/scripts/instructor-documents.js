@@ -76,9 +76,10 @@ async function loadDocuments() {
                         // ADD ALL DOCUMENTS - BACKEND HANDLES DELETION FROM BOTH DBs
                         if (documents && documents.length > 0) {
                             // Add all documents - backend ensures they exist in both databases
+                            const materialsList = getMaterialsList(courseMaterialsSection);
                             documents.forEach((doc) => {
                                 const documentItem = createDocumentItem(doc);
-                                courseMaterialsSection.appendChild(documentItem);
+                                materialsList.appendChild(documentItem);
                             });
                         }
                         
@@ -167,7 +168,8 @@ async function loadDocuments() {
  * @returns {HTMLElement} Document item element
  */
 function createDocumentItem(doc) {
-    const documentItem = document.createElement('div');
+    // Material items are list items; getMaterialsList() provides their list.
+    const documentItem = document.createElement('li');
     documentItem.className = 'file-item';
     documentItem.dataset.documentId = doc.documentId;
     documentItem.dataset.status = String(doc.status || '').trim().toLowerCase();
@@ -219,16 +221,19 @@ function createDocumentItem(doc) {
         : (doc.documentType || doc.type);
     const documentTypeLabel = getDocumentTypeLabel(storedDocumentType);
 
+    const documentTitle = doc.filename || doc.originalName;
     documentItem.innerHTML = `
-        <span class="file-icon">${fileIcon}</span>
-        <div class="file-info">
-            <h3>${doc.filename || doc.originalName}</h3>
-            ${doc.metadata?.description ? `<p>${doc.metadata.description}</p>` : ''}
-            <span class="document-type-badge">${documentTypeLabel}</span>
-            <span class="status-text${statusClass ? ` ${statusClass}` : ''}">${statusText}</span>
-        </div>
-        <div class="file-actions">
-            ${buildDocumentActionButtons(doc.documentId)}
+        <div class="file-item-row">
+            <span class="file-icon">${fileIcon}</span>
+            <div class="file-info">
+                <h4 class="file-title" ${headingAttrs(documentTitle)}>${documentTitle}</h4>
+                ${doc.metadata?.description ? `<p>${doc.metadata.description}</p>` : ''}
+                <span class="document-type-badge">${documentTypeLabel}</span>
+                <span class="status-text${statusClass ? ` ${statusClass}` : ''}">${statusText}</span>
+            </div>
+            <div class="file-actions">
+                ${buildDocumentActionButtons(doc.documentId, documentTitle)}
+            </div>
         </div>
     `;
     
@@ -728,7 +733,7 @@ function updateFileStatus(contentType, unitName, status, fileName) {
     const fileItems = document.querySelectorAll('.file-item');
     
     fileItems.forEach(item => {
-        const itemTitle = item.querySelector('h3');
+        const itemTitle = item.querySelector('.file-title, h3');
         if (itemTitle) {
             const isLectureNotes = contentType === 'lecture-notes' && itemTitle.textContent.includes('Lecture Notes');
             const isPracticeQuestions = contentType === 'practice-questions' && itemTitle.textContent.includes('Practice Questions');

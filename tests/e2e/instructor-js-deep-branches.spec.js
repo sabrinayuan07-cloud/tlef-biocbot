@@ -248,7 +248,7 @@ test.describe('instructor.js deep branch coverage', () => {
             aiButton.id = 'generate-ai-unit1';
             document.body.appendChild(aiButton);
             const lectureItem = /** @type {HTMLElement|undefined} */ (Array.from(document.querySelectorAll('.file-item'))
-                .find(item => item.querySelector('h3')?.textContent?.includes('Lecture Notes')));
+                .find(item => item.querySelector('.file-title')?.textContent?.includes('Lecture Notes')));
             const lectureStatus = lectureItem?.querySelector('.status-text');
             if (lectureItem && lectureStatus) {
                 lectureItem.classList.remove('placeholder-item');
@@ -276,8 +276,14 @@ test.describe('instructor.js deep branch coverage', () => {
                 materialsAvailable,
                 expanded: !content.classList.contains('collapsed'),
                 actions: section.querySelectorAll('.add-content-section, .save-objectives').length,
+                // The visible label. Each button also carries visually hidden
+                // text naming its unit, which is not what this test is about.
                 addMaterialActions: Array.from(section.querySelectorAll('.add-content-btn'))
-                    .map(button => button.textContent?.replace(/\s+/g, ' ').trim()),
+                    .map(button => {
+                        const visible = /** @type {HTMLElement} */ (button.cloneNode(true));
+                        visible.querySelectorAll('.visually-hidden').forEach(hidden => hidden.remove());
+                        return visible.textContent?.replace(/\s+/g, ' ').trim();
+                    }),
             };
         });
 
@@ -374,7 +380,7 @@ test.describe('instructor.js deep branch coverage', () => {
             await instructorWindow.handleUpload();
         });
 
-        await expect(page.locator('.file-item[data-document-id="doc_practice_upload"] h3')).toHaveText('practice.txt');
+        await expect(page.locator('.file-item[data-document-id="doc_practice_upload"] .file-title')).toHaveText('practice.txt');
         await expect(page.locator('.file-item[data-document-id="doc_practice_upload"] .document-type-badge')).toHaveText('Practice Questions/Tutorial');
         expect(state.textUploads).toHaveLength(0);
         expect(state.fileUploads).toBe(2);

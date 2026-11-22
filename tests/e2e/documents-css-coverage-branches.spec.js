@@ -365,7 +365,7 @@ async function gotoHarness(page) {
         const slider = testWindow.document.querySelector('.toggle-slider');
         if (!emptyState || !slider) return false;
         return testWindow.getComputedStyle(emptyState).textAlign === 'center'
-            && testWindow.getComputedStyle(slider).backgroundColor === 'rgb(204, 204, 204)';
+            && testWindow.getComputedStyle(slider).backgroundColor === 'rgb(107, 114, 128)';
     });
 }
 
@@ -385,7 +385,8 @@ test.describe('documents.css branch harness coverage', () => {
         await expect(page.locator('.empty-state')).toHaveCSS('text-align', 'center');
 
         await page.locator('#publish-off').focus();
-        await expect(page.locator('#publish-off + .toggle-slider')).toHaveCSS('background-color', 'rgb(204, 204, 204)');
+        // #6b7280: the "off" track is 4.8:1 against white. The old #ccc was 1.6:1 (issue 724, finding 11).
+        await expect(page.locator('#publish-off + .toggle-slider')).toHaveCSS('background-color', 'rgb(107, 114, 128)');
         await expect(page.locator('#publish-off + .toggle-slider')).toHaveCSS('box-shadow', 'rgba(74, 111, 165, 0.2) 0px 0px 0px 3px');
         await page.locator('#unpublished-header').hover();
         await expect(page.locator('#unpublished-header')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0.03)');

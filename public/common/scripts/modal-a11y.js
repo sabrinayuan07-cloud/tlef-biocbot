@@ -264,7 +264,10 @@
         };
         state.onKeydown = (event) => {
             if (event.key !== 'Tab') return;
-            const focusables = getFocusables(modalRootEl);
+            // Enumerate the dialog host, not just the modal inside it: toasts
+            // shown while a modal is open are parented into the host (see
+            // notifications.js), and their Dismiss button has to be reachable.
+            const focusables = getFocusables(dialogEl);
             if (!focusables.length) {
                 event.preventDefault();
                 heading.focus();
@@ -279,7 +282,7 @@
             } else if (!event.shiftKey && document.activeElement === last) {
                 event.preventDefault();
                 first.focus();
-            } else if (!modalRootEl.contains(document.activeElement)) {
+            } else if (!dialogEl.contains(document.activeElement)) {
                 event.preventDefault();
                 (event.shiftKey ? last : first).focus();
             }

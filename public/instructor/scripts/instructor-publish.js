@@ -21,13 +21,17 @@ function togglePublish(lectureName, isPublished) {
     }
     
     if (targetAccordion) {
+        // Name the unit by the title the instructor sees on screen, not the
+        // internal "Unit 2" key, so the announcement matches the page.
+        const unitLabel = typeof getUnitLabel === 'function' ? getUnitLabel(lectureName) : lectureName;
+
         // Update visual state
         if (isPublished) {
             targetAccordion.classList.add('published');
-            showNotification(`${lectureName} is now published and visible to students`, 'success');
+            showNotification(`${unitLabel} is now published and visible to students`, 'success');
         } else {
             targetAccordion.classList.remove('published');
-            showNotification(`${lectureName} is now unpublished and hidden from students`, 'info');
+            showNotification(`${unitLabel} is now unpublished and hidden from students`, 'info');
         }
         
         // In a real implementation, this would make an API call to update the publish status

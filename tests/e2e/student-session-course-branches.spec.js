@@ -313,7 +313,7 @@ async function fulfillApi(route, state) {
     await route.fulfill({ json: { success: true, data: {} } });
 }
 
-test('starts a new session with a fetched course name and closes the notification', async ({ page }) => {
+test('starts a new session with a fetched course name and shows a notification with no controls', async ({ page }) => {
     await openStudentWithMocks(page, { seedCourseName: false });
     await expect(page.locator('#chat-messages')).toContainText('seeded branch chat', { timeout: 10_000 });
 
@@ -324,8 +324,10 @@ test('starts a new session with a fetched course name and closes the notificatio
     await expect(notification).toBeVisible({ timeout: 5_000 });
     await expect.poll(() => page.evaluate(() => localStorage.getItem('selectedCourseName'))).toBe(COURSE_NAME);
 
-    await notification.locator('.notification-close').click();
-    await expect(notification).toHaveCount(0);
+    // Info toasts leave on their own, so they carry no Dismiss control: a
+    // control must never be taken away on a timer (issue 724, findings 16-17).
+    await expect(notification.locator('.notification-close')).toHaveCount(0);
+    await expect(notification).toHaveCount(0, { timeout: 7_000 });
 });
 
 test('auto-removes the new-session notification after its timeout', async ({ page }) => {

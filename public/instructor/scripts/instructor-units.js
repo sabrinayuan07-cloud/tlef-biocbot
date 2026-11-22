@@ -20,17 +20,104 @@ function toggleSection(headerElement, e) {
                           headerElement : headerElement.closest('.section-header');
     
     const sectionContent = sectionHeader.nextElementSibling;
-    const toggleIcon = sectionHeader.querySelector('.toggle-section');
-    
+
     // Toggle the collapsed class
     sectionContent.classList.toggle('collapsed');
-    
-    // Update the toggle icon
-    if (sectionContent.classList.contains('collapsed')) {
-        toggleIcon.textContent = '▶';
-    } else {
-        toggleIcon.textContent = '▼';
+
+    syncSectionToggle(sectionHeader);
+}
+
+/**
+ * Make a section header's button and caret say whether its content is showing.
+ * The button carries the state for assistive technology (aria-expanded); the
+ * caret is a picture of the same thing and is hidden from it.
+ * @param {HTMLElement} sectionHeader - The .section-header element
+ */
+function syncSectionToggle(sectionHeader) {
+    const sectionContent = sectionHeader.nextElementSibling;
+    if (!sectionContent) return;
+    const collapsed = sectionContent.classList.contains('collapsed');
+    const toggleButton = sectionHeader.querySelector('.toggle-section');
+    const toggleIcon = sectionHeader.querySelector('.toggle-section-icon');
+    if (toggleButton) toggleButton.setAttribute('aria-expanded', String(!collapsed));
+    if (toggleIcon) toggleIcon.textContent = collapsed ? '▶' : '▼';
+}
+
+/**
+ * The title an instructor sees for a unit (e.g. "2. Enzymes"). Falls back to
+ * the internal name when the unit is not on the page.
+ * @param {string} unitName - Internal name of the unit (e.g., "Unit 1")
+ * @returns {string}
+ */
+function getUnitLabel(unitName) {
+    const title = document.querySelector(`.accordion-item[data-unit-name="${unitName}"] .folder-name`);
+    return (title && title.textContent.trim()) || unitName;
+}
+
+/**
+ * Visually hidden text that finishes a repeated control's name with the unit
+ * it belongs to: "Add Question" + " for 1. Cell Structure".
+ *
+ * Every unit repeats the same controls, so without this a screen-reader user
+ * hears "Add Question, Add Question, Add Question" with no way to tell them
+ * apart. The name is made of real text inside the control (no aria-label or
+ * aria-labelledby), and the unit's title sits in its own .unit-name-ref span
+ * so a rename can update every control in the unit in one pass.
+ * @param {string} unitLabel - The unit's visible title
+ * @param {string} [lead=' for '] - Words between the control's text and the title
+ * @returns {string} HTML for the hidden span
+ */
+function unitContext(unitLabel, lead = ' for ') {
+    return `<span class="visually-hidden">${lead}<span class="unit-name-ref">${unitLabel}</span></span>`;
+}
+
+/**
+ * The list that holds a unit's course material items, created on first use.
+ * Material items are list items, so they have to live in a list rather than
+ * loose among the section's other content.
+ * @param {HTMLElement} sectionContent - The course materials .section-content
+ * @returns {HTMLElement} The ul.materials-list element
+ */
+function getMaterialsList(sectionContent) {
+    let list = sectionContent.querySelector(':scope > .materials-list');
+    if (!list) {
+        list = document.createElement('ul');
+        list.className = 'materials-list';
+        const before = sectionContent.querySelector(':scope > .add-content-section, :scope > .cleanup-section');
+        sectionContent.insertBefore(list, before);
     }
+    return list;
+}
+
+/**
+ * Build one "required material not uploaded yet" placeholder item.
+ * @param {string} unitName - Internal name of the unit (e.g., "Unit 1")
+ * @param {'lecture-notes'|'practice-quiz'} contentType - Which required material
+ * @param {string} [unitLabel] - The unit's visible title, when the unit is not on the page yet
+ * @returns {HTMLLIElement}
+ */
+function createPlaceholderItem(unitName, contentType, unitLabel = getUnitLabel(unitName)) {
+    const isLectureNotes = contentType === 'lecture-notes';
+    const title = isLectureNotes ? `*Lecture Notes - ${unitName}` : '*Practice Questions/Tutorial';
+    const item = document.createElement('li');
+    item.className = 'file-item placeholder-item';
+    item.dataset.status = 'not-uploaded';
+    item.innerHTML = `
+        <div class="file-item-row">
+            <span class="file-icon">${Icons.file}</span>
+            <div class="file-info">
+                <h4 class="file-title" ${headingAttrs(title)}>${title}</h4>
+                <p>${isLectureNotes
+                    ? 'Placeholder for required lecture notes. Please upload content.'
+                    : 'Placeholder for required practice questions. Please upload content.'}</p>
+                <span class="status-text">Not Uploaded</span>
+            </div>
+            <div class="file-actions">
+                <button type="button" class="action-button upload" onclick="openUploadModal('${unitName}', '${contentType}')">Upload<span class="visually-hidden"> ${isLectureNotes ? 'lecture notes' : 'practice questions or tutorial'}</span>${unitContext(unitLabel)}</button>
+            </div>
+        </div>
+    `;
+    return item;
 }
 
 /**
@@ -153,6 +240,13 @@ function generateUnitsFromOnboarding(onboardingData) {
     // this render throws the current list away.
     const previouslyExpanded = captureExpandedUnitNames();
     const isRerender = container.querySelector('.accordion-item[data-unit-name]') !== null;
+    // Rebuilding the list destroys whatever control had focus. Remember it (the
+    // ids are stable per unit) so the keyboard user is not dropped back at the
+    // top of the page after reordering, adding, or deleting a unit.
+    const focusedElement = document.activeElement;
+    const focusId = window.pendingFocusId
+        || (focusedElement && container.contains(focusedElement) ? focusedElement.id : null);
+    window.pendingFocusId = null;
     const previousScrollY = window.scrollY;
     // Set by addNewUnit() so the unit that was just created is the one we open.
     const focusUnitName = window.pendingFocusUnitName || null;
@@ -175,6 +269,11 @@ function generateUnitsFromOnboarding(onboardingData) {
         expandedNames.add(focusUnitName);
     }
 
+    // The units are a list, so they are marked up as one.
+    const unitListElement = document.createElement('ul');
+    unitListElement.className = 'unit-list';
+    container.appendChild(unitListElement);
+
     // Generate each unit. On a re-render (add/delete/rename) keep the units the
     // instructor already had open; only a first render falls back to "Unit 1".
     unitList.forEach((unit, index) => {
@@ -187,7 +286,7 @@ function generateUnitsFromOnboarding(onboardingData) {
             index,
             unitList.length
         );
-        container.appendChild(unitElement);
+        unitListElement.appendChild(unitElement);
     });
 
     // Add "Add Unit" button at the end
@@ -209,6 +308,10 @@ function generateUnitsFromOnboarding(onboardingData) {
     
     // Reinitialize event listeners for the new units
     initializeUnitEventListeners();
+
+    if (isRerender) {
+        restoreUnitFocus(focusId, focusUnitName);
+    }
     
     // Load existing data for the units (learning objectives, publish status, etc.)
     loadExistingUnitData(onboardingData);
@@ -263,6 +366,30 @@ function generateUnitsFromOnboarding(onboardingData) {
     }
 
     applyTASectionPermissions();
+}
+
+/**
+ * Put keyboard focus back after the unit list has been rebuilt.
+ * Tries the control that had focus, then (if it is now disabled or gone) a
+ * sibling move button, then the unit's own expand/collapse control.
+ * @param {string|null} focusId - Id of the control that had focus before the rebuild
+ * @param {string|null} unitName - Unit to fall back to (e.g. one just added)
+ */
+function restoreUnitFocus(focusId, unitName) {
+    const isUsable = element => element && !element.disabled && element.getClientRects().length > 0;
+    let target = focusId ? document.getElementById(focusId) : null;
+
+    if (target && !isUsable(target)) {
+        const group = target.closest('.unit-order-controls');
+        const sibling = group && Array.from(group.querySelectorAll('.unit-move-btn')).find(isUsable);
+        target = sibling || target.closest('.accordion-item')?.querySelector('.accordion-trigger') || null;
+    }
+    if (!isUsable(target) && unitName) {
+        target = document.querySelector(`.accordion-item[data-unit-name="${unitName}"] .accordion-trigger`);
+    }
+    if (isUsable(target)) {
+        target.focus({ preventScroll: true });
+    }
 }
 
 /**
@@ -326,7 +453,8 @@ function formatUnitLabel(unitName, displayName, showUnitNumber, unitPosition) {
  * @returns {HTMLElement} The unit element
  */
 function createUnitElement(unitName, unitData, isExpanded = false, canDelete = true, unitIndex = 0, unitCount = 1) {
-    const unitDiv = document.createElement('div');
+    // The units are a list (see generateUnitsFromOnboarding), so each is a list item.
+    const unitDiv = document.createElement('li');
     unitDiv.className = 'accordion-item';
     unitDiv.setAttribute('data-unit-name', unitName);
     unitDiv.setAttribute('data-unit-position', unitIndex + 1);
@@ -338,106 +466,106 @@ function createUnitElement(unitName, unitData, isExpanded = false, canDelete = t
     const showUnitNumber = unitData?.showUnitNumber !== false;
     const formattedName = formatUnitLabel(unitName, displayName, showUnitNumber, unitIndex + 1);
 
+    // Every unit repeats the same controls. `ctx()` finishes each control's
+    // name with this unit's title, as visually hidden text inside the control.
+    const ctx = lead => unitContext(formattedName, lead);
+
+    // One of the four collapsible sections inside a unit. The heading holds a
+    // real button (named by the heading text, state in aria-expanded); the
+    // caret beside it is decoration.
+    const sectionHeader = (key, title) => `
+                <div class="section-header">
+                    <h3 ${headingAttrs(title)}><button type="button" class="toggle-section" id="section-${key}-${unitId}" aria-expanded="true" aria-controls="section-${key}-content-${unitId}">${title}${ctx(': ')}</button></h3>
+                    <span class="toggle-section-icon" aria-hidden="true">▼</span>
+                </div>`;
+
     unitDiv.innerHTML = `
-        <div class="accordion-header" role="button" tabindex="0" aria-expanded="${isExpanded}">
+        <div class="accordion-header">
             <div class="unit-name-container">
-                <span class="folder-name">${formattedName}</span>
-                <button class="unit-rename-btn" onclick="event.stopPropagation(); openRenameUnitInput('${unitName}')" title="Rename unit">
+                <h2 class="unit-heading" ${headingAttrs(formattedName, `unit-heading-${unitId}`)}>
+                    <button type="button" class="accordion-trigger" id="unit-trigger-${unitId}" aria-expanded="${isExpanded}" aria-controls="unit-content-${unitId}">
+                        <span class="folder-name">${formattedName}</span>
+                    </button>
+                </h2>
+                <button type="button" class="unit-rename-btn" id="unit-rename-${unitId}" onclick="event.stopPropagation(); openRenameUnitInput('${unitName}')" title="Rename unit">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"></path><path d="m15 5 4 4"></path></svg>
+                    <span class="visually-hidden">Rename unit${ctx(' ')}</span>
                 </button>
                 <div class="unit-rename-edit" style="display: none;" data-last-saved-name="${displayName}" data-last-saved-show-number="${showUnitNumber}">
-                    <input type="text" class="unit-rename-input" placeholder="Enter unit title..." value="${displayName}" data-unit-name="${unitName}">
+                    <label class="unit-rename-label" for="unit-rename-input-${unitId}">Unit title</label>
+                    <input type="text" class="unit-rename-input" id="unit-rename-input-${unitId}" placeholder="Enter unit title..." value="${displayName}" data-unit-name="${unitName}">
                     <label class="unit-show-number-label" onclick="event.stopPropagation()">
                         <input type="checkbox" class="unit-show-number-input" data-unit-name="${unitName}" ${showUnitNumber ? 'checked' : ''}>
                         Show unit number
                     </label>
-                    <button class="unit-save-btn" onclick="event.stopPropagation(); saveUnitDisplayName('${unitName}')" title="Save">
+                    <button type="button" class="unit-save-btn" onclick="event.stopPropagation(); saveUnitDisplayName('${unitName}')" title="Save">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>
+                        <span class="visually-hidden">Save unit title</span>
                     </button>
-                    <button class="unit-cancel-btn" onclick="event.stopPropagation(); cancelRenameUnit('${unitName}')" title="Cancel">
+                    <button type="button" class="unit-cancel-btn" onclick="event.stopPropagation(); cancelRenameUnit('${unitName}')" title="Cancel">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>
+                        <span class="visually-hidden">Cancel renaming unit</span>
                     </button>
                 </div>
             </div>
             <div class="header-actions">
-                <div class="unit-order-controls" role="group" aria-label="Change position of ${unitName}">
-                    <button class="unit-move-btn" type="button"
+                <div class="unit-order-controls">
+                    <button class="unit-move-btn" type="button" id="unit-move-up-${unitId}"
                             onclick="event.stopPropagation(); moveUnit('${unitName}', 'up')"
-                            title="Move ${formattedName} up"
-                            aria-label="Move ${unitName} up"
-                            ${unitIndex === 0 ? 'disabled' : ''}>↑</button>
-                    <button class="unit-move-btn" type="button"
+                            title="Move up"
+                            ${unitIndex === 0 ? 'disabled' : ''}><span aria-hidden="true">↑</span><span class="visually-hidden">Move${ctx(' ')} up</span></button>
+                    <button class="unit-move-btn" type="button" id="unit-move-down-${unitId}"
                             onclick="event.stopPropagation(); moveUnit('${unitName}', 'down')"
-                            title="Move ${formattedName} down"
-                            aria-label="Move ${unitName} down"
-                            ${unitIndex === unitCount - 1 ? 'disabled' : ''}>↓</button>
+                            title="Move down"
+                            ${unitIndex === unitCount - 1 ? 'disabled' : ''}><span aria-hidden="true">↓</span><span class="visually-hidden">Move${ctx(' ')} down</span></button>
                 </div>
                 <div class="publish-toggle">
                     <label class="toggle-switch">
-                        <input type="checkbox" id="publish-${unitId}" aria-label="Publish ${unitName} to students" onchange="togglePublish('${unitName}', this.checked)">
+                        <input type="checkbox" id="publish-${unitId}" onchange="togglePublish('${unitName}', this.checked)">
                         <span class="toggle-slider"></span>
+                        <span class="visually-hidden">Published:${ctx(' ')}</span>
                     </label>
-                    <span class="toggle-label">Published</span>
+                    <!-- The same word as the label above, shown beside the switch. Hidden
+                         from assistive technology so it is not read a second time. -->
+                    <span class="toggle-label" aria-hidden="true">Published</span>
                 </div>
 
-                <button class="delete-unit-btn" onclick="openDeleteUnitModal('${unitName}')"
+                <button type="button" class="delete-unit-btn" id="unit-delete-${unitId}" onclick="openDeleteUnitModal('${unitName}')"
                         title="${canDelete ? 'Delete Unit' : 'A course must have at least one unit'}"
-                        aria-label="${canDelete ? `Delete ${unitName}` : `Cannot delete ${unitName}: a course must have at least one unit`}"
                         ${canDelete ? '' : 'disabled'}
-                        style="background: none; border: none; cursor: ${canDelete ? 'pointer' : 'not-allowed'}; display: inline-flex; margin-right: 10px; color: ${canDelete ? '#dc3545' : '#9ca3af'};">${Icons.trash}</button>
+                        style="background: none; border: none; cursor: ${canDelete ? 'pointer' : 'not-allowed'}; display: inline-flex; margin-right: 10px; color: ${canDelete ? '#dc3545' : '#6b7280'};">${Icons.trash}<span class="visually-hidden">${canDelete ? `Delete unit${ctx(' ')}` : `Cannot delete${ctx(' ')}: a course must have at least one unit`}</span></button>
 
-                <span class="accordion-toggle">${isExpanded ? '▼' : '▶'}</span>
+                <span class="accordion-toggle" aria-hidden="true">${isExpanded ? '▼' : '▶'}</span>
             </div>
         </div>
-        <div class="accordion-content ${isExpanded ? '' : 'collapsed'}">
+        <div class="accordion-content ${isExpanded ? '' : 'collapsed'}" id="unit-content-${unitId}">
             <!-- Learning Objectives Section -->
             <div class="unit-section learning-objectives-section">
-                <div class="section-header">
-                    <h3>Learning Objectives</h3>
-                    <button class="toggle-section">▼</button>
-                </div>
-                <div class="section-content">
+                ${sectionHeader('objectives', 'Learning Objectives')}
+                <div class="section-content" id="section-objectives-content-${unitId}">
                     <p style="margin-bottom: 10px; color: #666; font-size: 0.9em;">Please provide 3 - 8 learning objectives that are covered by this unit</p>
-                    <div class="objectives-list" id="objectives-list-${unitId}">
+                    <ol class="objectives-list" id="objectives-list-${unitId}">
                         <!-- Objectives will be added here -->
-                    </div>
+                    </ol>
                     <div class="objective-input-container">
+                        <label class="objective-input-label" for="objective-input-${unitId}">New learning objective${ctx()}</label>
                         <input type="text" id="objective-input-${unitId}" class="objective-input" placeholder="Enter learning objective..." onkeydown="if (event.key === 'Enter') { event.preventDefault(); addObjectiveFromInput('${unitName}'); }">
-                        <button class="add-objective-btn-inline" onclick="addObjectiveFromInput('${unitName}')">+</button>
+                        <button type="button" class="add-objective-btn-inline" id="add-objective-${unitId}" onclick="addObjectiveFromInput('${unitName}')"><span aria-hidden="true">+</span> Add objective${ctx(' to ')}</button>
                     </div>
                 </div>
             </div>
             
             <!-- Course Materials Section -->
             <div class="unit-section course-materials-section">
-                <div class="section-header">
-                    <h3>Course Materials</h3>
-                    <button class="toggle-section">▼</button>
-                </div>
-                <div class="section-content">
+                ${sectionHeader('materials', 'Course Materials')}
+                <div class="section-content" id="section-materials-content-${unitId}">
                     <div class="content-type-header">
                         <p><strong>Required Materials:</strong> *Lecture Notes and *Practice Questions/Tutorial are mandatory</p>
                     </div>
-                    <div class="file-item placeholder-item" data-status="not-uploaded">
-                        <div class="file-info">
-                            <h3>*Lecture Notes - ${unitName}</h3>
-                            <p>Placeholder for required lecture notes. Please upload content.</p>
-                            <span class="status-text">Not Uploaded</span>
-                        </div>
-                        <div class="file-actions">
-                            <button class="action-button upload" onclick="openUploadModal('${unitName}', 'lecture-notes')">Upload</button>
-                        </div>
-                    </div>
-                    <div class="file-item placeholder-item" data-status="not-uploaded">
-                        <div class="file-info">
-                            <h3>*Practice Questions/Tutorial</h3>
-                            <p>Placeholder for required practice questions. Please upload content.</p>
-                            <span class="status-text">Not Uploaded</span>
-                        </div>
-                        <div class="file-actions">
-                            <button class="action-button upload" onclick="openUploadModal('${unitName}', 'practice-quiz')">Upload</button>
-                        </div>
-                    </div>
+                    <ul class="materials-list">
+                        ${createPlaceholderItem(unitName, 'lecture-notes', formattedName).outerHTML}
+                        ${createPlaceholderItem(unitName, 'practice-quiz', formattedName).outerHTML}
+                    </ul>
                     <!-- Action buttons will be added dynamically by loadDocuments() -->
                     <!-- Expected order: Documents → Placeholders → Cleanup → Action Buttons -->
                     <!-- This ensures proper positioning below uploaded files -->
@@ -446,20 +574,17 @@ function createUnitElement(unitName, unitData, isExpanded = false, canDelete = t
 
             <!-- Shared Flashcards Section -->
             <div class="unit-section flashcards-section" data-flashcard-unit="${unitName}">
-                <div class="section-header">
-                    <h3>Student Flashcards</h3>
-                    <button class="toggle-section">▼</button>
-                </div>
-                <div class="section-content">
+                ${sectionHeader('flashcards', 'Student Flashcards')}
+                <div class="section-content" id="section-flashcards-content-${unitId}">
                     <div class="flashcard-intro">
                         <div>
-                            <strong>Instructor-curated study deck</strong>
+                            <h4 class="flashcard-intro-title" ${headingAttrs('Instructor-curated study deck')}>Instructor-curated study deck</h4>
                             <p>Generate a draft from this unit's uploaded materials, review it, then publish it to students.</p>
                         </div>
                         <span class="flashcard-status-badge" id="flashcard-status-${unitId}">Not generated</span>
                     </div>
                     <div class="flashcard-generation-controls">
-                        <label for="flashcard-count-${unitId}">Cards</label>
+                        <label for="flashcard-count-${unitId}">Cards${ctx()}</label>
                         <select id="flashcard-count-${unitId}">
                             <option value="5">5</option>
                             <option value="10" selected>10</option>
@@ -468,10 +593,10 @@ function createUnitElement(unitName, unitData, isExpanded = false, canDelete = t
                         </select>
                         <label class="flashcard-chemistry-toggle" for="flashcard-chemistry-${unitId}" title="Ask for chemical formulas as typeset math and molecules as drawn 2D structures. Turn this off for units without chemistry.">
                             <input type="checkbox" id="flashcard-chemistry-${unitId}" checked>
-                            <span>Chemistry notation</span>
+                            <span>Chemistry notation${ctx()}</span>
                         </label>
-                        <button type="button" class="flashcard-generate-btn" onclick="generateFlashcardDraft('${unitName}', this)">
-                            <span aria-hidden="true">${Icons.wand}</span> Generate Draft
+                        <button type="button" class="flashcard-generate-btn" id="flashcard-generate-${unitId}" onclick="generateFlashcardDraft('${unitName}', this)">
+                            <span aria-hidden="true">${Icons.wand}</span> Generate Draft${ctx()}
                         </button>
                     </div>
                     <p class="flashcard-section-message" id="flashcard-message-${unitId}">Upload course materials to generate a shared deck.</p>
@@ -481,18 +606,15 @@ function createUnitElement(unitName, unitData, isExpanded = false, canDelete = t
             
             <!-- Assessment Questions Section -->
             <div class="unit-section assessment-questions-section">
-                <div class="section-header">
-                    <h3>Assessment Questions</h3>
-                    <button class="toggle-section">▼</button>
-                </div>
-                <div class="section-content">
+                ${sectionHeader('questions', 'Assessment Questions')}
+                <div class="section-content" id="section-questions-content-${unitId}">
                     <div class="assessment-info">
                         <p><strong>Assessment Settings:</strong> Assessment questions help BIOCBOT to determine whether to be in protégé or tutor mode. We recommend creating at least 3 questions.</p>
                     </div>
                     
                     <!-- Pass Threshold Setting -->
                     <div class="threshold-setting">
-                        <label for="pass-threshold-${unitId}">Number of correct answers required for BIOCBOT to be in protégé mode:</label>
+                        <label for="pass-threshold-${unitId}">Number of correct answers required for BIOCBOT to be in protégé mode${ctx()}:</label>
                         <input type="number" id="pass-threshold-${unitId}" min="0" max="10" value="0" class="threshold-input">
                         <span class="threshold-help">out of total questions</span>
                     </div>
@@ -507,13 +629,13 @@ function createUnitElement(unitName, unitData, isExpanded = false, canDelete = t
                     
                     <!-- Action Buttons -->
                     <div class="assessment-actions">
-                        <button class="add-question-btn" onclick="openQuestionModal('${unitName}')">
+                        <button type="button" class="add-question-btn" id="add-question-${unitId}" onclick="openQuestionModal('${unitName}')">
                             <span class="btn-icon">${Icons.plus}</span>
-                            Add Question
+                            Add Question${ctx(' to ')}
                         </button>
-                        <button class="auto-link-btn" onclick="openAutoLinkConfirmationModal('${unitName}', this)">
+                        <button type="button" class="auto-link-btn" id="auto-link-${unitId}" onclick="openAutoLinkConfirmationModal('${unitName}', this)">
                             <span class="btn-icon">${Icons.wand}</span>
-                            Auto-link Questions
+                            Auto-link Questions${ctx()}
                         </button>
                     </div>
                 </div>
@@ -540,13 +662,7 @@ function loadExistingUnitData(onboardingData) {
             if (objectivesList) {
                 objectivesList.innerHTML = '';
                 unit.learningObjectives.forEach(objective => {
-                    const objectiveItem = document.createElement('div');
-                    objectiveItem.className = 'objective-display-item';
-                    objectiveItem.innerHTML = `
-                        <span class="objective-text">${objective}</span>
-                        <button class="remove-objective" onclick="removeObjective(this)">×</button>
-                    `;
-                    objectivesList.appendChild(objectiveItem);
+                    objectivesList.appendChild(createObjectiveItem(objective));
                 });
             } else {
                 console.error(`Could not find objectives list element with ID: objectives-list-${unitId}`);
@@ -613,9 +729,10 @@ function loadExistingUnitData(onboardingData) {
                     });
                     
                     // Add each document
+                    const materialsList = getMaterialsList(courseMaterialsSection);
                     unit.documents.forEach(doc => {
                         const documentItem = createDocumentItem(doc);
-                        courseMaterialsSection.appendChild(documentItem);
+                        materialsList.appendChild(documentItem);
                     });
                 }
             }
@@ -627,12 +744,18 @@ function loadExistingUnitData(onboardingData) {
  * Initialize event listeners for dynamically generated units
  */
 function initializeUnitEventListeners() {
-    // Setup accordion toggling
+    // Setup accordion toggling. The expand/collapse control is the button in
+    // the unit's heading; clicking the empty part of the header bar does the
+    // same thing as a convenience for mouse users. The bar itself is not a
+    // control: it holds the rename, reorder, publish and delete controls, and a
+    // control cannot contain other controls.
     const accordionHeaders = document.querySelectorAll('.accordion-header');
     accordionHeaders.forEach(header => {
         const toggleAccordion = (e) => {
+            const trigger = header.querySelector('.accordion-trigger');
+            const onTrigger = trigger && trigger.contains(e.target);
             // Keep the unit's own controls independent from the accordion.
-            if (e.target.closest('button, input, label, select, textarea, a')) {
+            if (!onTrigger && e.target.closest('button, input, label, select, textarea, a')) {
                 return;
             }
             
@@ -643,21 +766,16 @@ function initializeUnitEventListeners() {
             if (content.classList.contains('collapsed')) {
                 content.classList.remove('collapsed');
                 toggle.textContent = '▼';
-                header.setAttribute('aria-expanded', 'true');
+                if (trigger) trigger.setAttribute('aria-expanded', 'true');
             } else {
                 content.classList.add('collapsed');
                 toggle.textContent = '▶';
-                header.setAttribute('aria-expanded', 'false');
+                if (trigger) trigger.setAttribute('aria-expanded', 'false');
             }
         };
 
+        // Enter and Space on the trigger arrive here as clicks.
         header.addEventListener('click', toggleAccordion);
-        header.addEventListener('keydown', (e) => {
-            if (e.key !== 'Enter' && e.key !== ' ') return;
-            if (e.target !== header) return;
-            e.preventDefault();
-            toggleAccordion(e);
-        });
     });
     
     // Setup section toggling
@@ -683,7 +801,7 @@ function addRequiredPlaceholders(container, unitName) {
     let hasPracticeQuestions = false;
     
     container.querySelectorAll('.file-item').forEach(item => {
-        const title = item.querySelector('h3');
+        const title = item.querySelector('.file-title, h3');
         
         if (title) {
             const titleText = title.textContent;
@@ -716,42 +834,16 @@ function addRequiredPlaceholders(container, unitName) {
     // Remove any existing placeholders first to ensure clean state
     removeExistingPlaceholders(container);
     
+    const materialsList = getMaterialsList(container);
+
     // Add lecture notes placeholder if it doesn't exist
     if (!hasLectureNotes) {
-        const lectureNotesItem = document.createElement('div');
-        lectureNotesItem.className = 'file-item placeholder-item';
-        lectureNotesItem.dataset.status = 'not-uploaded';
-        lectureNotesItem.innerHTML = `
-            <span class="file-icon">${Icons.file}</span>
-            <div class="file-info">
-                <h3>*Lecture Notes - ${unitName}</h3>
-                <p>Placeholder for required lecture notes. Please upload content.</p>
-                <span class="status-text">Not Uploaded</span>
-            </div>
-            <div class="file-actions">
-                <button class="action-button upload" onclick="openUploadModal('${unitName}', 'lecture-notes')">Upload</button>
-            </div>
-        `;
-        container.appendChild(lectureNotesItem);
+        materialsList.appendChild(createPlaceholderItem(unitName, 'lecture-notes'));
     }
     
     // Add practice questions placeholder if it doesn't exist
     if (!hasPracticeQuestions) {
-        const practiceQuestionsItem = document.createElement('div');
-        practiceQuestionsItem.className = 'file-item placeholder-item';
-        practiceQuestionsItem.dataset.status = 'not-uploaded';
-        practiceQuestionsItem.innerHTML = `
-            <span class="file-icon">${Icons.file}</span>
-            <div class="file-info">
-                <h3>*Practice Questions/Tutorial</h3>
-                <p>Placeholder for required practice questions. Please upload content.</p>
-                <span class="status-text">Not Uploaded</span>
-            </div>
-            <div class="file-actions">
-                <button class="action-button upload" onclick="openUploadModal('${unitName}', 'practice-quiz')">Upload</button>
-            </div>
-        `;
-        container.appendChild(practiceQuestionsItem);
+        materialsList.appendChild(createPlaceholderItem(unitName, 'practice-quiz'));
     }
 }
 
@@ -769,18 +861,20 @@ function addActionButtonsIfMissing(container, unitName) {
     if (!hasAddContentSection) {
         const addContentSection = document.createElement('div');
         addContentSection.className = 'add-content-section';
+        const unitId = unitName.toLowerCase().replace(/\s+/g, '-');
+        const ctx = unitContext(getUnitLabel(unitName), ' to ');
         addContentSection.innerHTML = `
-            <button class="add-content-btn lecture-notes" onclick="openUploadModal('${unitName}', 'lecture-notes')">
+            <button type="button" class="add-content-btn lecture-notes" id="add-lecture-notes-${unitId}" onclick="openUploadModal('${unitName}', 'lecture-notes')">
                 <span class="btn-icon">${Icons.plus}</span>
-                Add Lecture Notes
+                Add Lecture Notes${ctx}
             </button>
-            <button class="add-content-btn practice-quiz" onclick="openUploadModal('${unitName}', 'practice-quiz')">
+            <button type="button" class="add-content-btn practice-quiz" id="add-practice-quiz-${unitId}" onclick="openUploadModal('${unitName}', 'practice-quiz')">
                 <span class="btn-icon">${Icons.plus}</span>
-                Add Practice Questions/Tutorial
+                Add Practice Questions/Tutorial${ctx}
             </button>
-            <button class="add-content-btn additional-material" onclick="openUploadModal('${unitName}', 'additional')">
+            <button type="button" class="add-content-btn additional-material" id="add-additional-material-${unitId}" onclick="openUploadModal('${unitName}', 'additional')">
                 <span class="btn-icon">${Icons.plus}</span>
-                Add Additional Material
+                Add Additional Material${ctx}
             </button>
         `;
         container.appendChild(addContentSection);
@@ -818,7 +912,9 @@ function openRenameUnitInput(unitName) {
     const accordionItem = document.querySelector(`.accordion-item[data-unit-name="${unitName}"]`);
     if (!accordionItem) return;
     
-    const folderName = accordionItem.querySelector('.folder-name');
+    // Hide the heading as a whole: hiding only the title text would leave an
+    // empty, nameless expand/collapse button behind it.
+    const folderName = accordionItem.querySelector('.unit-heading');
     const renameBtn = accordionItem.querySelector('.unit-rename-btn');
     const editContainer = accordionItem.querySelector('.unit-rename-edit');
     const input = accordionItem.querySelector('.unit-rename-input');
@@ -890,6 +986,11 @@ async function saveUnitDisplayName(unitName) {
         if (folderName) {
             folderName.textContent = formattedName;
         }
+        // The unit's title is also part of the (visually hidden) name of every
+        // control in the unit; keep those in step with what is now on screen.
+        accordionItem.querySelectorAll('.unit-name-ref').forEach(reference => {
+            reference.textContent = formattedName;
+        });
 
         // Remember this as the last-saved state so a future Cancel restores to it
         const editContainer = accordionItem.querySelector('.unit-rename-edit');
@@ -917,11 +1018,13 @@ function cancelRenameUnit(unitName) {
     const accordionItem = document.querySelector(`.accordion-item[data-unit-name="${unitName}"]`);
     if (!accordionItem) return;
 
-    const folderName = accordionItem.querySelector('.folder-name');
+    const folderName = accordionItem.querySelector('.unit-heading');
     const renameBtn = accordionItem.querySelector('.unit-rename-btn');
     const editContainer = accordionItem.querySelector('.unit-rename-edit');
     const input = accordionItem.querySelector('.unit-rename-input');
     const checkbox = accordionItem.querySelector('.unit-show-number-input');
+    // Leaving edit mode hides whatever had focus (the input, Save, or Cancel).
+    const hadFocus = editContainer && editContainer.contains(document.activeElement);
 
     // Reset the input and checkbox back to the last-saved state, discarding
     // whatever the instructor typed/toggled without saving.
@@ -934,6 +1037,7 @@ function cancelRenameUnit(unitName) {
     if (folderName) folderName.style.display = '';
     if (renameBtn) renameBtn.style.display = '';
     if (editContainer) editContainer.style.display = 'none';
+    if (hadFocus && renameBtn) renameBtn.focus();
 }
 
 // Make rename functions globally available
@@ -942,3 +1046,6 @@ window.openRenameUnitInput = openRenameUnitInput;
 window.saveUnitDisplayName = saveUnitDisplayName;
 
 window.cancelRenameUnit = cancelRenameUnit;
+
+window.getUnitLabel = getUnitLabel;
+window.unitContext = unitContext;

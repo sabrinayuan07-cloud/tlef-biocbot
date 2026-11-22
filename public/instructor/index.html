@@ -90,12 +90,15 @@
                  focused on course material. -->
             <div class="lms-import-bar" id="lms-import-bar" hidden>
                 <span class="lms-import-bar-label">Import from your LMS:</span>
+                <!-- The visually hidden words give each launcher a name that says
+                     what it does ("Import from Canvas: Not connected"); on screen
+                     the "Import from your LMS:" label beside them does that job. -->
                 <button type="button" class="lms-import-chip" data-lms-provider="canvas" hidden>
-                    <span class="lms-chip-name">Canvas</span>
+                    <span class="visually-hidden">Import from </span><span class="lms-chip-name">Canvas</span><span class="visually-hidden">: </span>
                     <span class="lms-chip-state" data-state="checking">Checking…</span>
                 </button>
                 <button type="button" class="lms-import-chip" data-lms-provider="moodle" hidden>
-                    <span class="lms-chip-name">Moodle</span>
+                    <span class="visually-hidden">Import from </span><span class="lms-chip-name">Moodle</span><span class="visually-hidden">: </span>
                     <span class="lms-chip-state" data-state="checking">Checking…</span>
                 </button>
             </div>
@@ -155,12 +158,12 @@
                         <ol class="lms-token-paths">
                             <li>
                                 <strong>Create the token:</strong> a Moodle admin goes to <em>Site administration → Server → Web services → Manage tokens → Add</em> and assigns it to your teacher account
-                                <a id="lms-manage-tokens-url" class="lms-token-link" target="_blank" rel="noopener noreferrer" hidden>Open this page</a>
+                                <a id="lms-manage-tokens-url" class="lms-token-link" target="_blank" rel="noopener noreferrer" hidden>Open Manage tokens (new tab)</a>
                                 <span class="lms-token-note">This list never shows token values — its first column is the token’s <em>name</em>, not the token itself.</span>
                             </li>
                             <li>
                                 <strong>Read the token:</strong> sign in as that teacher account, then go to <em>Preferences → User account → Security keys</em>
-                                <a id="lms-token-url" class="lms-token-link" target="_blank" rel="noopener noreferrer" hidden>Open this page</a>
+                                <a id="lms-token-url" class="lms-token-link" target="_blank" rel="noopener noreferrer" hidden>Open Security keys (new tab)</a>
                                 <span class="lms-token-note">This is the only page that prints the token string, and only for tokens owned by the account you are signed in as. Copy it from there into the box below.</span>
                             </li>
                         </ol>
@@ -499,11 +502,11 @@
 
                     <!-- Method Selection -->
                     <div id="upload-method-selection" class="method-selection" style="display: flex; gap: 20px; justify-content: center; margin: 30px 0;">
-                        <button class="method-btn" onclick="showFileUpload()" style="display: flex; flex-direction: column; align-items: center; padding: 20px; border: 2px dashed #ccc; border-radius: 8px; background: none; cursor: pointer; width: 150px; transition: all 0.2s;">
+                        <button type="button" class="method-btn" onclick="showFileUpload()" style="display: flex; flex-direction: column; align-items: center; padding: 20px; border: 2px dashed #ccc; border-radius: 8px; background: none; cursor: pointer; width: 150px; transition: all 0.2s;">
                             <span class="method-icon" style="margin-bottom: 10px;" aria-hidden="true"><svg class="icon-inline" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg></span>
                             <span>Upload a file</span>
                         </button>
-                        <button class="method-btn" onclick="showTextInput()" style="display: flex; flex-direction: column; align-items: center; padding: 20px; border: 2px dashed #ccc; border-radius: 8px; background: none; cursor: pointer; width: 150px; transition: all 0.2s;">
+                        <button type="button" class="method-btn" onclick="showTextInput()" style="display: flex; flex-direction: column; align-items: center; padding: 20px; border: 2px dashed #ccc; border-radius: 8px; background: none; cursor: pointer; width: 150px; transition: all 0.2s;">
                             <span class="method-icon" style="margin-bottom: 10px;" aria-hidden="true"><svg class="icon-inline" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/></svg></span>
                             <span>Paste content directly</span>
                         </button>
@@ -511,11 +514,11 @@
 
                     <!-- File Upload Section (Hidden by default) -->
                     <div id="file-upload-section" style="display: none;">
-                        <button class="btn-text-only" onclick="resetToSelection()" style="background: none; border: none; color: #666; cursor: pointer; margin-bottom: 15px; display: flex; align-items: center; padding: 0;">
-                            <span style="margin-right: 5px;">←</span> Back
+                        <button type="button" class="btn-text-only" onclick="resetToSelection(true)" style="background: none; border: none; color: #595959; cursor: pointer; margin-bottom: 15px; display: flex; align-items: center; padding: 0; min-height: 24px;">
+                            <span style="margin-right: 5px;" aria-hidden="true">←</span> Back
                         </button>
                         <div class="file-upload-container">
-                            <button class="upload-file-btn" onclick="triggerFileInput()">
+                            <button type="button" class="upload-file-btn" onclick="triggerFileInput()">
                                 <span class="upload-icon"><svg class="icon-inline" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/></svg></span>
                                 <span>Upload Document</span>
                             </button>
@@ -529,8 +532,8 @@
 
                     <!-- Text Input Section (Hidden by default) -->
                     <div id="text-input-section" style="display: none;">
-                        <button class="btn-text-only" onclick="resetToSelection()" style="background: none; border: none; color: #666; cursor: pointer; margin-bottom: 15px; display: flex; align-items: center; padding: 0;">
-                            <span style="margin-right: 5px;">←</span> Back
+                        <button type="button" class="btn-text-only" onclick="resetToSelection(true)" style="background: none; border: none; color: #595959; cursor: pointer; margin-bottom: 15px; display: flex; align-items: center; padding: 0; min-height: 24px;">
+                            <span style="margin-right: 5px;" aria-hidden="true">←</span> Back
                         </button>
                         <div class="input-section">
                             <label for="text-input">Content</label>

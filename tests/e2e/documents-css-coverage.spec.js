@@ -408,10 +408,10 @@ test.describe('documents.css harness coverage', () => {
 
         await expect(page.locator('.file-item').first()).toHaveCSS('display', 'flex');
         await expect(page.locator('.file-info.uploaded')).toHaveCSS('color', 'rgb(40, 167, 69)');
-        await expect(page.locator('.status-text.uploaded')).toHaveCSS('color', 'rgb(40, 167, 69)');
+        await expect(page.locator('.status-text.uploaded')).toHaveCSS('color', 'rgb(30, 126, 52)');
         await expect(page.locator('.status-text.failed')).toHaveCSS('color', 'rgb(220, 53, 69)');
         await expect(page.locator('.additional-material-item')).toHaveCSS('border-left-color', 'rgb(23, 162, 184)');
-        await expect(page.locator('.action-button.download')).toHaveCSS('background-color', 'rgb(40, 167, 69)');
+        await expect(page.locator('.action-button.download')).toHaveCSS('background-color', 'rgb(30, 126, 52)');
         await expect(page.locator('.action-button.delete')).toHaveCSS('background-color', 'rgb(220, 53, 69)');
         await expect(page.locator('.add-content-btn.additional-material')).toHaveCSS('display', 'flex');
 
@@ -419,11 +419,12 @@ test.describe('documents.css harness coverage', () => {
         await expect(page.locator('.objective-input')).toHaveCSS('border-top-right-radius', '4px');
         await expect(page.locator('.add-objective-btn-inline')).toHaveCSS('height', '36px');
         await page.locator('.add-objective-btn-inline').hover();
-        await expect(page.locator('.add-objective-btn-inline')).toHaveCSS('background-color', 'rgb(69, 160, 73)');
+        // #256628 on hover (white text 7:1). The old #45a049 put white text at 3.3:1.
+        await expect(page.locator('.add-objective-btn-inline')).toHaveCSS('background-color', 'rgb(37, 102, 40)');
 
         await expect(page.locator('.question-type-badge.true-false')).toHaveCSS('text-transform', 'uppercase');
         await expect(page.locator('.question-learning-objective-value').first()).toHaveCSS('border-radius', '999px');
-        await expect(page.locator('.question-learning-objective-value.unassigned')).toHaveCSS('color', 'rgb(107, 114, 128)');
+        await expect(page.locator('.question-learning-objective-value.unassigned')).toHaveCSS('color', 'rgb(75, 85, 99)');
         await expect(page.locator('.mcq-option-preview.correct')).toHaveCSS('font-weight', '600');
         await expect(page.locator('.auto-link-btn.is-loading')).toHaveCSS('cursor', 'not-allowed');
         await expect(page.locator('.generate-ai-btn:disabled')).toHaveCSS('opacity', '0.6');

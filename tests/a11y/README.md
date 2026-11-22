@@ -107,6 +107,19 @@ Student (`storageStatePath('student')`):
 - [x] ~~chat-limit info modal~~ on `/student` - `scanned-failing`, muted-text contrast; built via `window.showChatLimitModal()`
 - [ ] chat-survey popup - `blocked`; IIFE-private behind `maybeShowChatSurvey`, needs seeded survey settings + message threshold (e2e candidate)
 
+### Stateful checks (beyond axe)
+
+Page-level scans only see a page as it first loads. `issue-724-course-upload.a11y.spec.js`
+drives `/instructor/documents` into each of its states (units expanded, dialogs
+open, toasts showing, a control just activated) and checks them with the generic
+rules in `tests/a11y/toolkit/` as well as axe. It has one test per finding in
+ubc/tlef-biocbot#724, plus a sweep that fails on any `fail`-tier toolkit finding
+or blocking axe violation in any state.
+
+- [x] ~~/instructor/documents (9 states)~~ - `scanned-pass`
+
+See `tests/a11y/toolkit/README.md` for how to run it against a nodemon dev server.
+
 ### Route Aliases / Redirects
 
 These are viewable or navigable URLs, but they should usually be covered through

@@ -942,27 +942,54 @@ function updateQuestionsDisplay(week) {
     }
     
     const questions = assessmentQuestions[week] || [];
-    
+
+    // The list is rebuilt from scratch below, which destroys the focused button
+    // (for example the Delete that was just pressed). Remember its position.
+    const focused = document.activeElement;
+    const focusedItem = focused && questionsContainer.contains(focused) ? focused.closest('.question-item') : null;
+    const focusBefore = focusedItem ? {
+        index: Array.from(questionsContainer.querySelectorAll('.question-item')).indexOf(focusedItem),
+        className: focused.classList[0] || ''
+    } : null;
+    const restoreFocus = () => {
+        if (!focusBefore) return;
+        const items = questionsContainer.querySelectorAll('.question-item');
+        const item = items[Math.min(focusBefore.index, items.length - 1)];
+        const target = (item && focusBefore.className && item.querySelector(`.${focusBefore.className}`))
+            || questionsContainer.parentElement?.querySelector('.add-question-btn');
+        target?.focus({ preventScroll: true });
+    };
+
     if (questions.length === 0) {
+        questionsContainer.removeAttribute('role');
         questionsContainer.innerHTML = `
             <div class="no-questions-message">
                 <p>No assessment questions created yet. Click "Add Question" to get started.</p>
             </div>
         `;
+        restoreFocus();
         return;
     }
-    
+
+    // The questions are a list, and every question repeats the same two icon
+    // buttons, so each button's (visually hidden) name says which question and
+    // which unit it belongs to.
+    questionsContainer.removeAttribute('role');
+    const unitLabel = typeof getUnitLabel === 'function' ? getUnitLabel(week) : week;
+    const context = typeof unitContext === 'function' ? unitContext(escapeHTML(unitLabel), ', ') : '';
+
     let html = '';
     questions.forEach((question, index) => {
         const questionType = question.questionType || question.type;
+        const questionKey = question.questionId || question.id;
         html += `
-            <div class="question-item" data-question-id="${question.questionId || question.id}">
+            <li class="question-item" data-question-id="${questionKey}">
                 <div class="question-header">
                     <span class="question-type-badge ${questionType}">${getQuestionTypeLabel(questionType)}</span>
                     <span class="question-number">Question ${index + 1}</span>
                     <div class="question-action-buttons">
-                        <button class="edit-question-btn" onclick="openQuestionLearningObjectiveModal('${week}', '${question.questionId || question.id}')" title="Edit learning objective">${Icons.pencil}</button>
-                        <button class="delete-question-btn" onclick="deleteQuestion('${week}', '${question.questionId || question.id}')" title="Delete question">×</button>
+                        <button type="button" class="edit-question-btn" onclick="openQuestionLearningObjectiveModal('${week}', '${questionKey}')" title="Edit learning objective">${Icons.pencil}<span class="visually-hidden">Edit learning objective of question ${index + 1}${context}</span></button>
+                        <button type="button" class="delete-question-btn" onclick="deleteQuestion('${week}', '${questionKey}')" title="Delete question"><span aria-hidden="true">×</span><span class="visually-hidden">Delete question ${index + 1}${context}</span></button>
                     </div>
                 </div>
                 <div class="question-content">
@@ -970,11 +997,12 @@ function updateQuestionsDisplay(week) {
                     <p class="question-text">${question.question}</p>
                     ${getQuestionAnswerDisplay(question)}
                 </div>
-            </div>
+            </li>
         `;
     });
     
-    questionsContainer.innerHTML = html;
+    questionsContainer.innerHTML = `<ul class="question-items">${html}</ul>`;
+    restoreFocus();
     
     // Update pass threshold max value
     const weekId = week.toLowerCase().replace(/\s+/g, '-');

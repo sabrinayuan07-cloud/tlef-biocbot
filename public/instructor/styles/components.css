@@ -32,10 +32,14 @@
 .btn-danger { background: #dc3545; color: white; }
 .btn-danger:hover { background: #c82333; }
 
+/* Disabled buttons used to be the enabled colours at 60% opacity, which put
+   white text at about 2.5:1. A flat grey with dark text keeps the label
+   readable (6.4:1) while looking plainly unavailable. */
 .btn-primary:disabled,
 .btn-secondary:disabled,
 .btn-danger:disabled {
-  opacity: 0.6;
+  background: #e5e7eb;
+  color: #4b5563;
   cursor: not-allowed;
 }
 
@@ -218,14 +222,26 @@
   cursor: pointer;
   font-size: var(--bb-text-card-kicker);
   transition: background-color 0.2s var(--bb-ease-reveal);
+  /* No padding: the default button padding left a 24px icon about 12px of
+     room and it was squeezed out of sight, leaving a blank coloured dot. */
+  padding: 0;
+  flex: 0 0 auto;
+}
+
+.edit-question-btn .icon-inline,
+.delete-question-btn .icon-inline {
+  width: 14px;
+  height: 14px;
+  flex: 0 0 auto;
 }
 
 .edit-question-btn {
-  background: #0d6efd;
+  /* #0d6efd with a white icon is 4.5:1; this blue is 5.8:1. */
+  background: #0b5ed7;
 }
 
 .edit-question-btn:hover {
-  background: #0b5ed7;
+  background: #0a53be;
 }
 
 .delete-question-btn {

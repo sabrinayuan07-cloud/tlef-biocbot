@@ -276,7 +276,7 @@ test.describe('instructor onboarding boot/status/course setup branches', () => {
         await page.locator('#instructor-course-code').fill('BRINST');
         await page.locator('#join-course-btn').click();
 
-        await expect(page.getByText('Error joining course: server unavailable')).toBeVisible();
+        await expect(page.locator('.notification-message', { hasText: 'Error joining course: server unavailable' }).last()).toBeVisible();
         await expect(page.locator('#join-course-btn')).toBeEnabled();
         expect(captures.joins).toHaveLength(1);
     });
@@ -314,7 +314,7 @@ test.describe('instructor onboarding boot/status/course setup branches', () => {
         await page.locator('#lectures-per-week').fill('1');
         await page.locator('#continue-btn').click();
 
-        await expect(page.getByText('Error creating course. Please try again.')).toBeVisible();
+        await expect(page.locator('.notification-message', { hasText: 'Error creating course. Please try again.' }).last()).toBeVisible();
         await expect(page.locator('#continue-btn')).toBeEnabled();
         expect(captures.creates).toHaveLength(1);
     });

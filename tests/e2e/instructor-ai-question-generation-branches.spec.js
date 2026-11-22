@@ -19,7 +19,7 @@ test.describe('onboarding AI question generation branches', () => {
             testWindow.generateAIQuestionContent();
         });
 
-        await expect(page.getByText('Please select a question type first.')).toBeVisible();
+        await expect(page.locator('.notification-message', { hasText: 'Please select a question type first.' }).last()).toBeVisible();
     });
 
     test('requires objectives or materials before AI generation', async ({ page }) => {
@@ -31,7 +31,7 @@ test.describe('onboarding AI question generation branches', () => {
             testWindow.generateAIQuestionContent();
         });
 
-        await expect(page.getByText('Please upload course materials or add learning objectives before generating AI questions.')).toBeVisible();
+        await expect(page.locator('.notification-message', { hasText: 'Please upload course materials or add learning objectives before generating AI questions.' }).last()).toBeVisible();
     });
 
     test('uses fallback content when course context is missing', async ({ page }) => {
@@ -45,8 +45,8 @@ test.describe('onboarding AI question generation branches', () => {
             return testWindow.generateAIQuestionContent();
         });
 
-        await expect(page.getByText(/Error generating AI question: Course ID not found/)).toBeVisible();
-        await expect(page.getByText('Using fallback content due to generation error. Please edit before saving.')).toBeVisible();
+        await expect(page.locator('.notification-message', { hasText: /Error generating AI question: Course ID not found/ }).last()).toBeVisible();
+        await expect(page.locator('.notification-message', { hasText: 'Using fallback content due to generation error. Please edit before saving.' }).last()).toBeVisible();
         await expect(page.locator('#sa-answer')).toHaveValue(/Students should demonstrate understanding/);
     });
 
@@ -60,7 +60,7 @@ test.describe('onboarding AI question generation branches', () => {
 
         await page.locator('#ai-generate-btn').click();
 
-        await expect(page.getByText(/Error generating AI question: forced AI failure/)).toBeVisible();
+        await expect(page.locator('.notification-message', { hasText: /Error generating AI question: forced AI failure/ }).last()).toBeVisible();
         await expect(page.locator('#question-text')).toHaveValue(/According to the Unit 1 lecture notes/);
         await expect(page.locator('.mcq-input[data-option="A"]')).toHaveValue('Option A based on lecture content');
     });
@@ -75,7 +75,7 @@ test.describe('onboarding AI question generation branches', () => {
 
         await page.locator('#ai-generate-btn').click();
 
-        await expect(page.getByText(/Error generating AI question: AI reported unsuccessful/)).toBeVisible();
+        await expect(page.locator('.notification-message', { hasText: /Error generating AI question: AI reported unsuccessful/ }).last()).toBeVisible();
         await expect(page.locator('input[name="tf-answer"]:checked')).toHaveCount(1);
     });
 
@@ -88,17 +88,17 @@ test.describe('onboarding AI question generation branches', () => {
         await page.locator('#question-type').selectOption('multiple-choice');
 
         await page.locator('#ai-generate-btn').click();
-        await expect(page.getByText('AI question generated successfully! You can now edit and save it.')).toBeVisible();
+        await expect(page.locator('.notification-message', { hasText: 'AI question generated successfully! You can now edit and save it.' }).last()).toBeVisible();
         await page.locator('#ai-generate-btn').click();
 
         await expect(page.locator('#regenerate-modal')).toHaveClass(/show/);
         await expect(page.locator('#current-question-display')).toContainText('Generated branch question?');
         await page.locator('#regenerate-submit-btn').click();
-        await expect(page.getByText("Please provide feedback about what you'd like to improve.")).toBeVisible();
+        await expect(page.locator('.notification-message', { hasText: "Please provide feedback about what you'd like to improve." }).last()).toBeVisible();
 
         await page.locator('#regenerate-feedback').fill('Make it more applied.');
         await page.locator('#regenerate-submit-btn').click();
-        await expect(page.getByText('Question regenerated successfully based on your feedback!')).toBeVisible();
+        await expect(page.locator('.notification-message', { hasText: 'Question regenerated successfully based on your feedback!' }).last()).toBeVisible();
         await expect(page.locator('#question-text')).toHaveValue('Regenerated branch question?');
     });
 

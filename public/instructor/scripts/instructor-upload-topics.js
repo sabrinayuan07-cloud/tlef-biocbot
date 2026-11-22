@@ -300,6 +300,10 @@ function showFileUpload() {
     document.getElementById('text-input-section').style.display = 'none';
     const nameInputSection = document.getElementById('name-input-section');
     if (nameInputSection) nameInputSection.style.display = 'none';
+    // The button that was just pressed is now hidden. Move focus to the next
+    // thing to do rather than letting it fall back to the top of the page.
+    lastUploadMethod = 'file';
+    document.querySelector('#file-upload-section .upload-file-btn')?.focus();
 }
 
 /**
@@ -311,12 +315,22 @@ function showTextInput() {
     document.getElementById('text-input-section').style.display = 'block';
     const nameInputSection = document.getElementById('name-input-section');
     if (nameInputSection) nameInputSection.style.display = 'block';
+    // The button that was just pressed is now hidden; continue at the first field.
+    lastUploadMethod = 'text';
+    document.getElementById('material-name')?.focus();
 }
+
+// Which method the instructor last chose, so "Back" can return focus to it.
+let lastUploadMethod = null;
 
 /**
  * Reset to selection view
+ * @param {boolean} [restoreFocus=false] - true when the instructor pressed
+ *   "Back": focus returns to the method they came from. Left false when the
+ *   modal is merely being reset, where moving focus would fight the modal's own
+ *   focus handling.
  */
-function resetToSelection() {
+function resetToSelection(restoreFocus = false) {
     document.getElementById('upload-method-selection').style.display = 'flex';
     document.getElementById('file-upload-section').style.display = 'none';
     document.getElementById('text-input-section').style.display = 'none';
@@ -325,6 +339,11 @@ function resetToSelection() {
     // though the method-selection screen it reset to has no use for it.
     const nameInputSection = document.getElementById('name-input-section');
     if (nameInputSection) nameInputSection.style.display = 'none';
+
+    if (restoreFocus === true) {
+        const methodButtons = document.querySelectorAll('#upload-method-selection .method-btn');
+        (methodButtons[lastUploadMethod === 'text' ? 1 : 0] || methodButtons[0])?.focus();
+    }
 }
 
 function showInlineTopicReview(courseId, sourceName, existingTopics, suggestedTopics) {
@@ -680,15 +699,21 @@ async function handleUpload() {
  * @param {string} documentId - Document identifier
  * @returns {string} HTML for action buttons
  */
-function buildDocumentActionButtons(documentId) {
+function buildDocumentActionButtons(documentId, documentTitle = '') {
     if (!documentId) {
         return '';
     }
 
+    // Each button's name ends with the document's title, as visually hidden
+    // text ("View lecture-3.pdf"), so a list of documents is not a list of
+    // indistinguishable "View, Download, Delete" controls.
+    const hiddenTitle = documentTitle
+        ? `<span class="visually-hidden"> ${escapeHTML(documentTitle)}</span>`
+        : '';
     return `
-        <button class="action-button view" onclick="viewDocument('${documentId}')">View</button>
-        <button class="action-button download" onclick="downloadDocument('${documentId}')">Download</button>
-        <button class="action-button delete" onclick="deleteDocument('${documentId}')">Delete</button>
+        <button type="button" class="action-button view" id="doc-view-${documentId}" onclick="viewDocument('${documentId}')">View${hiddenTitle}</button>
+        <button type="button" class="action-button download" id="doc-download-${documentId}" onclick="downloadDocument('${documentId}')">Download${hiddenTitle}</button>
+        <button type="button" class="action-button delete" id="doc-delete-${documentId}" onclick="deleteDocument('${documentId}')">Delete${hiddenTitle}</button>
     `;
 }
 
@@ -736,7 +761,7 @@ function addContentToWeek(week, fileName, description, documentId, status = 'upl
     // Check if we're replacing an existing placeholder
     const existingItems = courseMaterialsContent.querySelectorAll('.file-item');
     existingItems.forEach(item => {
-        const title = item.querySelector('.file-info h3').textContent;
+        const title = item.querySelector('.file-info .file-title, .file-info h3').textContent;
         const isPlaceholder = item.classList.contains('placeholder-item');
         
         // Check if this is a placeholder that matches our content type
@@ -762,7 +787,7 @@ function addContentToWeek(week, fileName, description, documentId, status = 'upl
         }
         
         // Update content
-        targetFileItem.querySelector('.file-info h3').textContent = fileName;
+        targetFileItem.querySelector('.file-info .file-title, .file-info h3').textContent = fileName;
         targetFileItem.querySelector('.file-info p').textContent = description;
         let typeBadge = targetFileItem.querySelector('.document-type-badge');
         if (!typeBadge) {
@@ -781,12 +806,12 @@ function addContentToWeek(week, fileName, description, documentId, status = 'upl
         
         // Update action buttons - replace all buttons
         const actionsDiv = targetFileItem.querySelector('.file-actions');
-        actionsDiv.innerHTML = buildDocumentActionButtons(documentId);
+        actionsDiv.innerHTML = buildDocumentActionButtons(documentId, fileName);
         
         console.log(`✅ [ADD_CONTENT] Successfully replaced placeholder with uploaded content: ${fileName}`);
     } else {
         // Create new file item
-        const fileItem = document.createElement('div');
+        const fileItem = document.createElement('li');
         fileItem.className = 'file-item';
         fileItem.dataset.status = materialStatus;
         
@@ -800,25 +825,22 @@ function addContentToWeek(week, fileName, description, documentId, status = 'upl
         }
         
         fileItem.innerHTML = `
-            <span class="file-icon">${Icons.file}</span>
-            <div class="file-info">
-                <h3>${fileName}</h3>
-                <p>${description}</p>
-                <span class="document-type-badge">${getDocumentTypeLabel(contentType)}</span>
-                <span class="status-text uploaded">Uploaded</span>
-            </div>
-            <div class="file-actions">
-                ${buildDocumentActionButtons(documentId)}
+            <div class="file-item-row">
+                <span class="file-icon">${Icons.file}</span>
+                <div class="file-info">
+                    <h4 class="file-title" ${headingAttrs(fileName)}>${fileName}</h4>
+                    <p>${description}</p>
+                    <span class="document-type-badge">${getDocumentTypeLabel(contentType)}</span>
+                    <span class="status-text uploaded">Uploaded</span>
+                </div>
+                <div class="file-actions">
+                    ${buildDocumentActionButtons(documentId, fileName)}
+                </div>
             </div>
         `;
         
-        // Insert before the action buttons section to maintain proper order
-        const actionButtonsSection = courseMaterialsContent.querySelector('.add-content-section, .save-objectives');
-        if (actionButtonsSection) {
-            courseMaterialsContent.insertBefore(fileItem, actionButtonsSection);
-        } else {
-            // If no action buttons exist yet, add to the end
-            courseMaterialsContent.appendChild(fileItem);
-        }
+        // The materials list always sits above the action buttons, so adding
+        // to the end of the list keeps the item in the right place.
+        getMaterialsList(courseMaterialsContent).appendChild(fileItem);
     }
 }

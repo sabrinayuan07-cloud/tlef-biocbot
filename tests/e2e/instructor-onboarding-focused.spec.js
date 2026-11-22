@@ -520,7 +520,7 @@ test.describe('instructor onboarding focused script coverage', () => {
             mimeType: 'application/octet-stream',
             buffer: Buffer.from('not a supported file'),
         });
-        await expect(page.getByText(/Please select a valid file type/)).toBeVisible();
+        await expect(page.locator('.notification-message', { hasText: /Please select a valid file type/ }).last()).toBeVisible();
 
         await page.locator('#upload-modal .modal-close').click();
         await page.evaluate(() => {
@@ -558,7 +558,7 @@ test.describe('instructor onboarding focused script coverage', () => {
         await page.locator('#ai-generate-btn').click();
         await expect(page.locator('#regenerate-modal')).toHaveClass(/show/);
         await page.locator('#regenerate-submit-btn').click();
-        await expect(page.getByText(/Please provide feedback/)).toBeVisible();
+        await expect(page.locator('.notification-message', { hasText: /Please provide feedback/ }).last()).toBeVisible();
         await page.locator('#regenerate-feedback').fill('Make the prompt focus on feedback inhibition.');
         await page.locator('#regenerate-submit-btn').click();
         await expect(page.locator('#regenerate-modal')).not.toHaveClass(/show/);
