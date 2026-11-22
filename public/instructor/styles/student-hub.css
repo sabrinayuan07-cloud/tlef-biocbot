@@ -730,3 +730,17 @@ body.pseudonym-modal-open {
 .download-dropdown-menu button:not(:last-child) {
     border-bottom: 1px solid #f1f5f9;
 }
+
+/* Student Hub's action buttons (Connect LMS, Sync roster, Refresh, Save,
+   Download Report, etc.) shared the plain gray .btn-secondary look from
+   components.css. Give this page its own light-blue fill so they read as
+   action buttons, matching the design system (#652) - same color decided
+   for .save-btn/the Review Again Edit button (#468 follow-up). Scoped to
+   this stylesheet so ta-hub.html/onboarding.html keep the shared gray. */
+.btn-secondary {
+    background: var(--primary-color);
+}
+
+.btn-secondary:hover {
+    background: var(--accent-color);
+}
