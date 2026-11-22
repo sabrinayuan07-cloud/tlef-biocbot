@@ -180,6 +180,35 @@ describe('POST /start', () => {
         expect(realStudent.studentOnboardingComplete).toBe(false);
     });
 
+    test('can skip the terms agreement for the disposable preview student only', async () => {
+        const db = makeDb({
+            userAgreements: [{ userId: student.userId, userType: 'student', hasAgreed: false }]
+        });
+
+        const res = await request(app({ db, user: instructor, session: makeSession() }))
+            .post('/start')
+            .send({ courseId: COURSE_ID, skipTermsAgreement: true });
+
+        expect(res.status).toBe(200);
+
+        const previewAgreement = await db.collection('userAgreements').findOne({ userId: PREVIEW_ID });
+        const realAgreement = await db.collection('userAgreements').findOne({ userId: student.userId });
+
+        expect(previewAgreement.hasAgreed).toBe(true);
+        expect(realAgreement.hasAgreed).toBe(false);
+    });
+
+    test('does not record a terms agreement when skipTermsAgreement is not set', async () => {
+        const db = makeDb();
+
+        const res = await request(app({ db, user: instructor, session: makeSession() }))
+            .post('/start')
+            .send({ courseId: COURSE_ID });
+
+        expect(res.status).toBe(200);
+        expect(await db.collection('userAgreements').findOne({ userId: PREVIEW_ID })).toBeNull();
+    });
+
     test('never inherits data from a previous visit, even if it was never exited', async () => {
         // Closing the tab skips /stop entirely, so opening a preview has to be
         // the second place the sandbox is guaranteed clean.

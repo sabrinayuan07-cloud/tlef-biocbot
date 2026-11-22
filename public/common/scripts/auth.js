@@ -7,6 +7,7 @@ let currentUser = null;
 let currentLLMTagClasses = [];
 
 const PREVIEW_SKIP_TUTORIAL_KEY = 'biocbot_preview_skip_tutorial';
+const PREVIEW_SKIP_TERMS_KEY = 'biocbot_preview_skip_terms';
 
 const LLM_TAG_CLASS_PATTERN = /^(llm|reasoning)-\d+$/;
 const LLM_TAG_TARGET_SELECTOR = 'body, .chat-container, #chat-messages, .quiz-chat-container, #quiz-chat-messages';
@@ -251,6 +252,12 @@ function addStudentPreviewNavItem() {
                 <span class="student-preview-checkbox" aria-hidden="true"></span>
                 <span class="student-preview-option-label">Skip tutorial</span>
             </label>
+            <label class="student-preview-option" id="nav-student-preview-options-terms"
+                   for="nav-student-preview-skip-terms" hidden>
+                <input type="checkbox" id="nav-student-preview-skip-terms">
+                <span class="student-preview-checkbox" aria-hidden="true"></span>
+                <span class="student-preview-option-label">Skip terms agreement</span>
+            </label>
         </div>
     `;
 
@@ -259,12 +266,22 @@ function addStudentPreviewNavItem() {
 
     const previewLink = item.querySelector('#nav-student-preview');
     const previewOptions = item.querySelector('#nav-student-preview-options');
+    const previewOptionsTerms = item.querySelector('#nav-student-preview-options-terms');
     const skipTutorialToggle = item.querySelector('#nav-student-preview-skip');
+    const skipTermsToggle = item.querySelector('#nav-student-preview-skip-terms');
 
     try {
         skipTutorialToggle.checked = localStorage.getItem(PREVIEW_SKIP_TUTORIAL_KEY) === '1';
     } catch (error) {
         console.warn('Could not restore the preview tutorial preference:', error);
+    }
+
+    try {
+        // Checked by default: only an explicit prior uncheck (stored as '0')
+        // should turn this off, unlike skip-tutorial which defaults off.
+        skipTermsToggle.checked = localStorage.getItem(PREVIEW_SKIP_TERMS_KEY) !== '0';
+    } catch (error) {
+        console.warn('Could not restore the preview terms-agreement preference:', error);
     }
 
     skipTutorialToggle.addEventListener('change', () => {
@@ -275,18 +292,27 @@ function addStudentPreviewNavItem() {
         }
     });
 
+    skipTermsToggle.addEventListener('change', () => {
+        try {
+            localStorage.setItem(PREVIEW_SKIP_TERMS_KEY, skipTermsToggle.checked ? '1' : '0');
+        } catch (error) {
+            console.warn('Could not save the preview terms-agreement preference:', error);
+        }
+    });
+
     previewLink.addEventListener('click', async event => {
         event.preventDefault();
 
         if (previewOptions.hidden) {
             previewOptions.hidden = false;
+            previewOptionsTerms.hidden = false;
             previewLink.setAttribute('aria-expanded', 'true');
             previewLink.textContent = 'Open as Student';
             skipTutorialToggle.focus();
             return;
         }
 
-        await startStudentPreview(event.currentTarget, skipTutorialToggle.checked);
+        await startStudentPreview(event.currentTarget, skipTutorialToggle.checked, skipTermsToggle.checked);
     });
 }
 
@@ -342,9 +368,10 @@ function seedPreviewWalkthrough(previewUserId, firstRunCompleted) {
  *
  * @param {HTMLElement} trigger - The clicked nav link, disabled while starting
  * @param {boolean} [skipTutorial=false] - Open with preview onboarding complete
+ * @param {boolean} [skipTermsAgreement=false] - Open with terms already agreed to
  * @returns {Promise<void>}
  */
-async function startStudentPreview(trigger, skipTutorial = false) {
+async function startStudentPreview(trigger, skipTutorial = false, skipTermsAgreement = false) {
     // Instructor pages do not all resolve course context the same way: the
     // shared auth helper is synchronous, while Course Upload, Flagged Content,
     // and Download Chats provide asynchronous resolvers. Awaiting works for
@@ -365,7 +392,7 @@ async function startStudentPreview(trigger, skipTutorial = false) {
             method: 'POST',
             credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ courseId, skipTutorial })
+            body: JSON.stringify({ courseId, skipTutorial, skipTermsAgreement })
         });
 
         const result = await response.json();

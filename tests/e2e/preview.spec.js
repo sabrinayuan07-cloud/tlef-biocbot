@@ -867,6 +867,21 @@ test.describe('preview UI', () => {
         await expect(page.locator('#nav-student-preview-skip')).toBeChecked();
     });
 
+    test('skip terms agreement defaults to checked and remembers an explicit uncheck', async ({ page }) => {
+        await page.goto('/instructor/home');
+        await page.locator('#nav-student-preview').click();
+
+        const skipTerms = page.locator('#nav-student-preview-skip-terms');
+        await expect(skipTerms).toBeVisible();
+        await expect(skipTerms).toBeChecked();
+        await skipTerms.uncheck();
+
+        await page.reload();
+        await expect(page.locator('#nav-student-preview-skip-terms')).toBeHidden();
+        await page.locator('#nav-student-preview').click();
+        await expect(page.locator('#nav-student-preview-skip-terms')).not.toBeChecked();
+    });
+
     test('a real student sees no preview banner', async ({ page, baseURL }) => {
         const api = await apiAs(baseURL, 'instructor');
         await startPreview(api);

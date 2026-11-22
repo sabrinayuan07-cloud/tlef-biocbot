@@ -18,6 +18,7 @@ const router = express.Router();
 const previewSession = require('../services/previewSession');
 const PreviewState = require('../models/PreviewState');
 const CourseModel = require('../models/Course');
+const UserAgreement = require('../models/UserAgreement');
 
 /**
  * Resolve the human behind the request, looking past any active preview swap.
@@ -68,7 +69,7 @@ async function canPreviewCourse(db, user, courseId) {
 /**
  * POST /api/preview/start
  * Issue a preview grant for a course and return the entry URL.
- * Body: { courseId: string, skipTutorial?: boolean }
+ * Body: { courseId: string, skipTutorial?: boolean, skipTermsAgreement?: boolean }
  */
 router.post('/start', async (req, res) => {
     try {
@@ -76,6 +77,7 @@ router.post('/start', async (req, res) => {
         const user = getRealUser(req);
         const { courseId } = req.body || {};
         const skipTutorial = req.body && req.body.skipTutorial === true;
+        const skipTermsAgreement = req.body && req.body.skipTermsAgreement === true;
 
         if (!user) {
             return res.status(401).json({ success: false, message: 'Not authenticated' });
@@ -112,6 +114,12 @@ router.post('/start', async (req, res) => {
                 { $set: { studentOnboardingComplete: true, updatedAt: new Date() } }
             );
             state.firstRunCompleted = true;
+        }
+
+        if (skipTermsAgreement) {
+            await UserAgreement.createOrUpdateUserAgreement(db, grant.previewUserId, 'student', {
+                hasAgreed: true
+            });
         }
 
         req.session.preview = grant;
