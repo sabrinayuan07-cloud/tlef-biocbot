@@ -10,11 +10,11 @@
     align-items: center;
     margin-bottom: 1rem;
     padding-bottom: 1rem;
-    border-bottom: 1px solid #e0e4e7;
+    border-bottom: 1px solid var(--bb-ink-16);
 }
 
 .flagged-header h1 {
-    color: #2c3e50;
+    color: var(--bb-steel);
     font-size: 2rem;
     font-weight: 600;
     margin: 0;
@@ -25,8 +25,8 @@
 }
 
 .flagged-subtitle p {
-    color: #475569;
-    font-size: 1rem;
+    color: var(--bb-ink-70);
+    font-size: var(--bb-text-nav);
     margin: 0;
 }
 
@@ -37,9 +37,9 @@
     align-items: end;
     margin-bottom: 2rem;
     padding: 1rem;
-    background: #f8fafc;
+    background: var(--bb-ground);
     border-radius: 8px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--bb-ink-16);
 }
 
 .filter-group {
@@ -50,39 +50,39 @@
 
 .filter-group label {
     font-weight: 500;
-    color: #374151;
-    font-size: 0.875rem;
+    color: var(--bb-ink);
+    font-size: var(--bb-text-card-kicker);
 }
 
 .filter-group select {
     padding: 0.5rem 0.75rem;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--bb-ink-20);
     border-radius: 6px;
-    background: white;
-    font-size: 0.875rem;
+    background: var(--bb-white);
+    font-size: var(--bb-text-card-kicker);
     min-width: 150px;
 }
 
 .filter-group select:focus {
     outline: none;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    border-color: var(--bb-steel);
+    box-shadow: 0 0 0 3px rgba(44, 69, 93, 0.1);
 }
 
 .refresh-btn {
     padding: 0.5rem 1rem;
-    background: #2563eb;
+    background: var(--bb-steel);
     color: white;
     border: none;
     border-radius: 6px;
-    font-size: 0.875rem;
+    font-size: var(--bb-text-card-kicker);
     font-weight: 500;
     cursor: pointer;
     transition: background-color 0.2s;
 }
 
 .refresh-btn:hover {
-    background: #1d4ed8;
+    background: var(--bb-steel-dark);
 }
 
 /* Statistics Cards */
@@ -94,10 +94,10 @@
 }
 
 .stat-card {
-    background: white;
+    background: var(--bb-white);
     padding: var(--bb-gap-loose);
     border-radius: 8px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--bb-ink-16);
     text-align: center;
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
 }
@@ -105,22 +105,22 @@
 .stat-number {
     font-size: 2rem;
     font-weight: 700;
-    color: #1f2937;
+    color: var(--bb-ink);
     margin-bottom: 0.5rem;
 }
 
 .stat-label {
-    font-size: 0.875rem;
-    color: #6b7280;
+    font-size: var(--bb-text-card-kicker);
+    color: var(--bb-ink-70);
     text-transform: uppercase;
     letter-spacing: 0.025em;
 }
 
 /* Content Container */
 .flagged-content-container {
-    background: white;
+    background: var(--bb-white);
     border-radius: 8px;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--bb-ink-16);
     overflow: hidden;
 }
 
@@ -128,13 +128,13 @@
 .empty-message {
     padding: 3rem 2rem;
     text-align: center;
-    color: #6b7280;
+    color: var(--bb-ink-70);
 }
 
 .loading-message p,
 .empty-message p {
     margin: 0;
-    font-size: 1rem;
+    font-size: var(--bb-text-nav);
 }
 
 .empty-message .error-message {
@@ -150,8 +150,8 @@
 
 /* New Card Layout */
 .flag-card {
-    background: white;
-    border: 1px solid #e2e8f0;
+    background: var(--bb-white);
+    border: 1px solid var(--bb-ink-16);
     border-radius: 12px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     overflow: hidden;
@@ -165,9 +165,9 @@
 
 /* Card Header */
 .flag-card-header {
-    background: #f8fafc;
+    background: var(--bb-ground);
     padding: 1rem 1.5rem;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid var(--bb-ink-16);
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -177,7 +177,7 @@
     display: inline-block;
     padding: 0.25rem 0.75rem;
     border-radius: 9999px;
-    font-size: 0.75rem;
+    font-size: var(--bb-text-kicker);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -222,7 +222,7 @@
 /* Dark Red */
 .flag-type-badge.irrelevant {
     background: #f3f4f6;
-    color: #374151;
+    color: var(--bb-ink);
 }
 
 /* Gray */
@@ -231,8 +231,8 @@
     display: flex;
     gap: 1rem;
     align-items: center;
-    font-size: 0.875rem;
-    color: #64748b;
+    font-size: var(--bb-text-card-kicker);
+    color: var(--bb-ink-70);
 }
 
 .flag-date {
@@ -242,7 +242,7 @@
 .flag-status-badge {
     padding: 0.125rem 0.5rem;
     border-radius: 4px;
-    font-size: 0.75rem;
+    font-size: var(--bb-text-kicker);
     font-weight: 500;
     text-transform: uppercase;
 }
@@ -263,8 +263,8 @@
 }
 
 .flag-status-badge.dismissed {
-    background: #f1f5f9;
-    color: #475569;
+    background: var(--bb-ground-alt);
+    color: var(--bb-ink-70);
 }
 
 /* Card Body */
@@ -280,9 +280,9 @@
 }
 
 .flag-section-title {
-    font-size: 0.75rem;
+    font-size: var(--bb-text-kicker);
     text-transform: uppercase;
-    color: #94a3b8;
+    color: var(--bb-ink-65);
     letter-spacing: 0.05em;
     margin: 0 0 0.5rem 0;
     font-weight: 600;
@@ -296,11 +296,11 @@
 }
 
 .context-tag {
-    background: #f1f5f9;
-    color: #475569;
+    background: var(--bb-ground-alt);
+    color: var(--bb-ink-70);
     padding: 0.125rem 0.5rem;
     border-radius: 4px;
-    font-size: 0.75rem;
+    font-size: var(--bb-text-kicker);
     font-weight: 500;
 }
 
@@ -313,8 +313,8 @@
 }
 
 .source-breadcrumb-label {
-    color: #64748b;
-    font-size: 0.75rem;
+    color: var(--bb-ink-70);
+    font-size: var(--bb-text-kicker);
     font-weight: 600;
     text-transform: uppercase;
 }
@@ -328,14 +328,14 @@
     border: 1px solid #bae6fd;
     border-radius: 4px;
     padding: 0.2rem 0.5rem;
-    font-size: 0.75rem;
+    font-size: var(--bb-text-kicker);
     font-weight: 600;
 }
 
 .source-breadcrumb.muted {
-    background: #f8fafc;
-    border-color: #e2e8f0;
-    color: #64748b;
+    background: var(--bb-ground);
+    border-color: var(--bb-ink-16);
+    color: var(--bb-ink-70);
     font-weight: 500;
 }
 
@@ -345,20 +345,20 @@
 }
 
 .flag-quote {
-    background: #f8fafc;
-    border-left: 3px solid #cbd5e1;
+    background: var(--bb-ground);
+    border-left: 3px solid var(--bb-ink-20);
     padding: 1rem;
-    font-size: 0.95rem;
+    font-size: var(--bb-text-card-body);
     line-height: 1.6;
-    color: #334155;
+    color: var(--bb-ink);
     font-style: italic;
     border-radius: 0 4px 4px 0;
 }
 
 /* User Note Section */
 .flag-note {
-    font-size: 1rem;
-    color: #1e293b;
+    font-size: var(--bb-text-nav);
+    color: var(--bb-ink);
     line-height: 1.5;
 }
 
@@ -374,7 +374,7 @@
 
 .response-content {
     color: #14532d;
-    font-size: 0.95rem;
+    font-size: var(--bb-text-card-body);
     line-height: 1.5;
     margin-bottom: 0.75rem;
 }
@@ -382,7 +382,7 @@
 .response-footer {
     display: flex;
     justify-content: flex-end;
-    font-size: 0.75rem;
+    font-size: var(--bb-text-kicker);
     color: #15803d;
     font-weight: 500;
 }
@@ -390,17 +390,17 @@
 .flag-section.pending-section {
     padding: 1rem 0;
     text-align: center;
-    color: #94a3b8;
-    font-size: 0.875rem;
-    border-top: 1px dashed #e2e8f0;
+    color: var(--bb-ink-65);
+    font-size: var(--bb-text-card-kicker);
+    border-top: 1px dashed var(--bb-ink-16);
 }
 
 /* Approval Form - Not strictly part of Student View but kept if shared */
 .approval-form {
     margin-top: 1rem;
     padding: var(--bb-gap-loose);
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
+    background: var(--bb-ground);
+    border: 1px solid var(--bb-ink-16);
     border-radius: 8px;
     border-left: 4px solid #10b981;
 }
@@ -411,15 +411,15 @@
 
 .form-header h4 {
     margin: 0;
-    color: #1f2937;
-    font-size: 1rem;
+    color: var(--bb-ink);
+    font-size: var(--bb-text-nav);
     font-weight: 600;
 }
 
 .form-description {
     margin: 0.5rem 0 0 0;
-    font-size: 0.875rem;
-    color: #6b7280;
+    font-size: var(--bb-text-card-kicker);
+    color: var(--bb-ink-70);
     font-style: italic;
 }
 
@@ -431,18 +431,18 @@
     display: block;
     margin-bottom: 0.5rem;
     font-weight: 500;
-    color: #374151;
-    font-size: 0.875rem;
+    color: var(--bb-ink);
+    font-size: var(--bb-text-card-kicker);
 }
 
 .message-textarea {
     width: 100%;
     padding: 0.75rem;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--bb-ink-20);
     border-radius: 6px;
-    font-size: 0.875rem;
+    font-size: var(--bb-text-card-kicker);
     line-height: 1.5;
-    background: white;
+    background: var(--bb-white);
     resize: vertical;
     min-height: 100px;
     font-family: inherit;
@@ -460,7 +460,7 @@
     gap: 0.75rem;
     margin-top: var(--bb-gap-loose);
     padding-top: 1rem;
-    border-top: 1px solid #e5e7eb;
+    border-top: 1px solid var(--bb-ink-16);
 }
 
 /* Action Buttons (if used here) */
@@ -468,19 +468,19 @@
     padding: 0.5rem 1rem;
     border: none;
     border-radius: 6px;
-    font-size: 0.875rem;
+    font-size: var(--bb-text-card-kicker);
     font-weight: 500;
     cursor: pointer;
     transition: all 0.2s;
 }
 
 .cancel-btn {
-    background: #6b7280;
+    background: var(--bb-ink-70);
     color: white;
 }
 
 .cancel-btn:hover {
-    background: #4b5563;
+    background: var(--bb-ink-78);
 }
 
 .send-approve-btn {
@@ -540,7 +540,7 @@
 .flag-priority-badge {
     padding: 0.125rem 0.6rem;
     border-radius: 9999px;
-    font-size: 0.7rem;
+    font-size: var(--bb-text-kicker);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -558,28 +558,28 @@
 }
 
 .flag-priority-badge.low {
-    background: #f1f5f9;
-    color: #64748b;
+    background: var(--bb-ground-alt);
+    color: var(--bb-ink-70);
 }
 
 .flag-student {
     display: flex;
     align-items: center;
     gap: 0.25rem;
-    color: #1e293b;
+    color: var(--bb-ink);
     font-weight: 500;
 }
 
 .meta-icon {
-    font-size: 1rem;
+    font-size: var(--bb-text-nav);
     opacity: 0.6;
 }
 
 /* Card Footer */
 .flag-card-footer {
-    background: #f8fafc;
+    background: var(--bb-ground);
     padding: 1rem var(--bb-gap-loose);
-    border-top: 1px solid #e2e8f0;
+    border-top: 1px solid var(--bb-ink-16);
 }
 
 /* Action Buttons inside Footer */
@@ -594,8 +594,8 @@
 .approval-form {
     width: 100%;
     margin-top: 1rem;
-    background: white;
-    border: 1px solid #e2e8f0;
+    background: var(--bb-white);
+    border: 1px solid var(--bb-ink-16);
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
@@ -604,12 +604,12 @@
     gap: 0.75rem;
     margin-top: 1rem;
     padding-top: 1rem;
-    border-top: 1px solid #f1f5f9;
+    border-top: 1px solid var(--bb-ground-alt);
 }
 
 .action-status-msg {
-    color: #64748b;
-    font-size: 0.875rem;
+    color: var(--bb-ink-70);
+    font-size: var(--bb-text-card-kicker);
 }
 
 /* ===================================
@@ -618,7 +618,7 @@
 
 .section-divider {
     border: none;
-    border-top: 2px solid #e2e8f0;
+    border-top: 2px solid var(--bb-ink-16);
     margin: 2rem 0;
 }
 
@@ -655,7 +655,7 @@
     background: #f59e0b;
     color: white;
     border-radius: 9999px;
-    font-size: 0.75rem;
+    font-size: var(--bb-text-kicker);
     font-weight: 700;
 }
 
@@ -668,10 +668,10 @@
 
 .mh-filter-controls select {
     padding: 0.375rem 0.625rem;
-    border: 1px solid #d1d5db;
+    border: 1px solid var(--bb-ink-20);
     border-radius: 6px;
-    background: white;
-    font-size: 0.8rem;
+    background: var(--bb-white);
+    font-size: var(--bb-text-card-kicker);
 }
 
 /* MH Flag Cards */
@@ -682,8 +682,8 @@
 }
 
 .mh-flag-card {
-    background: white;
-    border: 1px solid #e2e8f0;
+    background: var(--bb-white);
+    border: 1px solid var(--bb-ink-16);
     border-radius: 10px;
     overflow: hidden;
     animation: fadeIn 0.3s ease-out;
@@ -702,8 +702,8 @@
     justify-content: space-between;
     align-items: center;
     padding: 0.75rem 1.25rem;
-    background: #f8fafc;
-    border-bottom: 1px solid #e2e8f0;
+    background: var(--bb-ground);
+    border-bottom: 1px solid var(--bb-ink-16);
     flex-wrap: wrap;
     gap: 0.5rem;
 }
@@ -712,7 +712,7 @@
     display: inline-block;
     padding: 0.2rem 0.6rem;
     border-radius: 9999px;
-    font-size: 0.7rem;
+    font-size: var(--bb-text-kicker);
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -732,56 +732,56 @@
     display: flex;
     gap: 1rem;
     align-items: center;
-    font-size: 0.8rem;
-    color: #64748b;
+    font-size: var(--bb-text-card-kicker);
+    color: var(--bb-ink-70);
 }
 
 .mh-flag-status {
     padding: 0.125rem 0.5rem;
     border-radius: 4px;
-    font-size: 0.7rem;
+    font-size: var(--bb-text-kicker);
     font-weight: 600;
     text-transform: uppercase;
 }
 
 .mh-flag-status.pending { background: #fef9c3; color: #854d0e; }
 .mh-flag-status.escalated { background: #fee2e2; color: #991b1b; }
-.mh-flag-status.dismissed { background: #f1f5f9; color: #475569; }
+.mh-flag-status.dismissed { background: var(--bb-ground-alt); color: var(--bb-ink-70); }
 .mh-flag-status.resolved { background: #dcfce7; color: #15803d; }
-.mh-flag-status.disregarded { background: #f1f5f9; color: #475569; }
+.mh-flag-status.disregarded { background: var(--bb-ground-alt); color: var(--bb-ink-70); }
 
 .mh-flag-card-body {
     padding: 1rem 1.25rem;
 }
 
 .mh-flag-reason {
-    font-size: 0.85rem;
-    color: #6b7280;
+    font-size: var(--bb-text-card-kicker);
+    color: var(--bb-ink-70);
     margin-bottom: 0.75rem;
     font-style: italic;
 }
 
 .mh-flag-message {
-    background: #f8fafc;
-    border-left: 3px solid #cbd5e1;
+    background: var(--bb-ground);
+    border-left: 3px solid var(--bb-ink-20);
     padding: 0.75rem 1rem;
-    font-size: 0.9rem;
+    font-size: var(--bb-text-card-body);
     line-height: 1.5;
-    color: #334155;
+    color: var(--bb-ink);
     border-radius: 0 4px 4px 0;
     margin-bottom: 0.75rem;
 }
 
 .mh-flag-student-info {
-    font-size: 0.85rem;
-    color: #1e293b;
+    font-size: var(--bb-text-card-kicker);
+    color: var(--bb-ink);
     font-weight: 500;
     margin-bottom: 0.5rem;
 }
 
 .mh-flag-context-toggle {
-    font-size: 0.8rem;
-    color: #3b82f6;
+    font-size: var(--bb-text-card-kicker);
+    color: var(--bb-steel);
     cursor: pointer;
     background: none;
     border: none;
@@ -796,9 +796,9 @@
 .mh-flag-context {
     margin-top: 0.5rem;
     padding: 0.75rem;
-    background: #f1f5f9;
+    background: var(--bb-ground-alt);
     border-radius: 6px;
-    font-size: 0.8rem;
+    font-size: var(--bb-text-card-kicker);
     max-height: 200px;
     overflow-y: auto;
 }
@@ -810,13 +810,13 @@
 
 .mh-flag-context .ctx-msg .ctx-role {
     font-weight: 600;
-    color: #475569;
+    color: var(--bb-ink-70);
 }
 
 .mh-flag-card-footer {
     padding: 0.75rem 1.25rem;
-    background: #f8fafc;
-    border-top: 1px solid #e2e8f0;
+    background: var(--bb-ground);
+    border-top: 1px solid var(--bb-ink-16);
     display: flex;
     gap: 0.75rem;
 }
@@ -825,7 +825,7 @@
     padding: 0.4rem 1rem;
     border: none;
     border-radius: 6px;
-    font-size: 0.8rem;
+    font-size: var(--bb-text-card-kicker);
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s;
@@ -841,12 +841,12 @@
 }
 
 .mh-dismiss-btn {
-    background: #6b7280;
+    background: var(--bb-ink-70);
     color: white;
 }
 
 .mh-dismiss-btn:hover {
-    background: #4b5563;
+    background: var(--bb-ink-78);
 }
 
 .mh-resolve-btn {
@@ -859,10 +859,10 @@
 }
 
 .mh-disregard-btn {
-    background: #6b7280;
+    background: var(--bb-ink-70);
     color: white;
 }
 
 .mh-disregard-btn:hover {
-    background: #4b5563;
+    background: var(--bb-ink-78);
 }
