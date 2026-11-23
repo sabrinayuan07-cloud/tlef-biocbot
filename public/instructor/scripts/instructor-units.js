@@ -55,15 +55,43 @@ function getUnitLabel(unitName) {
 }
 
 /**
+ * How the hidden part of a control's name refers to a unit. Usually that is
+ * the title the instructor sees ("2. Enzymes"). But two units may share a
+ * title, and the number in front can be switched off, so then the unit's
+ * position is added ("Enzymes, unit 2"). That way no two units are ever
+ * referred to the same way. Nothing on screen changes.
+ * @param {string} unitName - Internal name of the unit (e.g., "Unit 1")
+ * @param {string} displayName - The instructor's title for the unit, if any
+ * @param {boolean} showUnitNumber - Whether the title is shown with its number
+ * @param {number} unitPosition - 1-based position among the units
+ * @returns {string}
+ */
+function formatUnitReference(unitName, displayName, showUnitNumber, unitPosition) {
+    const label = formatUnitLabel(unitName, displayName, showUnitNumber, unitPosition);
+    return displayName && showUnitNumber === false ? `${label}, unit ${unitPosition}` : label;
+}
+
+/**
+ * The reference a control's hidden name uses for a unit (see
+ * formatUnitReference). Falls back to the visible title.
+ * @param {string} unitName - Internal name of the unit (e.g., "Unit 1")
+ * @returns {string}
+ */
+function getUnitReference(unitName) {
+    const item = document.querySelector(`.accordion-item[data-unit-name="${unitName}"]`);
+    return (item && item.dataset.unitReference) || getUnitLabel(unitName);
+}
+
+/**
  * Visually hidden text that finishes a repeated control's name with the unit
  * it belongs to: "Add Question" + " for 1. Cell Structure".
  *
  * Every unit repeats the same controls, so without this a screen-reader user
  * hears "Add Question, Add Question, Add Question" with no way to tell them
  * apart. The name is made of real text inside the control (no aria-label or
- * aria-labelledby), and the unit's title sits in its own .unit-name-ref span
- * so a rename can update every control in the unit in one pass.
- * @param {string} unitLabel - The unit's visible title
+ * aria-labelledby), and the unit's reference sits in its own .unit-name-ref
+ * span so a rename can update every control in the unit in one pass.
+ * @param {string} unitLabel - The unit's reference (see getUnitReference)
  * @param {string} [lead=' for '] - Words between the control's text and the title
  * @returns {string} HTML for the hidden span
  */
@@ -90,13 +118,46 @@ function getMaterialsList(sectionContent) {
 }
 
 /**
+ * Finish the names of the View, Download and Delete controls of every file in
+ * a unit's materials list: the file's title, a copy number when the same title
+ * appears more than once in the list, and the unit ("View lecture.pdf (copy 2)
+ * in Cell Structure, unit 2"). File names can repeat, within a unit and across
+ * units, so the title alone does not keep the controls apart. Call this after
+ * the list changes.
+ * @param {HTMLElement|null} list - A unit's ul.materials-list
+ */
+function refreshMaterialNames(list) {
+    if (!list) return;
+    const unitName = list.closest('.accordion-item')?.getAttribute('data-unit-name');
+    const unitReference = unitName ? getUnitReference(unitName) : '';
+    const copies = new Map();
+    list.querySelectorAll(':scope > .file-item').forEach(item => {
+        const contexts = item.querySelectorAll('.file-actions .material-context');
+        if (!contexts.length) return;
+        const title = (item.querySelector('.file-title')?.textContent || '').trim();
+        const copy = (copies.get(title) || 0) + 1;
+        copies.set(title, copy);
+        contexts.forEach(context => {
+            const parts = [document.createTextNode(` ${title}${copy > 1 ? ` (copy ${copy})` : ''}`)];
+            if (unitReference) {
+                const reference = document.createElement('span');
+                reference.className = 'unit-name-ref';
+                reference.textContent = unitReference;
+                parts.push(document.createTextNode(' in '), reference);
+            }
+            context.replaceChildren(...parts);
+        });
+    });
+}
+
+/**
  * Build one "required material not uploaded yet" placeholder item.
  * @param {string} unitName - Internal name of the unit (e.g., "Unit 1")
  * @param {'lecture-notes'|'practice-quiz'} contentType - Which required material
- * @param {string} [unitLabel] - The unit's visible title, when the unit is not on the page yet
+ * @param {string} [unitLabel] - The unit's reference (see getUnitReference), when the unit is not on the page yet
  * @returns {HTMLLIElement}
  */
-function createPlaceholderItem(unitName, contentType, unitLabel = getUnitLabel(unitName)) {
+function createPlaceholderItem(unitName, contentType, unitLabel = getUnitReference(unitName)) {
     const isLectureNotes = contentType === 'lecture-notes';
     const title = isLectureNotes ? `*Lecture Notes - ${unitName}` : '*Practice Questions/Tutorial';
     const item = document.createElement('li');
@@ -465,10 +526,16 @@ function createUnitElement(unitName, unitData, isExpanded = false, canDelete = t
     const displayName = unitData?.displayName || '';
     const showUnitNumber = unitData?.showUnitNumber !== false;
     const formattedName = formatUnitLabel(unitName, displayName, showUnitNumber, unitIndex + 1);
+    // How hidden names refer to this unit: its title, plus its position when
+    // the title could be shared with another unit (see formatUnitReference).
+    const unitReference = formatUnitReference(unitName, displayName, showUnitNumber, unitIndex + 1);
+    unitDiv.setAttribute('data-unit-reference', unitReference);
+    // What the reference adds to the visible title (", unit 2"), if anything.
+    const unitPositionHint = unitReference.slice(formattedName.length);
 
     // Every unit repeats the same controls. `ctx()` finishes each control's
-    // name with this unit's title, as visually hidden text inside the control.
-    const ctx = lead => unitContext(formattedName, lead);
+    // name with this unit's reference, as visually hidden text inside the control.
+    const ctx = lead => unitContext(unitReference, lead);
 
     // One of the four collapsible sections inside a unit. The heading holds a
     // real button (named by the heading text, state in aria-expanded); the
@@ -484,7 +551,7 @@ function createUnitElement(unitName, unitData, isExpanded = false, canDelete = t
             <div class="unit-name-container">
                 <h2 class="unit-heading" ${headingAttrs(formattedName, `unit-heading-${unitId}`)}>
                     <button type="button" class="accordion-trigger" id="unit-trigger-${unitId}" aria-expanded="${isExpanded}" aria-controls="unit-content-${unitId}">
-                        <span class="folder-name">${formattedName}</span>
+                        <span class="folder-name">${formattedName}</span><span class="visually-hidden unit-position-ref">${unitPositionHint}</span>
                     </button>
                 </h2>
                 <button type="button" class="unit-rename-btn" id="unit-rename-${unitId}" onclick="event.stopPropagation(); openRenameUnitInput('${unitName}')" title="Rename unit">
@@ -563,8 +630,8 @@ function createUnitElement(unitName, unitData, isExpanded = false, canDelete = t
                         <p><strong>Required Materials:</strong> *Lecture Notes and *Practice Questions/Tutorial are mandatory</p>
                     </div>
                     <ul class="materials-list">
-                        ${createPlaceholderItem(unitName, 'lecture-notes', formattedName).outerHTML}
-                        ${createPlaceholderItem(unitName, 'practice-quiz', formattedName).outerHTML}
+                        ${createPlaceholderItem(unitName, 'lecture-notes', unitReference).outerHTML}
+                        ${createPlaceholderItem(unitName, 'practice-quiz', unitReference).outerHTML}
                     </ul>
                     <!-- Action buttons will be added dynamically by loadDocuments() -->
                     <!-- Expected order: Documents → Placeholders → Cleanup → Action Buttons -->
@@ -591,9 +658,12 @@ function createUnitElement(unitName, unitData, isExpanded = false, canDelete = t
                             <option value="15">15</option>
                             <option value="20">20</option>
                         </select>
-                        <label class="flashcard-chemistry-toggle" for="flashcard-chemistry-${unitId}" title="Ask for chemical formulas as typeset math and molecules as drawn 2D structures. Turn this off for units without chemistry.">
+                        <!-- The tooltip sits on the text, not the <label>: Safari and
+                             VoiceOver read a title on the label instead of the
+                             label's text, so every unit's checkbox sounded the same. -->
+                        <label class="flashcard-chemistry-toggle" for="flashcard-chemistry-${unitId}">
                             <input type="checkbox" id="flashcard-chemistry-${unitId}" checked>
-                            <span>Chemistry notation${ctx()}</span>
+                            <span title="Ask for chemical formulas as typeset math and molecules as drawn 2D structures. Turn this off for units without chemistry.">Chemistry notation${ctx()}</span>
                         </label>
                         <button type="button" class="flashcard-generate-btn" id="flashcard-generate-${unitId}" onclick="generateFlashcardDraft('${unitName}', this)">
                             <span aria-hidden="true">${Icons.wand}</span> Generate Draft${ctx()}
@@ -664,6 +734,7 @@ function loadExistingUnitData(onboardingData) {
                 unit.learningObjectives.forEach(objective => {
                     objectivesList.appendChild(createObjectiveItem(objective));
                 });
+                if (typeof refreshObjectiveNames === 'function') refreshObjectiveNames(objectivesList);
             } else {
                 console.error(`Could not find objectives list element with ID: objectives-list-${unitId}`);
             }
@@ -862,7 +933,7 @@ function addActionButtonsIfMissing(container, unitName) {
         const addContentSection = document.createElement('div');
         addContentSection.className = 'add-content-section';
         const unitId = unitName.toLowerCase().replace(/\s+/g, '-');
-        const ctx = unitContext(getUnitLabel(unitName), ' to ');
+        const ctx = unitContext(getUnitReference(unitName), ' to ');
         addContentSection.innerHTML = `
             <button type="button" class="add-content-btn lecture-notes" id="add-lecture-notes-${unitId}" onclick="openUploadModal('${unitName}', 'lecture-notes')">
                 <span class="btn-icon">${Icons.plus}</span>
@@ -986,10 +1057,17 @@ async function saveUnitDisplayName(unitName) {
         if (folderName) {
             folderName.textContent = formattedName;
         }
-        // The unit's title is also part of the (visually hidden) name of every
-        // control in the unit; keep those in step with what is now on screen.
+        // The unit's reference is also part of the (visually hidden) name of
+        // every control in the unit, and of the unit's own control when its
+        // title could be shared; keep those in step with what is now on screen.
+        const unitReference = formatUnitReference(unitName, displayName, showUnitNumber, unitPosition);
+        accordionItem.dataset.unitReference = unitReference;
+        const positionHint = accordionItem.querySelector('.unit-position-ref');
+        if (positionHint) {
+            positionHint.textContent = unitReference.slice(formattedName.length);
+        }
         accordionItem.querySelectorAll('.unit-name-ref').forEach(reference => {
-            reference.textContent = formattedName;
+            reference.textContent = unitReference;
         });
 
         // Remember this as the last-saved state so a future Cancel restores to it

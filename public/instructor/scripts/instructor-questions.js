@@ -975,7 +975,7 @@ function updateQuestionsDisplay(week) {
     // buttons, so each button's (visually hidden) name says which question and
     // which unit it belongs to.
     questionsContainer.removeAttribute('role');
-    const unitLabel = typeof getUnitLabel === 'function' ? getUnitLabel(week) : week;
+    const unitLabel = typeof getUnitReference === 'function' ? getUnitReference(week) : week;
     const context = typeof unitContext === 'function' ? unitContext(escapeHTML(unitLabel), ', ') : '';
 
     let html = '';

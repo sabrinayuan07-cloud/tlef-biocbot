@@ -67,7 +67,7 @@ async function loadFlashcardDecks() {
  * @returns {string} HTML for the hidden span
  */
 function flashcardContext(unitName, lead) {
-    const label = typeof getUnitLabel === 'function' ? getUnitLabel(unitName) : unitName;
+    const label = typeof getUnitReference === 'function' ? getUnitReference(unitName) : unitName;
     return typeof unitContext === 'function'
         ? unitContext(flashcardEscapeHtml(label), lead)
         : `<span class="visually-hidden"> for ${flashcardEscapeHtml(label)}</span>`;

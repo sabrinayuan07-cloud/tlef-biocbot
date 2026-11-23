@@ -92,6 +92,9 @@ async function loadDocuments() {
                         // ALWAYS add the "Add Additional Material" button LAST
                         // This ensures it stays at the bottom, regardless of whether there are documents
                         addActionButtonsIfMissing(courseMaterialsSection, lectureName);
+
+                        // A file name can repeat: number the copies and name the unit.
+                        refreshMaterialNames(getMaterialsList(courseMaterialsSection));
                     } else {
                         console.error('Course materials section not found for', lectureName);
                     }
@@ -373,7 +376,10 @@ async function deleteDocument(documentId) {
             // Get the document type before removing it
             deletedDocumentType = documentItem.dataset.documentType;
             console.log(`🗑️ [DELETE] Removing document with type: "${deletedDocumentType}"`);
+            const materialsList = documentItem.closest('.materials-list');
             documentItem.remove();
+            // The remaining copies of a repeated file name are renumbered.
+            refreshMaterialNames(materialsList);
         }
         
         // Immediately check and add placeholder for the deleted material type

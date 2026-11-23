@@ -19,88 +19,16 @@ const {
     seedCourse, seedDocumentAndAttach, cleanupCourses, getUserIdByUsername,
 } = require('../e2e/helpers/courses-test');
 const toolkit = require('./toolkit');
+const fixture = require('./helpers/course-upload-fixture');
+
+const { unitToggle } = fixture;
 
 const COURSE_ID = 'BIOC-A11Y-724';
 const EVIDENCE_DIR = path.resolve(__dirname, '../../a11y-results/issue-724', process.env.A11Y_EVIDENCE_RUN || 'current');
 const SYMBOL = /[×←-⇿■-◿☀-➿]|^\+$/u;
 
-/** @param {number} n */
-const card = (n, unit) => ({
-    cardId: `fc-${unit}-${n}`,
-    front: `Question ${n} for ${unit}`,
-    back: `Answer ${n} for ${unit}`,
-    source: { documentId: 'doc1', fileName: 'Lecture.pdf', chunkIndex: n },
-});
-
-const draftDeck = (unit) => ({
-    deckId: `deck-${unit.replace(/\s+/g, '-')}`, courseId: COURSE_ID, lectureName: unit, title: `${unit} Flashcards`,
-    hasDraft: true, isPublished: false, isStale: false, publishedVersion: 0,
-    draftCards: [card(1, unit), card(2, unit), card(3, unit)], publishedCards: [],
-});
-
-const publishedDeck = (unit) => ({
-    deckId: `deck-${unit.replace(/\s+/g, '-')}`, courseId: COURSE_ID, lectureName: unit, title: `${unit} Flashcards`,
-    hasDraft: false, isPublished: true, isStale: false, publishedVersion: 1,
-    draftCards: [], publishedCards: [card(1, unit), card(2, unit)],
-});
-
-/**
- * The LMS launchers only appear when a deployment has Canvas/Moodle configured,
- * and flashcard decks need generated content, so both are answered from here.
- * Everything else (units, objectives, documents, publish, reorder) is the real
- * application against a seeded course.
- * @param {import('@playwright/test').Page} page
- */
-async function mockIntegrations(page) {
-    const json = (body, status = 200) => ({ status, contentType: 'application/json', body: JSON.stringify(body) });
-    await page.route('**/api/lms/configuration', (route) => route.fulfill(json({
-        success: true,
-        data: { providers: { canvas: { enabled: true, environment: 'present' }, moodle: { enabled: true, environment: 'present' } } },
-    })));
-    await page.route('**/api/lms/*/status', (route) => route.fulfill(json({ success: false, connected: false }, 401)));
-    await page.route('**/api/lms/moodle/info', (route) => route.fulfill(json({
-        success: true,
-        data: {
-            tokenUrl: 'https://moodle.example.test/user/managetoken.php',
-            manageTokensUrl: 'https://moodle.example.test/admin/webservice/tokens.php',
-        },
-    })));
-
-    const decks = [draftDeck('Unit 1'), draftDeck('Unit 2'), publishedDeck('Unit 3')];
-    await page.route('**/api/flashcards/instructor?**', (route) => route.fulfill(json({ success: true, data: { units: [], decks } })));
-    await page.route('**/api/flashcards/instructor/generate', (route) => route.fulfill(json({
-        success: true, message: 'Flashcard draft generated.', data: draftDeck('Unit 1'),
-    })));
-    await page.route('**/api/flashcards/instructor/deck-*', async (route) => {
-        const body = route.request().postDataJSON() || {};
-        const unit = decodeURIComponent(route.request().url().split('/deck-')[1].split('/')[0]).replace(/-/g, ' ');
-        route.fulfill(json({ success: true, data: { ...draftDeck(unit), draftCards: body.cards || draftDeck(unit).draftCards } }));
-    });
-}
-
-/** @param {import('@playwright/test').Page} page */
-async function openCourseUpload(page) {
-    await mockIntegrations(page);
-    await page.goto(`/instructor/documents?courseId=${COURSE_ID}`);
-    await expect(page.locator('.accordion-item')).toHaveCount(3, { timeout: 20_000 });
-    await expect(page.locator('.flashcard-editor-row')).toHaveCount(8, { timeout: 20_000 });
-    await expect(page.locator('.lms-import-chip:visible')).toHaveCount(2);
-    await expect(page.locator('.add-content-section')).toHaveCount(3);
-    // Expand every unit through its own disclosure control, as a user would.
-    for (let guard = 0; guard < 6; guard += 1) {
-        const collapsed = page.locator('.accordion-item').filter({ has: page.locator('.accordion-content.collapsed') });
-        if ((await collapsed.count()) === 0) break;
-        await unitToggle(collapsed.first()).click();
-    }
-    await expect(page.locator('.accordion-content.collapsed')).toHaveCount(0);
-    // Let the page's own staggered loaders (documents, thresholds, decks) finish.
-    await page.waitForTimeout(700);
-}
-
-/** The control that expands/collapses a unit, whatever element it is. */
-function unitToggle(unit) {
-    return unit.locator('[aria-expanded]').first();
-}
+/** Open the seeded course's Course Upload page with every unit expanded. */
+const openCourseUpload = (page) => fixture.openCourseUpload(page, COURSE_ID);
 
 /** @param {import('@playwright/test').Page} page @param {'canvas'|'moodle'} provider */
 async function openLmsDialog(page, provider) {
@@ -185,34 +113,7 @@ test.describe('Issue 724: Course Upload page', () => {
     // Re-seeded before every test: several tests reorder, publish, or edit, and
     // each finding should be checked against the same starting course.
     test.beforeEach(async () => {
-        const instructorId = await getUserIdByUsername(TEST_USERS.instructor.username);
-        const now = new Date();
-        const unit = (n, displayName, objectives) => ({
-            name: `Unit ${n}`, displayName, isPublished: false, learningObjectives: objectives, passThreshold: 1,
-            createdAt: now, updatedAt: now, documents: [],
-            assessmentQuestions: [{
-                questionId: `q-${n}-1`, questionType: 'true-false', question: `Statement ${n} is true.`,
-                correctAnswer: 'true', options: {},
-            }],
-        });
-        await seedCourse({
-            courseId: COURSE_ID, instructorId, courseName: 'A11y 724 Course',
-            lectures: [
-                unit(1, 'Cell Structure', ['Describe the cell membrane', 'Name the organelles', 'Explain osmosis']),
-                unit(2, 'Enzymes', ['Define activation energy', 'Describe enzyme inhibition']),
-                unit(3, 'Metabolism', ['Outline glycolysis', 'Outline the citric acid cycle']),
-            ],
-        });
-        for (const n of [1, 2]) {
-            await seedDocumentAndAttach({
-                documentId: `a11y724-doc-${n}-a`, courseId: COURSE_ID, lectureName: `Unit ${n}`, instructorId,
-                filename: `unit-${n}-lecture.txt`,
-            });
-            await seedDocumentAndAttach({
-                documentId: `a11y724-doc-${n}-b`, courseId: COURSE_ID, lectureName: `Unit ${n}`, instructorId,
-                filename: `unit-${n}-tutorial.txt`,
-            });
-        }
+        await fixture.seedCourseUploadCourse(COURSE_ID);
     });
 
     test.afterAll(async () => {
