@@ -33,7 +33,16 @@ function togglePublish(lectureName, isPublished) {
             targetAccordion.classList.remove('published');
             showNotification(`${unitLabel} is now unpublished and hidden from students`, 'info');
         }
-        
+
+        // Transient flash to confirm the toggle took effect, instead of the
+        // permanent outline that used to stay lit around the unit indefinitely (#662)
+        targetAccordion.classList.remove('just-published');
+        void targetAccordion.offsetWidth; // restart the animation on rapid re-toggles
+        targetAccordion.classList.add('just-published');
+        setTimeout(() => {
+            targetAccordion.classList.remove('just-published');
+        }, 1500);
+
         // In a real implementation, this would make an API call to update the publish status
         updatePublishStatus(lectureName, isPublished);
     }
