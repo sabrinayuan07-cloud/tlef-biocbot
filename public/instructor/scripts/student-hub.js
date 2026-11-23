@@ -1537,10 +1537,11 @@ window.saveEnrollment = async function(courseId, studentId) {
             body: JSON.stringify({ enrolled: value })
         });
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
-        showNotification(`Enrollment ${value ? 'enabled' : 'disabled'} for ${studentId}`, 'success');
         // Update the cached original so a later toggle's dirty-check compares
         // against the value that's now actually persisted, not the pre-save one.
         const original = currentStudents.find(s => s.userId === studentId);
+        const studentLabel = (original && (original.displayName || original.username)) || studentId;
+        showNotification(`Enrollment ${value ? 'enabled' : 'disabled'} for ${studentLabel}`, 'success');
         if (original) original.enrolled = value;
         dirtyEnrollment.delete(studentId);
         const btn = document.getElementById(`save-${studentId}`);
