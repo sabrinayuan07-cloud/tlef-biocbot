@@ -776,11 +776,15 @@
 }
 
 .mode-bar-fill.tutor {
-  background-color: #4a90e2;
+  /* Reuse the design system's primary blue instead of an off-palette
+     saturated blue (#4a90e2) that didn't match the rest of the UI (#656) */
+  background-color: var(--primary-color, #4a6fa5);
 }
 
 .mode-bar-fill.protege {
-  background-color: #50c878;
+  /* Reuse the design system's success green instead of an off-palette
+     saturated green (#50c878) that didn't match the rest of the UI (#656) */
+  background-color: var(--success-color, #28a745);
 }
 
 .mode-count {

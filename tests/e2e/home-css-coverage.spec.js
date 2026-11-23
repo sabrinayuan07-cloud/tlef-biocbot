@@ -438,8 +438,8 @@ test.describe('home.css harness coverage', () => {
         await expect(page.locator('.stat-card').first()).toHaveCSS('text-align', 'center');
         await page.locator('.stat-card').first().hover();
         expect(await page.locator('.stat-card').first().evaluate((el) => getComputedStyle(el).transform)).not.toBe('none');
-        await expect(page.locator('.mode-bar-fill.tutor')).toHaveCSS('background-color', 'rgb(74, 144, 226)');
-        await expect(page.locator('.mode-bar-fill.protege')).toHaveCSS('background-color', 'rgb(80, 200, 120)');
+        await expect(page.locator('.mode-bar-fill.tutor')).toHaveCSS('background-color', 'rgb(74, 111, 165)');
+        await expect(page.locator('.mode-bar-fill.protege')).toHaveCSS('background-color', 'rgb(40, 167, 69)');
     });
 
     test('styles generated topic, table, tooltip, modal, and empty variants', async ({ page }) => {
