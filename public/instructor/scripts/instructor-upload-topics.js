@@ -707,9 +707,9 @@ function buildDocumentActionButtons(documentId, documentTitle = '') {
     // Each button's name ends with the document's title, as visually hidden
     // text ("View lecture-3.pdf"), so a list of documents is not a list of
     // indistinguishable "View, Download, Delete" controls.
-    const hiddenTitle = documentTitle
-        ? `<span class="visually-hidden"> ${escapeHTML(documentTitle)}</span>`
-        : '';
+    // refreshMaterialNames() (instructor-units.js) completes this once the item
+    // is in its list: a copy number when the title repeats there, and the unit.
+    const hiddenTitle = `<span class="visually-hidden material-context">${documentTitle ? ` ${escapeHTML(documentTitle)}` : ''}</span>`;
     return `
         <button type="button" class="action-button view" id="doc-view-${documentId}" onclick="viewDocument('${documentId}')">View${hiddenTitle}</button>
         <button type="button" class="action-button download" id="doc-download-${documentId}" onclick="downloadDocument('${documentId}')">Download${hiddenTitle}</button>
@@ -843,4 +843,7 @@ function addContentToWeek(week, fileName, description, documentId, status = 'upl
         // to the end of the list keeps the item in the right place.
         getMaterialsList(courseMaterialsContent).appendChild(fileItem);
     }
+
+    // A file name can repeat: number the copies and name the unit.
+    if (typeof refreshMaterialNames === 'function') refreshMaterialNames(getMaterialsList(courseMaterialsContent));
 }
