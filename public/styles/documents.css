@@ -2300,11 +2300,19 @@ fieldset.radio-group-fieldset {
     cursor: pointer;
     font-size: 12px;
     margin-left: 8px;
-    transition: background-color 0.2s var(--bb-ease-reveal);
+    transition: background-color 0.2s var(--bb-ease-reveal), color 0.15s var(--bb-ease-reveal), transform 0.15s var(--bb-ease-reveal);
 }
 
 .delete-unit-btn:hover {
     background: #c82333;
+}
+
+/* The trash icon button sets its own inline color (red when enabled, gray
+   when disabled), which beats this rule's specificity for `color` unless
+   marked important. Only the enabled state should react to hover (#663). */
+.delete-unit-btn:not(:disabled):hover {
+    color: #a52834 !important;
+    transform: scale(1.15);
 }
 
 .delete-unit-btn .btn-icon {
