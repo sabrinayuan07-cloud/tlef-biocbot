@@ -49,6 +49,8 @@ const studentPseudonymRoutes = require('./routes/studentPseudonyms');
 const topicDashboardTimeRoutes = require('./routes/topicDashboardTime');
 const previewRoutes = require('./routes/preview');
 const vendorRoutes = require('./routes/vendor');
+const { createEventReportRoute } = require('./routes/events');
+const { getEvents } = require('./services/events');
 const { createHealthRouter } = require('./routes/health');
 const { createCanvasLmsRouter } = require('./routes/canvasLms');
 const { createLmsGradesRouter } = require('./routes/lmsGrades');
@@ -702,6 +704,13 @@ function setupAPIRoutes() {
     app.use('/api/quiz', authMiddleware.requireAuth, authMiddleware.populateUser, authMiddleware.requireActiveCourseForNonInstructors, authMiddleware.requireStudentEnrolled, quizRoutes);
     app.use('/api/flashcards', authMiddleware.requireAuth, authMiddleware.populateUser, authMiddleware.requireActiveCourseForNonInstructors, authMiddleware.requireStudentEnrolled, flashcardRoutes);
     app.use('/api/mental-health-flags', authMiddleware.requireAuth, authMiddleware.populateUser, authMiddleware.requireActiveCourseForNonInstructors, mentalHealthFlagsRoutes);
+
+    // Events the student page reports (a mode switch), behind student chat's
+    // guards. BiocBot's one publisher is made here, at startup.
+    console.log(getEvents()
+        ? '📣 Events are on (pub/sub toolkit installed)'
+        : 'ℹ️ Events are off: the pub/sub toolkit is not installed');
+    app.post('/api/events/:courseId', createEventReportRoute(authMiddleware));
 
     // Preview control plane. Deliberately mounted without a role gate: calls
     // arrive from a tab that is already wearing the sandboxed student identity,

@@ -10,6 +10,8 @@ const StruggleActivity = require('./StruggleActivity');
 const PersistenceTopic = require('./PersistenceTopic');
 const { applyAccessState, normalizeEmail } = require('../services/authorization');
 const { createId } = require('../services/id');
+const { publishEvent } = require('../services/events');
+const { isPreviewUserId } = require('../services/previewSession');
 
 /**
  * User Schema Structure:
@@ -782,6 +784,8 @@ async function updateUserStruggleState(db, userId, struggleData, courseId = null
         });
 
         console.log(`💾 [DB] Persisted Active state for ${user.userId}`);
+
+        publishStruggleChange('struggle.topic.activated', user, activeCourseId, normalizedTopic);
     }
 
     // Persist changes. struggleState is encrypted as one value, so it is written
@@ -868,8 +872,34 @@ async function resetUserStruggleState(db, userId, topic, courseId = null) {
             });
             
             console.log(`💾 [DB] Persisted Inactive state for ${user.userId}`);
+
+            publishStruggleChange('struggle.topic.cleared', user, activeCourseId, topicObj.topic);
         }
     }
 
     return { success: true };
+}
+
+/**
+ * Announce a struggle change, next to the struggleActivity row that records it
+ * (the pub/sub toolkit's rung 3). One event per row: an `Active` row is
+ * struggle.topic.activated, and each `Inactive` row a reset writes is
+ * struggle.topic.cleared. Both are sensitive, so a listener on everything
+ * doesn't get them unless it asks. Super Chat's own per-message rows
+ * (routes/studentSuperCourse.js) don't publish.
+ *
+ * It never throws, so the row and the rest of the update are as before.
+ *
+ * @param {string} type - struggle.topic.activated or struggle.topic.cleared
+ * @param {Object} user - The user document (its pseudonymous userId only)
+ * @param {string|null} courseId - The course the row names, if any
+ * @param {string} topic - The topic the row names
+ */
+function publishStruggleChange(type, user, courseId, topic) {
+    publishEvent(type, {
+        user: user.userId,
+        ...(courseId ? { course: courseId } : {}),
+        preview: user.isPreview === true || isPreviewUserId(user.userId),
+        data: { topic }
+    });
 }
