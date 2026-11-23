@@ -22,6 +22,7 @@
     "test": "playwright test",
     "test:e2e": "playwright test",
     "test:a11y": "playwright test --config=playwright.a11y.config.js",
+    "test:a11y:audit": "cross-env A11Y_AUDIT=1 playwright test --config=playwright.a11y.config.js --reporter=list tests/a11y/audit-",
     "test:unit": "jest",
     "test:unit:watch": "jest --watch",
     "test:unit:coverage": "jest --coverage",

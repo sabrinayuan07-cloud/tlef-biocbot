@@ -201,6 +201,27 @@ Run one route/test by title:
 npx playwright test --config=playwright.a11y.config.js -g "/student/quiz"
 ```
 
+### Page audits (not part of `npm run test:a11y` or CI)
+
+The `audit-*.a11y.spec.js` files audit the pages other than Course Upload. Each
+one drives a page through its states (loaded, empty, dialogs open, after an
+action), runs the toolkit rules and axe-core in every state, and checks focus
+after activation, disclosure state, status messages and dialog behaviour. They
+record what they find and never fail on a finding. A state they could not reach
+is recorded as `notCovered` rather than skipped silently.
+
+They take about 13 minutes, so the default run leaves them out. Run them with:
+
+```sh
+npm run test:a11y:audit
+```
+
+Output goes to `a11y-results/other-pages/` (gitignored): `raw/<page>.json` per
+page and a screenshot of every state in `screens/`. The specs seed their own
+data under the `BIOC-A11Y-AUD` / `a11y_aud` prefix and remove it afterwards. Run
+them against a local or CI database, not a shared one: they briefly make the test
+instructor a system admin and change Super Chat settings, then put both back.
+
 ## Spec Pattern
 
 Use existing storage states from global setup. Do not add new login code.
