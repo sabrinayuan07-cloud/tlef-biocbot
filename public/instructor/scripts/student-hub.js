@@ -6,6 +6,8 @@
 let instructorCourses = [];
 let currentStudents = [];
 let topicDashboardTimeByUserId = {}; // userId -> cumulative ms spent on the Topic Dashboard
+let outstandingFlagCountByStudentId = {}; // studentId -> count of pending/reviewed flags (#691)
+let studentSortOrder = 'alphabetical'; // 'alphabetical' | 'needs-attention' (#691)
 let currentTAs = []; // Store TAs for the current course
 let anonymizeStudentsEnabled = false;
 let currentSurveyCourseId = null;
@@ -250,6 +252,16 @@ function downloadPseudonymMapping() {
 function initializeStudentHub() {
     // Course selection is now handled by the home page
     // No need for dropdown change handler
+    const sortOrderSelect = document.getElementById('student-sort-order');
+    if (sortOrderSelect) {
+        addKeyboardPickerActivation(sortOrderSelect);
+        sortOrderSelect.addEventListener('change', () => {
+            studentSortOrder = sortOrderSelect.value;
+            const courseId = document.getElementById('student-course-select')?.value;
+            if (courseId) renderStudents(courseId);
+        });
+    }
+
     const surveyStatusFilter = document.getElementById('survey-status-filter');
     if (surveyStatusFilter) {
         addKeyboardPickerActivation(surveyStatusFilter);
@@ -465,6 +477,23 @@ async function loadStudents(courseId) {
         } catch (timeErr) {
             console.error('Error loading topic dashboard time:', timeErr);
             topicDashboardTimeByUserId = {};
+        }
+
+        // 5. Fetch outstanding (pending/reviewed) flag counts per student, for the
+        // "needs attention" sort (#691)
+        try {
+            const flagsResponse = await authenticatedFetch(`/api/flags/course/${courseId}`);
+            const flagsResult = flagsResponse.ok ? await flagsResponse.json() : null;
+            const flags = flagsResult?.data?.flags || [];
+            outstandingFlagCountByStudentId = {};
+            flags.forEach(flag => {
+                if (flag.flagStatus !== 'pending' && flag.flagStatus !== 'reviewed') return;
+                if (!flag.studentId) return;
+                outstandingFlagCountByStudentId[flag.studentId] = (outstandingFlagCountByStudentId[flag.studentId] || 0) + 1;
+            });
+        } catch (flagsErr) {
+            console.error('Error loading flag counts:', flagsErr);
+            outstandingFlagCountByStudentId = {};
         }
 
         renderStudents(courseId);
@@ -1349,6 +1378,31 @@ async function loadAnonymizeStudentsSetting(courseId) {
     }
 }
 
+function hasActiveStruggle(student) {
+    return !!student.struggleState?.topics?.some(t => t.isActive);
+}
+
+function needsAttention(student) {
+    return hasActiveStruggle(student) || (outstandingFlagCountByStudentId[student.userId] || 0) > 0;
+}
+
+// Keeps the TA block first (unchanged), and within the student portion, when
+// "needs attention" is selected, surfaces students with an active struggle
+// topic and/or an outstanding flag ahead of everyone else.
+function sortedStudentsForRender() {
+    if (studentSortOrder !== 'needs-attention') return currentStudents;
+
+    const tas = currentStudents.filter(s => s.isTA);
+    const students = currentStudents.filter(s => !s.isTA);
+    const score = s => (hasActiveStruggle(s) ? 2 : 0) + ((outstandingFlagCountByStudentId[s.userId] || 0) > 0 ? 1 : 0);
+    const nameOf = s => (s.displayName || s.username || s.userId || '').toLowerCase();
+    // Explicit alphabetical tiebreaker so that when nobody (or everybody)
+    // needs attention, the list still reads A-Z instead of relying on
+    // whatever order the API happened to return.
+    const sortedStudents = [...students].sort((a, b) => score(b) - score(a) || nameOf(a).localeCompare(nameOf(b)));
+    return [...tas, ...sortedStudents];
+}
+
 function renderStudents(courseId) {
     const container = document.getElementById('students-container');
     if (!container) return;
@@ -1358,7 +1412,7 @@ function renderStudents(courseId) {
         return;
     }
 
-    container.innerHTML = currentStudents.map(s => {
+    container.innerHTML = sortedStudentsForRender().map(s => {
         const enrolled = dirtyEnrollment.has(s.userId) ? dirtyEnrollment.get(s.userId) : !!s.enrolled;
         const isTA = !!s.isTA;
         const hasPendingTAInvite = !isTA && s.role === 'ta' && Array.isArray(s.invitedCourses) && s.invitedCourses.includes(courseId);
@@ -1386,6 +1440,7 @@ function renderStudents(courseId) {
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <h3 class="student-name">${escapeHTML(s.displayName || s.username || s.userId)}</h3>
                         ${isTA ? '<span class="badge badge-info" style="background: #117a8b; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8em;">TA</span>' : ''}
+                        ${!isTA && needsAttention(s) ? '<span class="badge badge-warning" style="background: #dc3545; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8em;">Needs attention</span>' : ''}
                     </div>
                 </div>
                 <div class="student-info">
