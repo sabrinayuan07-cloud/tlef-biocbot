@@ -5,8 +5,9 @@
  * isn't installed that file 404s, UbcPubsub is undefined, and the page works as
  * before: nothing is published or reported.
  *
- * A mode switch is reported to POST /api/events/:courseId with only its type
- * and data. The server decides who and where (src/routes/events.js). Reports
+ * A mode switch is reported to POST /api/events/:courseId with only its type,
+ * its data and the page's address up to its path (the reporter cuts off any
+ * query string). The server decides who and where (src/routes/events.js). Reports
  * go through the page's own fetch, so a "View as Student" tab's preview header
  * goes with them and the server marks the event as a preview.
  *

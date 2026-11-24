@@ -139,6 +139,7 @@ describeWithToolkit('struggle events', () => {
             version: 1,
             app: 'biocbot',
             origin: 'server',
+            source: { server: eventsService.serverName() },
             user: STUDENT_ID,
             course: 'C1',
             preview: false,

@@ -15,9 +15,37 @@
  * otherwise works as before.
  */
 
+const os = require('os');
+
 const CORE_PACKAGE = '@ubc/genai-toolkit-pubsub-core';
 const EVENTS_PACKAGE = '@ubc/genai-toolkit-pubsub-events';
 const SERVER_PACKAGE = '@ubc/genai-toolkit-pubsub-server';
+
+// The toolkit takes a server name of 128 characters at most.
+const MAX_SERVER_NAME = 128;
+const LOCAL_SERVER_NAME = 'biocbot-local';
+
+/**
+ * This application server's name. Every event it publishes carries it as
+ * `source.server`, so events from several servers can be told apart.
+ *
+ * BIOCBOT_SERVER_NAME sets it (.env-example). Without it, a production server
+ * uses its host name up to the first dot, and anywhere else it is
+ * `biocbot-local`, because a laptop's host name is often its owner's name.
+ *
+ * @param {NodeJS.ProcessEnv} [env]
+ * @param {() => string} [hostname]
+ * @returns {string} 1 to 128 characters
+ */
+function serverName(env = process.env, hostname = os.hostname) {
+    const configured = String(env.BIOCBOT_SERVER_NAME || '').trim();
+    if (configured) return configured.slice(0, MAX_SERVER_NAME).trim();
+    if (env.NODE_ENV === 'production') {
+        const host = String(hostname() || '').split('.')[0].trim();
+        if (host) return host.slice(0, MAX_SERVER_NAME);
+    }
+    return LOCAL_SERVER_NAME;
+}
 
 /**
  * Tutor and protégé, in BiocBot's own words (the guided tour and the protégé
@@ -144,7 +172,7 @@ function getEvents() {
         bus.subscribe('bus.failed', failed => {
             console.error(`⚠️ [EVENTS] A listener on ${failed.pattern} failed for ${failed.eventType} (${failed.failure && failed.failure.code})`);
         });
-        events = loaded.events.createEvents({ bus, dictionary });
+        events = loaded.events.createEvents({ bus, dictionary, server: serverName() });
     }
     return events;
 }
@@ -204,10 +232,13 @@ function subscribeAll(listener, options) {
 
 /**
  * The handler for POST /api/events/:courseId, after src/routes/events.js's
- * guards. The page sends a type, data and a session hint. Who and where come
- * from what the server has checked: the signed-in user's pseudonymous id, the
- * course in the path (which the enrollment guard checked), and whether this is
- * a "View as Student" preview. The page's session hint isn't kept.
+ * guards. The page sends a type, data, and its address up to its path. Who and
+ * where come from what the server has checked: the signed-in user's
+ * pseudonymous id, the course in the path (which the enrollment guard
+ * checked), and whether this is a "View as Student" preview. A session hint
+ * isn't kept. The toolkit adds `source`: this server's name, the browser from
+ * the User-Agent header shortened (such as "Chrome 131 on macOS"), and the
+ * page, which are context, never identity.
  *
  * @returns {(req: object, res: object) => void}
  */
@@ -233,6 +264,7 @@ module.exports = {
     MODES,
     EVENT_DEFINITIONS,
     REPORTABLE_TYPES,
+    serverName,
     loadToolkit,
     getEvents,
     publishEvent,

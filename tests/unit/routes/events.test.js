@@ -84,6 +84,8 @@ describeWithToolkit('POST /api/events/:courseId', () => {
         });
         expect(Number.isNaN(Date.parse(event.at))).toBe(false);
         expect(event).not.toHaveProperty('session');
+        // This server's name. No browser or page: supertest sends neither.
+        expect(event.source).toEqual({ server: eventsService.serverName() });
         expect(event.meta).toEqual({
             label: 'switches chat mode',
             description: "The student moved BiocBot between tutor and protégé mode, with the mode toggle or through the assessment's result.",
@@ -111,6 +113,22 @@ describeWithToolkit('POST /api/events/:courseId', () => {
         });
     });
 
+    test('says which server took it, the browser shortened from its User-Agent, and the page without its query string', async () => {
+        const res = await request(reportApp())
+            .post('/api/events/C1')
+            .set('User-Agent', 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36')
+            .send({ ...SWITCH, page: 'https://biocbot.example/student?courseId=C1&preview=1#chat' });
+        await delivered();
+
+        expect(res.status).toBe(202);
+        expect(received).toHaveLength(1);
+        expect(received[0].source).toEqual({
+            server: eventsService.serverName(),
+            browser: 'Chrome 131 on macOS',
+            page: 'https://biocbot.example/student'
+        });
+    });
+
     test('puts no name, email or PUID on the event, only the pseudonymous id', async () => {
         await request(reportApp()).post('/api/events/C1').send(SWITCH);
         await delivered();
@@ -129,7 +147,8 @@ describeWithToolkit('POST /api/events/:courseId', () => {
         ['origin', 'server'],
         ['preview', true],
         ['meta', { label: 'forged' }],
-        ['version', 2]
+        ['version', 2],
+        ['source', { server: 'forged-server' }]
     ])('refuses a report that sets `%s`, and publishes nothing', async (field, value) => {
         const res = await request(reportApp()).post('/api/events/C1').send({ ...SWITCH, [field]: value });
         await delivered();

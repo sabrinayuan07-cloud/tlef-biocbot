@@ -219,12 +219,14 @@ describeWithToolkit('the mode toggle', () => {
         });
         await settled();
         expect(published).toHaveLength(1);
-        // Only the type and the data leave the page, through its own fetch.
+        // Only the type, the data and the page's address leave the page, through its own fetch.
         expect(reports()).toHaveLength(1);
         const [{ url, init }] = reports();
         expect(url).toBe('/api/events/C1');
         expect(init).toMatchObject({ method: 'POST', credentials: 'same-origin', keepalive: true });
-        expect(JSON.parse(init.body)).toEqual({ type: 'chat.mode.changed', data: { from: 'protege', to: 'tutor' } });
+        expect(JSON.parse(init.body)).toEqual({ type: 'chat.mode.changed', data: { from: 'protege', to: 'tutor' }, page: `${base}/student` });
+        // The server names itself. Node's fetch says no browser the toolkit knows.
+        expect(published[0].source).toEqual({ server: eventsService.serverName(), page: `${base}/student` });
         // The switch itself is as before.
         expect(labels['.tutor-label'].classList.contains('active')).toBe(true);
     });
@@ -273,6 +275,9 @@ describeWithToolkit('the mode toggle', () => {
             data: { from: 'tutor', to: 'protege' }
         });
         expect(new Headers(reports()[0].init.headers).get('X-Preview-Session')).toBe('1');
+        // The entry URL's query string (the preview flag, the course) never leaves the page.
+        expect(JSON.parse(reports()[0].init.body).page).toBe(`${base}/student`);
+        expect(published[0].source.page).toBe(`${base}/student`);
     });
 
     test('a report the server refuses comes back on the page\'s bus, and the switch still happens', async () => {

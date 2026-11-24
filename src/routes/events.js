@@ -3,10 +3,11 @@
  * bus (public/student/scripts/student-events.js), published on BiocBot's own
  * (src/services/events.js).
  *
- * The page sends only `{ type, data, session }`. The toolkit's handler refuses
- * anything else, refuses any type but chat.mode.changed, and takes who and
- * where from the server: the signed-in user, the course in the path once the
- * enrollment guard has checked it, and whether this is a preview tab.
+ * The page sends only `{ type, data, page }`, and may send `session`. The
+ * toolkit's handler refuses anything else, refuses any type but
+ * chat.mode.changed, and takes who and where from the server: the signed-in
+ * user, the course in the path once the enrollment guard has checked it, and
+ * whether this is a preview tab.
  */
 const eventsService = require('../services/events');
 

@@ -50,7 +50,7 @@ const topicDashboardTimeRoutes = require('./routes/topicDashboardTime');
 const previewRoutes = require('./routes/preview');
 const vendorRoutes = require('./routes/vendor');
 const { createEventReportRoute } = require('./routes/events');
-const { getEvents } = require('./services/events');
+const { getEvents, serverName } = require('./services/events');
 const { createHealthRouter } = require('./routes/health');
 const { createCanvasLmsRouter } = require('./routes/canvasLms');
 const { createLmsGradesRouter } = require('./routes/lmsGrades');
@@ -708,7 +708,7 @@ function setupAPIRoutes() {
     // Events the student page reports (a mode switch), behind student chat's
     // guards. BiocBot's one publisher is made here, at startup.
     console.log(getEvents()
-        ? '📣 Events are on (pub/sub toolkit installed)'
+        ? `📣 Events are on (pub/sub toolkit installed), from server "${serverName()}"`
         : 'ℹ️ Events are off: the pub/sub toolkit is not installed');
     app.post('/api/events/:courseId', createEventReportRoute(authMiddleware));
 
