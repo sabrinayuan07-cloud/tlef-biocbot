@@ -88,13 +88,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentController = null; // Controller for aborting in-flight requests
     let lastActiveStruggleTopic = null; // Track active struggle topic for the session
 
-    window.addEventListener('chat-session:rotating', () => {
+    // Stops a reply that is still coming in. handleNewSession() in
+    // student-session.js calls it before it clears the chat, so the old reply
+    // can't be drawn into the new session. A direct call, not an event: the
+    // page's events reach their listeners a moment after they are published,
+    // and this has to happen first.
+    window.stopInFlightChatReply = () => {
         if (currentController) {
             currentController.abort();
             currentController = null;
         }
         removeTypingIndicator();
-    });
+    };
 
     // Guard: Only allow students on this page; redirect others immediately
     const handleRoleGuard = (user) => {
@@ -117,7 +122,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (existingUser) {
             handleRoleGuard(existingUser);
         } else {
-            document.addEventListener('auth:ready', (e) => handleRoleGuard(e.detail));
+            BiocbotEvents.subscribe('auth.ready', () => handleRoleGuard(getCurrentUser()));
         }
     } catch (e) {
         // If anything goes wrong, rely on server-side protection
@@ -176,8 +181,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         await initializeAutoSaveWhenReady();
     } else {
-        // Wait for auth:ready event
-        document.addEventListener('auth:ready', initializeAutoSaveWhenReady);
+        // Wait for the auth.ready event
+        BiocbotEvents.subscribe('auth.ready', initializeAutoSaveWhenReady);
     }
 
     // Add beforeunload event to ensure auto-save data is preserved and synced
@@ -629,7 +634,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!summaryButton) return;
 
         summaryButton.addEventListener('click', handleChatSummaryContinue);
-        document.addEventListener('auth:ready', () => setTimeout(updateChatSummaryButtonState, 0));
+        BiocbotEvents.subscribe('auth.ready', () => setTimeout(updateChatSummaryButtonState, 0));
         updateChatSummaryButtonState();
         setTimeout(updateChatSummaryButtonState, 500);
         setTimeout(updateChatSummaryButtonState, 1500);

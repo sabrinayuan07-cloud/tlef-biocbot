@@ -352,6 +352,7 @@ async function openInstructorScriptHarness(page, options = {}) {
     <div class="user-avatar">I</div>
     <div class="user-role"></div>
     <script src="/common/scripts/notifications.js"></script>
+    <script src="/common/scripts/biocbot-events.js"></script>
     <script src="/common/scripts/auth.js"></script>
     <script src="/common/scripts/ui-utils.js"></script>
     <script src="/common/scripts/topic-review.js"></script>
@@ -1096,7 +1097,7 @@ test.describe('instructor publish, TA, course, and polling branches', () => {
             testWindow.getCurrentInstructorId = () => (authReady ? 'e2e_instructor_id' : null);
             setTimeout(() => {
                 authReady = true;
-                document.dispatchEvent(new CustomEvent('auth:ready'));
+                testWindow.BiocbotEvents.publish('auth.ready');
             }, 0);
             return instructorWindow.getCurrentCourseId();
         });
@@ -1114,7 +1115,7 @@ test.describe('instructor publish, TA, course, and polling branches', () => {
             localStorage.removeItem('selectedCourseId');
             testWindow.getCurrentUser = () => null;
             testWindow.getCurrentInstructorId = () => null;
-            setTimeout(() => document.dispatchEvent(new CustomEvent('auth:ready')), 0);
+            setTimeout(() => testWindow.BiocbotEvents.publish('auth.ready'), 0);
             return instructorWindow.getCurrentCourseId();
         });
 

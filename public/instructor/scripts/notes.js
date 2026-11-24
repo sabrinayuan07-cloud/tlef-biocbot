@@ -376,7 +376,7 @@ function waitForAuthReady() {
             resolve();
             return;
         }
-        document.addEventListener('auth:ready', () => resolve(), { once: true });
+        BiocbotEvents.subscribe('auth.ready', () => resolve(), { once: true });
         setTimeout(resolve, 5000);
     });
 }

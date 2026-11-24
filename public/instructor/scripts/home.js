@@ -53,7 +53,7 @@ function weeklyStruggleEndpoint(weeks) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Two racers can start the page: the auth:ready event and a 500ms fallback
+    // Two racers can start the page: the auth.ready event and a 500ms fallback
     // timer. When auth resolves in under 500ms — the common case — both fire, so
     // initializeHomePage() must guard against running twice. A second run
     // re-registers every listener and re-enters setSelectedCourse(), whose
@@ -80,20 +80,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Try initializing immediately if auth is already ready
     if (!tryInitialize()) {
-        // Wait for auth:ready event if auth hasn't loaded yet
-        // Use a one-time listener
-        const authReadyHandler = function() {
+        // Wait for the auth.ready event if auth hasn't loaded yet, and stop
+        // listening once the page has started
+        const stopWaitingForAuth = BiocbotEvents.subscribe('auth.ready', () => {
             if (tryInitialize()) {
-                document.removeEventListener('auth:ready', authReadyHandler);
+                stopWaitingForAuth();
             }
-        };
-        document.addEventListener('auth:ready', authReadyHandler);
+        });
 
         // Fallback: try initializing after a short delay if event doesn't fire
         initFallbackTimer = setTimeout(() => {
             initFallbackTimer = null;
             if (tryInitialize()) {
-                document.removeEventListener('auth:ready', authReadyHandler);
+                stopWaitingForAuth();
             }
         }, 500);
     }

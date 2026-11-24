@@ -944,7 +944,7 @@ test.describe('instructor.js focused browser coverage', () => {
             document.dispatchEvent(new Event('DOMContentLoaded'));
             await new Promise((resolve) => setTimeout(resolve, 50));
             testWindow.getCurrentUser = originalGetCurrentUser;
-            document.dispatchEvent(new Event('auth:ready'));
+            testWindow.BiocbotEvents.publish('auth.ready');
             await new Promise((resolve) => setTimeout(resolve, 50));
             await Promise.all(intervalCallbacks.map((callback) => Promise.resolve(callback())));
             document.dispatchEvent(new Event('visibilitychange'));

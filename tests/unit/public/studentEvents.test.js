@@ -4,7 +4,8 @@
  *
  * The page's own scripts run in a VM, loaded by URL in index.html's order
  * from a real server: the preview bootstrap, /vendor/pubsub.js (the toolkit's
- * file, from node_modules), student-events.js and student-calibration.js. The
+ * file, from node_modules), biocbot-events.js (the page's bus),
+ * student-events.js and student-calibration.js. The
  * DOM is a stand-in with just what the mode toggle touches. The page reports
  * to POST /api/events/:courseId on that server, with BiocBot's real guards,
  * and each test listens on BiocBot's publisher for what the server published.
@@ -29,6 +30,7 @@ const PUBLIC = path.join(__dirname, '../../../public');
 const PAGE_SCRIPTS = [
     '/common/scripts/preview-session.js',
     '/vendor/pubsub.js',
+    '/common/scripts/biocbot-events.js',
     '/student/scripts/student-events.js',
     '/student/scripts/student-calibration.js'
 ];
@@ -176,14 +178,15 @@ afterEach(async () => {
     await Promise.all(servers.splice(0).map(server => new Promise(resolve => server.close(resolve))));
 });
 
-test('index.html loads the toolkit\'s file and student-events.js after the preview bootstrap and before student-calibration.js', () => {
+test('index.html loads the toolkit\'s file, the page bus and student-events.js after the preview bootstrap and before student-calibration.js', () => {
     const html = fs.readFileSync(path.join(PUBLIC, 'student/index.html'), 'utf8');
     const sources = [...html.matchAll(/<script src="([^"]+)"/g)].map(match => match[1]);
-    const relevant = sources.filter(src => /preview-session|pubsub|student-events|student-calibration/.test(src));
+    const relevant = sources.filter(src => /preview-session|pubsub|biocbot-events|student-events|student-calibration/.test(src));
 
     expect(relevant).toEqual([
         '../common/scripts/preview-session.js',
         '../vendor/pubsub.js',
+        '../common/scripts/biocbot-events.js',
         './scripts/student-events.js',
         './scripts/student-calibration.js'
     ]);
@@ -369,19 +372,22 @@ describeWithToolkit('modes set without the student choosing', () => {
 });
 
 describe('without the toolkit\'s file', () => {
-    test('the toggle works as before and nothing is reported, when /vendor/pubsub.js does not load', async () => {
+    test('the toggle works as before and the switch is published on the page only, when /vendor/pubsub.js does not load', async () => {
         const base = await listen(serverApp());
         const scripts = PAGE_SCRIPTS.filter(src => src !== '/vendor/pubsub.js');
         const { page, switchTo, reports, labels } = await openPage(base, { scripts, local: { studentMode: 'tutor' } });
 
         expect(page.UbcPubsub).toBeUndefined();
+        expect(page.BiocbotEvents.usesToolkit).toBe(false);
+        const onThePage = [];
+        page.BiocbotEvents.subscribe('chat.mode.changed', event => onThePage.push(event.data));
         switchTo('protege');
         await settled();
 
         expect(page.localStorage.getItem('studentMode')).toBe('protege');
         expect(page.showModeToggleResult).toHaveBeenCalledWith('protege');
         expect(labels['.protege-label'].classList.contains('active')).toBe(true);
-        expect(page.StudentEvents.publishModeChange('tutor', 'protege')).toBe(false);
+        expect(onThePage).toEqual([{ from: 'tutor', to: 'protege' }]);
         expect(reports()).toEqual([]);
         expect(published).toEqual([]);
     });

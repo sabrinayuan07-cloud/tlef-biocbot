@@ -315,10 +315,11 @@ class AgreementModal {
                 // Agreement recorded successfully
                 this.hide();
                 
-                // Dispatch custom event to notify other components
-                document.dispatchEvent(new CustomEvent('userAgreementAccepted', {
-                    detail: { agreementVersion: result.data.agreementVersion }
-                }));
+                // Tell the page (biocbot-events.js), in the toolkit's general
+                // agreement.accepted event: the agreement and its version.
+                BiocbotEvents.publish('agreement.accepted', {
+                    agreement: 'user-agreement-' + result.data.agreementVersion
+                });
                 
                 console.log('User agreement recorded successfully');
             } else {

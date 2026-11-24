@@ -733,7 +733,7 @@ test.describe('Instructor home dashboard', () => {
         await expect(page.locator('#join-course-btn')).toBeEnabled();
 
         // This fill used to time out with "element is not visible": the home
-        // page initialized twice (auth:ready plus its 500ms fallback timer), and
+        // page initialized twice (auth.ready plus its 500ms fallback timer), and
         // the second init's setSelectedCourse() -> hideCourseSelector() closed
         // the whole course selector mid-test. public/instructor/scripts/home.js
         // now guards against the double init, so a plain fill is deterministic.

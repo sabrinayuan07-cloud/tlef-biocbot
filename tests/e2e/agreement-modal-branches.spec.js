@@ -164,6 +164,7 @@ test.describe('Agreement modal role copy variants', () => {
                     '<html>',
                     '<head><title>Agreement harness</title></head>',
                     '<body>',
+                    '<script src="/common/scripts/biocbot-events.js"></script>',
                     '<script src="/common/scripts/agreement-modal.js"></script>',
                     '</body>',
                     '</html>',

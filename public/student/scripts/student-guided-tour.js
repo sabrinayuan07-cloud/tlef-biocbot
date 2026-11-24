@@ -371,7 +371,7 @@
 
         // The existing agreement modal owns the legal-consent step. Begin the
         // product tour only after that modal has been completed.
-        document.addEventListener('userAgreementAccepted', renderStep, { once: true });
+        BiocbotEvents.subscribe('agreement.accepted', () => renderStep(), { once: true });
     }
 
     window.StudentGuidedTour = {
@@ -384,7 +384,7 @@
         if (currentUser) {
             start(currentUser);
         } else {
-            document.addEventListener('auth:ready', event => start(event.detail), { once: true });
+            BiocbotEvents.subscribe('auth.ready', () => start(getCurrentUser()), { once: true });
         }
     });
 })();
