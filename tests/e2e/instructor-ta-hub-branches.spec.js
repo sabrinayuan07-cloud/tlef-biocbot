@@ -211,7 +211,10 @@ test.describe('Instructor TA Hub branch coverage', () => {
         const card = page.locator('.ta-card', { hasText: taUser.displayName });
         await expect(card).toBeVisible({ timeout: 15_000 });
 
-        await card.getByRole('button', { name: 'Remove', exact: true }).click();
+        // The visually-hidden name suffix is an absolutely-positioned span,
+        // which Chromium's accessible-name computation separates from the
+        // preceding text with a space - match either spacing around the colon.
+        await card.getByRole('button', { name: new RegExp(`^Remove\\s*:\\s*${taUser.displayName}$`) }).click();
         const modal = page.locator('#remove-ta-modal');
         await expect(modal).toHaveClass(/show/);
         await expect(modal.locator('.modal-body')).toContainText(
@@ -223,7 +226,10 @@ test.describe('Instructor TA Hub branch coverage', () => {
         });
         await expect(modal).not.toHaveClass(/show/);
 
-        await card.getByRole('button', { name: 'Remove', exact: true }).click();
+        // The visually-hidden name suffix is an absolutely-positioned span,
+        // which Chromium's accessible-name computation separates from the
+        // preceding text with a space - match either spacing around the colon.
+        await card.getByRole('button', { name: new RegExp(`^Remove\\s*:\\s*${taUser.displayName}$`) }).click();
         await page.locator('#confirm-remove-ta').click();
 
         expect(deleteRequested).toBe(true);

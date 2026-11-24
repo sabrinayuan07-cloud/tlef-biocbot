@@ -310,7 +310,7 @@ test.describe('Student Hub UI', () => {
 
         await rerenderedCard.locator(`#save-${HUB_ACTIVE_STUDENT.userId}`).click();
         await expect(page.locator('.notification.success')).toContainText(
-            `Enrollment disabled for ${HUB_ACTIVE_STUDENT.userId}`,
+            `Enrollment disabled for ${HUB_ACTIVE_STUDENT.displayName}`,
             { timeout: 10_000 }
         );
 
