@@ -1280,11 +1280,15 @@ async function calculateStudentMode() {
         currentCalibrationQuestions.forEach((question, index) => {
             question.isCorrect = score.results[index].isCorrect;
         });
+        // Starting the assessment cleared the mode, so there is one here only
+        // if the student chose it since. The result changing it is reported.
+        const previousMode = localStorage.getItem('studentMode');
         // Store mode in localStorage
         localStorage.setItem('studentMode', mode);
         updateModeToggleUI(mode);
         showModeResult(mode, score);
         enableChatInput();
+        window.StudentEvents?.publishModeChange(previousMode, mode);
 
         // Capture the completed result after it is in the DOM, then await the
         // server write so instructors do not need a later student message.
@@ -1443,6 +1447,7 @@ function initializeModeToggle() {
     modeToggleCheckbox.addEventListener('change', function() {
 
         const newMode = this.checked ? 'tutor' : 'protege';
+        const previousMode = localStorage.getItem('studentMode');
 
 
         // Update localStorage
@@ -1457,6 +1462,9 @@ function initializeModeToggle() {
 
         // Show mode confirmation popup
         showModeToggleResult(newMode);
+
+        // Report the switch (student-events.js). Only when there was a mode to switch from.
+        window.StudentEvents?.publishModeChange(previousMode, newMode);
 
         // Autosave the mode toggle message immediately
         try {
