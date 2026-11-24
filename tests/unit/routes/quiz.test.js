@@ -13,6 +13,7 @@ jest.mock('../../../src/routes/llmKeyMiddleware', () => ({
 const { memoryDb } = require('../helpers/memory-db');
 const { makeRouteApp, request } = require('../helpers/route-app');
 const quizRouter = require('../../../src/routes/quiz');
+const activityEvents = require('../../../src/services/activityEvents');
 
 const student = { userId: 's1', role: 'student' };
 const app = (opts) => makeRouteApp(quizRouter, opts);
@@ -141,6 +142,23 @@ describe('POST /attempt', () => {
         expect(res.status).toBe(200);
         expect(res.body.attemptId).toMatch(/^qa_[0-9a-f-]{36}$/i);
         expect(await db.collection('quizAttempts').findOne({ studentId: 's1' })).toBeTruthy();
+    });
+
+    test('announces a saved answer as practice activity, and nothing for a refused one', async () => {
+        const announce = jest.spyOn(activityEvents, 'publishQuestionAnswered');
+        try {
+            const body = { courseId: 'C1', questionId: 'q1', lectureName: 'Unit 1', questionType: 'multiple-choice', studentAnswer: 'B' };
+            await request(app({ db: quizDb(), user: student })).post('/attempt').send({ ...body, correct: false });
+            await request(app({ db: quizDb() })).post('/attempt').send({ ...body, correct: true });
+            expect(announce).not.toHaveBeenCalled();
+
+            const res = await request(app({ db: quizDb(), user: student })).post('/attempt').send({ ...body, correct: true });
+            expect(res.status).toBe(200);
+            expect(announce).toHaveBeenCalledTimes(1);
+            expect(announce).toHaveBeenCalledWith(student, { courseId: 'C1', unit: 'Unit 1', correct: true });
+        } finally {
+            announce.mockRestore();
+        }
     });
 });
 

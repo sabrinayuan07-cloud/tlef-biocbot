@@ -44,6 +44,7 @@ const MessageFeedback = require('../../../src/models/MessageFeedback');
 const Survey = require('../../../src/models/ChatSurveyResponse');
 const { resolveCourseAi } = require('../../../src/routes/llmKeyMiddleware');
 const router = require('../../../src/routes/chat');
+const activityEvents = require('../../../src/services/activityEvents');
 
 const student = { userId: 's1', role: 'student', displayName: 'Student One' };
 const instructor = { userId: 'i1', role: 'instructor' };
@@ -292,6 +293,54 @@ describe('main chat pipeline', () => {
         const res = await request(app({ db: memoryDb({}) })).post('/').send({ message: 'this is shit', courseId: 'missing', unitName: 'none' });
         expect(res.status).toBe(200);
         expect(res.body).toMatchObject({ model: 'system', usage: { tokens: 0 }, debug: { profanityFiltered: true } });
+    });
+
+    describe('announcing the student\'s message (src/services/activityEvents.js)', () => {
+        let announce;
+        beforeEach(() => {
+            announce = jest.spyOn(activityEvents, 'announceChatMessage').mockResolvedValue({ started: false, sent: false });
+        });
+        afterEach(() => announce.mockRestore());
+
+        test('a message BiocBot answers is announced once, with its chat and unit', async () => {
+            const db = chatDb();
+            aiWith();
+            const res = await request(app({ db, user: student })).post('/').send({
+                message: 'Explain ATP', courseId: 'C1', unitName: 'Unit 1', conversationId: 'autosave_1764000000000_abc123def'
+            });
+            expect(res.status).toBe(200);
+            expect(announce).toHaveBeenCalledTimes(1);
+            expect(announce).toHaveBeenCalledWith(db, student, {
+                courseId: 'C1', sessionId: 'autosave_1764000000000_abc123def', unit: 'Unit 1'
+            });
+        });
+
+        test('the reply never waits on it', async () => {
+            announce.mockReturnValue(new Promise(() => {}));
+            aiWith();
+            const res = await request(app({ db: chatDb(), user: student })).post('/').send({
+                message: 'Explain ATP', courseId: 'C1', unitName: 'Unit 1', conversationId: 'autosave_1'
+            });
+            expect(res.status).toBe(200);
+            expect(res.body.message).toBe('A grounded answer.');
+        });
+
+        test("not for the language check's warning, a missing course, an unpublished unit, or an explanation the page asks for", async () => {
+            await request(app({ db: memoryDb({}), user: student })).post('/').send({ message: 'this is shit', courseId: 'C1', unitName: 'Unit 1', conversationId: 'autosave_1' });
+            await request(app({ db: memoryDb({ courses: [] }), user: student })).post('/').send({ message: 'hi', courseId: 'C1', unitName: 'Unit 1', conversationId: 'autosave_1' });
+            aiWith();
+            const hidden = await request(app({ db: chatDb(), user: student })).post('/').send({ message: 'hi', courseId: 'C1', unitName: 'Hidden', conversationId: 'autosave_1' });
+            expect(hidden.status).toBe(400);
+            aiWith();
+            const unpublished = chatDb({ lectures: [{ name: 'Unit 1', isPublished: false }] });
+            expect((await request(app({ db: unpublished, user: student })).post('/').send({ message: 'hi', courseId: 'C1', unitName: 'Unit 1', conversationId: 'autosave_1' })).status).toBe(400);
+            aiWith();
+            await request(app({ db: chatDb(), user: student })).post('/').send({
+                message: 'Explain this', courseId: 'C1', unitName: 'Unit 1', conversationId: 'autosave_1',
+                isExplanationRequest: { topic: 'Not an approved topic' }, topic: 'Not an approved topic'
+            });
+            expect(announce).not.toHaveBeenCalled();
+        });
     });
 
     test('retrieves course chunks and returns citations, attribution, and retrieval scope', async () => {

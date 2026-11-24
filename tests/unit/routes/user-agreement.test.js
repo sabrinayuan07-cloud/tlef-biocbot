@@ -8,6 +8,7 @@
 const { memoryDb } = require('../helpers/memory-db');
 const { makeRouteApp, request } = require('../helpers/route-app');
 const router = require('../../../src/routes/user-agreement');
+const activityEvents = require('../../../src/services/activityEvents');
 
 const student = { userId: 's1', role: 'student' };
 const app = (opts) => makeRouteApp(router, opts);
@@ -73,6 +74,20 @@ describe('POST /agree', () => {
         const res = await request(app({ db, user: student })).post('/agree').send({});
         expect(res.status).toBe(200);
         expect(res.body.data.agreementVersion).toBe('1.0');
+    });
+
+    test('announces a first acceptance of each version, not a repeat', async () => {
+        const announce = jest.spyOn(activityEvents, 'publishAgreementAccepted');
+        try {
+            const db = memoryDb({ userAgreements: [] });
+            await request(app({ db, user: student })).post('/agree').send({});
+            await request(app({ db, user: student })).post('/agree').send({});
+            await request(app({ db, user: student })).post('/agree').send({ agreementVersion: '2.0' });
+
+            expect(announce.mock.calls).toEqual([[student, '1.0'], [student, '2.0']]);
+        } finally {
+            announce.mockRestore();
+        }
     });
 });
 

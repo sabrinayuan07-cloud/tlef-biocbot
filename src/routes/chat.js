@@ -25,6 +25,7 @@ const MentalHealthFlag = require('../models/MentalHealthFlag');
 const previewSession = require('../services/previewSession');
 const agentChat = require('../services/agentChat');
 const pendingChatReplies = require('../services/pendingChatReplies');
+const activityEvents = require('../services/activityEvents');
 const gridfs = require('../services/gridfs');
 const { resolveCourseAi, sendLlmKeyError } = require('./llmKeyMiddleware');
 const { evaluateObjectiveAnswer } = require('../services/objectiveAnswer');
@@ -1942,6 +1943,21 @@ router.post('/', async (req, res) => {
         if (!ai) return;
         llmService = ai.llm;
         qdrant = ai.qdrant;
+
+        // BiocBot answers this message: announce it, and the chat's start if
+        // it's the first (src/services/activityEvents.js). Not awaited, and it
+        // never rejects, so the reply doesn't wait for it. An explanation the
+        // page asks for itself isn't the student's message, and a message
+        // about a unit that isn't published is refused below
+        // (resolveRetrievalScope), so neither is announced.
+        const unitIsPublished = (course.lectures || []).some(lecture => lecture && lecture.isPublished && lecture.name === unitName);
+        if (!req.body.isExplanationRequest && unitIsPublished) {
+            activityEvents.announceChatMessage(db, req.user, {
+                courseId,
+                sessionId: conversationId,
+                unit: unitName
+            });
+        }
 
         const approvedStruggleTopics = CourseModel.normalizeTopicList(course.approvedStruggleTopics || []);
         console.log(`🧭 [CHAT_TOPIC_MAP] Approved topics loaded: ${approvedStruggleTopics.length}`);
