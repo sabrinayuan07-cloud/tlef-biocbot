@@ -1087,7 +1087,7 @@ function createActionButtons(flag) {
             <div id="dismiss-form-${flag.flagId}" class="approval-form" style="display: none;">
                 <div class="form-header">
                     <h4>Dismiss Flag</h4>
-                    <p class="form-description">Optionally add a note explaining why (not sent to the ${reporterRole}).</p>
+                    <p class="form-description">Optionally add a note explaining why. If you add one, the ${reporterRole} will see it on their flagged item.</p>
                 </div>
                 <div class="form-group">
                     <label for="dismiss-note-${flag.flagId}">Note (optional):</label>
@@ -1195,18 +1195,21 @@ function hideDismissForm(flagId) {
 }
 
 /**
- * Confirm dismissal, with an optional note (#694). Routes through the same
- * /response endpoint the approve flow uses (rather than the note-less
- * /status endpoint) so the note is stored when one is given.
+ * Confirm dismissal, with an optional note (#694). A non-empty note routes
+ * through the same /response endpoint the approve flow uses, so the note is
+ * stored and shown to the reporter the same way an approval reply is. An
+ * empty note instead uses the plain /status endpoint (the same one the
+ * one-click Dismiss button uses) - /response 400s when response is empty,
+ * since that endpoint's contract is "set a response", not "maybe set one".
  * @param {string} flagId - The flag ID
  */
 async function sendDismissal(flagId) {
+    const sendButton = document.querySelector(`[data-flag-id="${flagId}"] .send-dismiss-btn`);
+    const cancelButton = document.querySelector(`#dismiss-form-${flagId} .cancel-btn`);
     try {
         const noteTextarea = document.getElementById(`dismiss-note-${flagId}`);
         const note = noteTextarea ? noteTextarea.value.trim() : '';
 
-        const sendButton = document.querySelector(`[data-flag-id="${flagId}"] .send-dismiss-btn`);
-        const cancelButton = document.querySelector(`#dismiss-form-${flagId} .cancel-btn`);
         if (sendButton) {
             sendButton.textContent = 'Dismissing...';
             sendButton.disabled = true;
@@ -1221,16 +1224,25 @@ async function sendDismissal(flagId) {
         const currentUser = getCurrentUser();
         const instructorName = currentUser ? (currentUser.displayName || currentUser.username) : 'Instructor';
 
-        const response = await fetch(`/api/flags/${flagId}/response`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                response: note,
-                instructorId,
-                instructorName,
-                flagStatus: 'dismissed'
+        const response = note
+            ? await fetch(`/api/flags/${flagId}/response`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    response: note,
+                    instructorId,
+                    instructorName,
+                    flagStatus: 'dismissed'
+                })
             })
-        });
+            : await fetch(`/api/flags/${flagId}/status`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    status: 'dismissed',
+                    instructorId
+                })
+            });
 
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -1244,9 +1256,11 @@ async function sendDismissal(flagId) {
         const flagIndex = appState.flags.findIndex(flag => flag.flagId === flagId);
         if (flagIndex !== -1) {
             appState.flags[flagIndex].flagStatus = 'dismissed';
-            appState.flags[flagIndex].instructorResponse = note;
-            appState.flags[flagIndex].instructorId = instructorId;
-            appState.flags[flagIndex].instructorName = instructorName;
+            if (note) {
+                appState.flags[flagIndex].instructorResponse = note;
+                appState.flags[flagIndex].instructorId = instructorId;
+                appState.flags[flagIndex].instructorName = instructorName;
+            }
             appState.flags[flagIndex].updatedAt = new Date().toISOString();
         }
 
@@ -1259,11 +1273,11 @@ async function sendDismissal(flagId) {
         console.error('Error dismissing flag:', error);
         showErrorMessage('Failed to dismiss flag. Please try again.');
 
-        const sendButton = document.querySelector(`[data-flag-id="${flagId}"] .send-dismiss-btn`);
         if (sendButton) {
             sendButton.textContent = 'Confirm Dismiss';
             sendButton.disabled = false;
         }
+        if (cancelButton) cancelButton.disabled = false;
     }
 }
 
