@@ -1282,6 +1282,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Initialize Chat Limit Modal
     initializeChatLimitModal();
 
+    // Floating "scroll to latest message" button, shown once a student
+    // scrolls away from the bottom of the chat history.
+    const chatMessagesEl = document.getElementById('chat-messages');
+    const scrollToBottomBtn = document.getElementById('scroll-to-bottom-btn');
+    if (chatMessagesEl && scrollToBottomBtn && typeof window.initChatScrollAffordance === 'function') {
+        window.chatScrollAffordance = window.initChatScrollAffordance(chatMessagesEl, scrollToBottomBtn);
+    }
+
     // Expose functions to global scope for helper actions
     window.sendMessageToLLM = sendMessageToLLM;
     window.showTypingIndicator = showTypingIndicator;

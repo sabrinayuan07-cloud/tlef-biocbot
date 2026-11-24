@@ -97,6 +97,10 @@
                     </div>
                 </div>
 
+                <button type="button" id="scroll-to-bottom-btn" class="scroll-to-bottom-btn" aria-label="Scroll to latest message" hidden>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </button>
+
                 <div class="chat-input-container">
                     <form id="instructor-chat-form" autocomplete="off">
                         <input type="text" id="instructor-chat-input" placeholder="Ask about biochemistry course material..." autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="true" name="instructor-chat-message-input">
@@ -137,6 +141,7 @@
     <script src="../common/scripts/auth.js"></script>
     <script src="../common/scripts/notifications.js"></script>
     <script src="../common/scripts/typewriter.js"></script>
+    <script src="../common/scripts/chat-scroll-affordance.js"></script>
     <script src="./scripts/instructor-chat.js"></script>
 </body>
 </html>

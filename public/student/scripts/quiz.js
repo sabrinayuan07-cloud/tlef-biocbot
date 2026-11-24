@@ -606,7 +606,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Reveal a freshly-arrived bot answer word-by-word instead of all at once.
         if (animate && role === 'bot' && typeof window.typeOutText === 'function') {
             window.typeOutText(msgDiv, text, {
-                onStep: () => { quizChatMessages.scrollTop = quizChatMessages.scrollHeight; }
+                onStep: () => {
+                    // Don't pull a student back down if they've scrolled up mid-type.
+                    const nearBottom = quizChatMessages.scrollHeight - quizChatMessages.scrollTop - quizChatMessages.clientHeight <= 48;
+                    if (nearBottom) {
+                        quizChatMessages.scrollTop = quizChatMessages.scrollHeight;
+                    }
+                }
             });
         } else {
             msgDiv.textContent = text;

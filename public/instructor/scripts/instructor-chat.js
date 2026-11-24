@@ -10,6 +10,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const form = document.getElementById('instructor-chat-form');
     const input = document.getElementById('instructor-chat-input');
     const messages = document.getElementById('chat-messages');
+    const scrollToBottomBtn = document.getElementById('scroll-to-bottom-btn');
+    const chatScrollAffordance = (scrollToBottomBtn && typeof window.initChatScrollAffordance === 'function')
+        ? window.initChatScrollAffordance(messages, scrollToBottomBtn)
+        : null;
     const sendButton = document.getElementById('send-button');
     const newChatButton = document.getElementById('new-super-course-chat');
     const levelSelector = document.getElementById('answer-level-selector');
@@ -311,7 +315,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Reveal a freshly-arrived bot answer word-by-word instead of all at once.
         if (sender === 'bot' && options.animate && typeof window.typeOutText === 'function') {
             window.typeOutText(text, content, {
-                onStep: () => { messages.scrollTop = messages.scrollHeight; }
+                onStep: () => {
+                    if (!chatScrollAffordance || chatScrollAffordance.isNearBottom()) {
+                        messages.scrollTop = messages.scrollHeight;
+                    }
+                }
             });
         }
 

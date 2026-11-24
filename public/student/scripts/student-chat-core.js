@@ -639,7 +639,12 @@ function addMessage(content, sender, withSource = false, skipAutoSave = false, s
     // isHtml system/link messages or history restores, which don't set it.
     if (sender === 'bot' && !isHtml && messageOptions && messageOptions.animate && typeof window.typeOutText === 'function') {
         window.typeOutText(paragraph, content, {
-            onStep: () => { chatMessages.scrollTop = chatMessages.scrollHeight; }
+            onStep: () => {
+                // Don't pull a student back down if they've scrolled up mid-type.
+                if (!window.chatScrollAffordance || window.chatScrollAffordance.isNearBottom()) {
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }
+            }
         });
     }
 

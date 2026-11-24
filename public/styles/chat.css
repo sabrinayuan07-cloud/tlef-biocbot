@@ -1,6 +1,7 @@
 /* Chat Interface Styles */
 
 .chat-container {
+    position: relative;
     display: flex;
     flex-direction: column;
     height: calc(100vh - 120px);
@@ -8,6 +9,40 @@
     border-radius: 8px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     overflow: hidden;
+}
+
+.scroll-to-bottom-btn {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 1px solid var(--border-color);
+    background: #fff;
+    color: var(--primary-color);
+    box-shadow: 0 2px 8px var(--shadow-color);
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+    z-index: 5;
+}
+
+.scroll-to-bottom-btn:hover {
+    background: var(--background-color);
+    transform: translateX(-50%) translateY(-1px);
+}
+
+.scroll-to-bottom-btn:focus-visible {
+    outline: 3px solid rgba(74, 111, 165, 0.35);
+    outline-offset: 2px;
+}
+
+.scroll-to-bottom-btn[hidden] {
+    display: none;
 }
 
 /*
