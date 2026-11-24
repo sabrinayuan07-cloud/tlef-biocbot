@@ -737,7 +737,7 @@ async function waitForAuth() {
             resolve();
             return;
         }
-        document.addEventListener('auth:ready', () => resolve(), { once: true });
+        BiocbotEvents.subscribe('auth.ready', () => resolve(), { once: true });
         // Fallback timeout
         setTimeout(resolve, 3000);
     });

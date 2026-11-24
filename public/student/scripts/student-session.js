@@ -972,8 +972,13 @@ async function handleNewSession(options = {}) {
         const reason = options?.reason === 'inactivity' ? 'inactivity' : 'manual';
 
         // Stop an old in-flight response before its result can be rendered into
-        // the newly rotated session/assessment.
-        window.dispatchEvent(new CustomEvent('chat-session:rotating', { detail: { reason } }));
+        // the newly rotated session/assessment (student.js).
+        if (typeof window.stopInFlightChatReply === 'function') {
+            window.stopInFlightChatReply();
+        }
+
+        // Then tell the page the session ended (biocbot-events.js).
+        BiocbotEvents.publish('chat.session.ended', { reason });
 
 
         // Clear any existing session data
@@ -1614,14 +1619,9 @@ function initializeChatHistoryStorage() {
  */
 function initializeUserAgreement() {
     // The agreement modal is automatically initialized by the agreement-modal.js script
-    // This function is here for consistency with other initialize functions
-
-
-    // Listen for agreement acceptance event
-    document.addEventListener('userAgreementAccepted', (event) => {
-
-        // You can add any additional logic here after agreement is accepted
-    });
+    // This function is here for consistency with other initialize functions.
+    // Anything that should follow the agreement listens for agreement.accepted
+    // (biocbot-events.js), as the guided tour does.
 }
 
 /**

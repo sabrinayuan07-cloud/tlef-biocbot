@@ -62,7 +62,7 @@ test.describe('Quiz nav visibility', () => {
         await loginAsStudent(page);
         await page.goto(`/student?courseId=${QUIZ_COURSE_ID}`);
 
-        // checkQuizNavVisibility() runs after auth:ready — wait for the fetch
+        // checkQuizNavVisibility() runs after auth.ready — wait for the fetch
         // to resolve and the style to be applied.
         const navItem = page.locator('#quiz-nav-item');
         await expect(navItem).toBeHidden({ timeout: 10_000 });

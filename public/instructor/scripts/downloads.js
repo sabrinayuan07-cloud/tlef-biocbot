@@ -158,8 +158,8 @@ async function waitForAuth() {
             return;
         }
         
-        // Wait for auth:ready event
-        document.addEventListener('auth:ready', () => {
+        // Wait for the auth.ready event
+        BiocbotEvents.subscribe('auth.ready', () => {
             console.log('✅ [AUTH] Authentication ready');
             resolve();
         }, { once: true });

@@ -174,7 +174,7 @@ async function updateChatTitle(chatId, newTitle) {
  * @returns {Object|null} Current user object or null
  */
 function getCurrentUser() {
-    // First try to get from window.currentUser (set by auth:ready event)
+    // First try to get from window.currentUser (set when auth.ready arrives)
     if (window.currentUser) {
         return window.currentUser;
     }
@@ -279,6 +279,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // The auth.ready event carries no data. This file's getCurrentUser()
+    // replaces auth.js's, so ask auth.js for the user it loaded, and keep it
+    // where this file's getCurrentUser() looks first.
+    const initializeOnAuthReady = async () => {
+        console.log('Auth ready event received, initializing');
+        const user = typeof waitForCurrentUser === 'function' ? await waitForCurrentUser() : null;
+        if (user) {
+            window.currentUser = user;
+        }
+        runInitialization();
+    };
+
     // Wait for auth to be ready before initializing
     if (typeof window.getCurrentUser === 'function') {
         const user = window.getCurrentUser();
@@ -287,30 +299,12 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('User is authenticated, initializing immediately');
             runInitialization();
         } else {
-            console.log('Auth function available but user not authenticated, waiting for auth:ready event');
-            document.addEventListener('auth:ready', (event) => {
-                console.log('Auth ready event received, initializing');
-                console.log('Auth ready event detail:', event.detail);
-                // Store the user data from the event
-                if (event.detail) {
-                    window.currentUser = event.detail;
-                    console.log('Stored user from event:', window.currentUser);
-                }
-                runInitialization();
-            });
+            console.log('Auth function available but user not authenticated, waiting for the auth.ready event');
+            BiocbotEvents.subscribe('auth.ready', initializeOnAuthReady);
         }
     } else {
-        console.log('Auth not ready, waiting for auth:ready event');
-        document.addEventListener('auth:ready', (event) => {
-            console.log('Auth ready event received, initializing');
-            console.log('Auth ready event detail:', event.detail);
-            // Store the user data from the event
-            if (event.detail) {
-                window.currentUser = event.detail;
-                console.log('Stored user from event:', window.currentUser);
-            }
-            runInitialization();
-        });
+        console.log('Auth not ready, waiting for the auth.ready event');
+        BiocbotEvents.subscribe('auth.ready', initializeOnAuthReady);
     }
     
     // Fallback: try after a delay if still not initialized

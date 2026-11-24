@@ -214,6 +214,7 @@ async function openDeepHarness(page, options = {}) {
         };
     })();
     </script>
+    <script src="/common/scripts/biocbot-events.js"></script>
     <script src="/common/scripts/assessment-scoring.js"></script>
     <script src="/student/scripts/student-state.js"></script>
     <script src="/student/scripts/student-chat-core.js"></script>

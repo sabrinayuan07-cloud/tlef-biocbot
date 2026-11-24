@@ -146,12 +146,11 @@ async function initAuth() {
             adjustNavigationForRole();
             setupLogoutHandler();
             setupAccountMenu();
-            // Notify listeners that auth/user state is ready
-            try {
-                document.dispatchEvent(new CustomEvent('auth:ready', { detail: currentUser }));
-            } catch (e) {
-                console.warn('auth:ready event dispatch failed', e);
-            }
+            // Tell the page's scripts the user is known (biocbot-events.js).
+            // The event carries no data: the user's name and email stay here,
+            // and listeners read them with getCurrentUser() or
+            // waitForCurrentUser().
+            BiocbotEvents.publish('auth.ready');
         } else {
             // User not authenticated, redirect to login
             window.location.href = '/login';
@@ -600,7 +599,7 @@ function waitForCurrentUser(timeoutMs = 5000) {
             resolve(user || currentUser || null);
         };
         const timeoutId = setTimeout(() => finish(null), timeoutMs);
-        document.addEventListener('auth:ready', event => finish(event.detail), { once: true });
+        BiocbotEvents.subscribe('auth.ready', () => finish(currentUser), { once: true });
     });
 }
 

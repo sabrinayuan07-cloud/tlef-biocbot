@@ -44,8 +44,9 @@ function sendInstalledFile(file) {
 router.get('/agents-chat.js', sendInstalledFile(installedFile('@ubc/genai-toolkit-agents-chat/client.global.js')));
 
 // The pub/sub toolkit's browser bus as a classic script, which sets
-// window.UbcPubsub for the student page (public/student/scripts/student-events.js).
-// Where the toolkit isn't installed, the page reports nothing.
+// window.UbcPubsub. Every page loads it before public/common/scripts/biocbot-events.js,
+// which makes it the page's bus. Where the toolkit isn't installed, that file
+// uses a bus of its own with the same contract, and the page reports nothing.
 router.get('/pubsub.js', sendInstalledFile(installedFile('@ubc/genai-toolkit-pubsub-browser/pubsub.global.js')));
 
 module.exports = router;

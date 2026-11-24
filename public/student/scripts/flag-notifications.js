@@ -56,13 +56,13 @@ async function waitForAuthReady() {
         return;
     }
     
-    // Wait for auth:ready event
+    // Wait for the auth.ready event
     return new Promise((resolve) => {
         const checkAuth = () => {
             if (typeof getCurrentUser === 'function' && getCurrentUser()) {
                 resolve();
             } else {
-                document.addEventListener('auth:ready', () => resolve(), { once: true });
+                BiocbotEvents.subscribe('auth.ready', () => resolve(), { once: true });
             }
         };
         checkAuth();
