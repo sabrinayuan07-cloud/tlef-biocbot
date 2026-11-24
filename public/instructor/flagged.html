@@ -183,6 +183,23 @@
                 <button id="refresh-flags" class="refresh-btn">Refresh</button>
             </div>
 
+            <!-- Batch resolve controls (#692) -->
+            <div class="batch-flag-controls" id="batch-flag-controls">
+                <div class="batch-select-all-group">
+                    <label class="batch-select-all-label">
+                        <input type="checkbox" id="batch-select-all-flags">
+                        <span>Select all</span>
+                    </label>
+                    <span id="batch-selection-count" class="batch-selection-count">0 selected</span>
+                </div>
+                <div class="batch-flag-actions">
+                    <button type="button" id="batch-approve-flags" class="primary-button" disabled
+                            title="Resolves every checked flag at once">Approve Selected</button>
+                    <button type="button" id="batch-cancel-selection" class="secondary-button" disabled
+                            title="Clear the current selection">Cancel</button>
+                </div>
+            </div>
+
             <!-- Statistics Summary -->
             <div class="flag-stats">
                 <div class="stat-card">
