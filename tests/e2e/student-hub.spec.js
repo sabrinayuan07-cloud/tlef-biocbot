@@ -80,7 +80,7 @@ test.describe('Student Hub UI', () => {
         await seedStudentHub();
     });
 
-    test('loads the URL-selected course, hides the legacy selector, and renders students, TAs, and struggle topics', async ({ page }) => {
+    test('loads the URL-selected course, hides the legacy selector, and renders students and struggle topics (not TAs)', async ({ page }) => {
         await openStudentHub(page, {
             courseId: HUB_COURSE_ID,
             storedCourseId: HUB_OTHER_COURSE_ID,
@@ -96,10 +96,8 @@ test.describe('Student Hub UI', () => {
         await expect(activeCard).toContainText('Count: 3');
         await expect(activeCard.getByRole('button', { name: 'Download Report' })).toBeVisible();
 
-        const taCard = studentCard(page, TEST_USERS.ta.displayName);
-        await expect(taCard).toBeVisible();
-        await expect(taCard).toContainText('TA');
-        await expect(taCard.getByRole('button', { name: 'Demote from TA' })).toBeVisible();
+        // Student Hub shows students only - TA management lives in TA Hub.
+        await expect(studentCard(page, TEST_USERS.ta.displayName)).toHaveCount(0);
 
         await expect(studentCard(page, HUB_OTHER_STUDENT.displayName)).toHaveCount(0);
     });
@@ -291,6 +289,42 @@ test.describe('Student Hub UI', () => {
         expect(course.studentEnrollment[HUB_ACTIVE_STUDENT.userId].enrolled).toBe(false);
     });
 
+    test('keeps Save enabled across a search-triggered re-render until the change is actually saved', async ({ page }) => {
+        await openStudentHub(page);
+
+        const activeCard = studentCard(page, HUB_ACTIVE_STUDENT.displayName);
+        const checkbox = activeCard.locator('input[type="checkbox"]');
+        const saveButton = activeCard.locator(`#save-${HUB_ACTIVE_STUDENT.userId}`);
+
+        await expect(checkbox).toBeChecked();
+        await activeCard.locator('.enroll-toggle .toggle-slider').click();
+        await expect(checkbox).not.toBeChecked();
+        await expect(saveButton).toBeEnabled();
+
+        // Typing in the search box re-renders every card from scratch. The
+        // unsaved toggle must not look saved just because the card was rebuilt.
+        await page.locator('#student-search-input').fill(HUB_ACTIVE_STUDENT.displayName);
+        const rerenderedCard = studentCard(page, HUB_ACTIVE_STUDENT.displayName);
+        await expect(rerenderedCard.locator('input[type="checkbox"]')).not.toBeChecked();
+        await expect(rerenderedCard.locator(`#save-${HUB_ACTIVE_STUDENT.userId}`)).toBeEnabled();
+
+        await rerenderedCard.locator(`#save-${HUB_ACTIVE_STUDENT.userId}`).click();
+        await expect(page.locator('.notification.success')).toContainText(
+            `Enrollment disabled for ${HUB_ACTIVE_STUDENT.displayName}`,
+            { timeout: 10_000 }
+        );
+
+        // Saved: the button goes back to disabled, and clearing the search
+        // (another re-render) must not make it look unsaved again.
+        await expect(rerenderedCard.locator(`#save-${HUB_ACTIVE_STUDENT.userId}`)).toBeDisabled();
+        await page.locator('#student-search-clear').click();
+        await expect(studentCard(page, HUB_ACTIVE_STUDENT.displayName).locator(`#save-${HUB_ACTIVE_STUDENT.userId}`))
+            .toBeDisabled();
+
+        const course = await getHubCourse();
+        expect(course.studentEnrollment[HUB_ACTIVE_STUDENT.userId].enrolled).toBe(false);
+    });
+
     test('escapes student display names instead of injecting markup', async ({ page }) => {
         await page.addInitScript(() => {
             (/** @type {Window & typeof globalThis & { __studentHubXss?: boolean }} */ (window)).__studentHubXss = false;
@@ -308,48 +342,18 @@ test.describe('Student Hub UI', () => {
         expect(injected).toBe(false);
     });
 
-    test('demoting a TA works when the selected course comes only from the URL', async ({ page }) => {
+    test('TAs assigned to the course are not shown in the Student Hub roster', async ({ page }) => {
         await openStudentHub(page, {
             courseId: HUB_COURSE_ID,
             storedCourseId: null,
         });
 
-        page.on('dialog', (dialog) => dialog.accept().catch(() => {}));
-
-        const taCard = studentCard(page, TEST_USERS.ta.displayName);
-        await expect(taCard).toBeVisible();
-        await taCard.getByRole('button', { name: 'Demote from TA' }).click();
-
-        await expect.soft(page.locator('.notification.success')).toContainText(
-            `Successfully removed ${TEST_USERS.ta.displayName} as TA from this course`,
-            { timeout: 5_000 }
-        );
+        // Student Hub shows students only - TA management lives in TA Hub.
+        await expect(studentCard(page, HUB_ACTIVE_STUDENT.displayName)).toBeVisible();
+        await expect(studentCard(page, TEST_USERS.ta.displayName)).toHaveCount(0);
 
         const course = await getHubCourse();
-        expect.soft(course.tas || []).not.toContain(taId);
-    });
-
-    test('demoting a TA uses the visible URL course, not a stale localStorage course', async ({ page }) => {
-        await seedStudentHub({ assignTaToOtherCourse: true });
-
-        await openStudentHub(page, {
-            courseId: HUB_COURSE_ID,
-            storedCourseId: HUB_OTHER_COURSE_ID,
-        });
-
-        page.on('dialog', (dialog) => dialog.accept().catch(() => {}));
-
-        await studentCard(page, TEST_USERS.ta.displayName)
-            .getByRole('button', { name: 'Demote from TA' })
-            .click();
-
-        const [mainCourse, otherCourse] = await Promise.all([
-            getHubCourse(HUB_COURSE_ID),
-            getHubCourse(HUB_OTHER_COURSE_ID),
-        ]);
-
-        expect.soft(mainCourse.tas || []).not.toContain(taId);
-        expect.soft(otherCourse.tas || []).toContain(taId);
+        expect(course.tas || []).toContain(taId);
     });
 });
 

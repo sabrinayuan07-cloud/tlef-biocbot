@@ -20,6 +20,8 @@ let currentRosterMatch = null;
 // LMS grades keyed by BiocBot user id so a student card can find its own row.
 let gradesByLocalUserId = new Map();
 const dirtyEnrollment = new Map(); // studentId -> boolean (enrolled)
+let currentStudentCourseId = null;
+let studentSearchQuery = '';
 
 document.addEventListener('DOMContentLoaded', async function() {
     await waitForAuth();
@@ -262,6 +264,37 @@ function initializeStudentHub() {
         });
     }
 
+    const studentSearchInput = document.getElementById('student-search-input');
+    const studentSearchClear = document.getElementById('student-search-clear');
+    const studentSearchForm = studentSearchInput ? studentSearchInput.closest('form') : null;
+    if (studentSearchForm) {
+        studentSearchForm.addEventListener('submit', (event) => event.preventDefault());
+    }
+    if (studentSearchInput) {
+        studentSearchInput.addEventListener('input', () => {
+            studentSearchQuery = studentSearchInput.value;
+            if (studentSearchClear) {
+                studentSearchClear.hidden = studentSearchQuery.length === 0;
+            }
+            if (currentStudentCourseId) {
+                renderStudents(currentStudentCourseId);
+            }
+        });
+    }
+    if (studentSearchClear) {
+        studentSearchClear.addEventListener('click', () => {
+            studentSearchQuery = '';
+            if (studentSearchInput) {
+                studentSearchInput.value = '';
+                studentSearchInput.focus();
+            }
+            studentSearchClear.hidden = true;
+            if (currentStudentCourseId) {
+                renderStudents(currentStudentCourseId);
+            }
+        });
+    }
+
     const surveyStatusFilter = document.getElementById('survey-status-filter');
     if (surveyStatusFilter) {
         addKeyboardPickerActivation(surveyStatusFilter);
@@ -417,6 +450,7 @@ async function loadInstructorCourses() {
 
 async function loadStudents(courseId) {
     try {
+        currentStudentCourseId = courseId;
         await loadAnonymizeStudentsSetting(courseId);
 
         // 1. Fetch Students
@@ -455,19 +489,13 @@ async function loadStudents(courseId) {
             // Continue with just students if TA load fails
         }
 
-        // 3. Merge lists
-        // Mark TAs with isTA property
+        // 3. Student Hub shows students only - TAs have their own TA Hub page.
+        // Still track currentTAs (used elsewhere to detect existing/invited
+        // TAs) and filter them out of the roster so a TA assigned to this
+        // course doesn't also show up as a duplicate "student" card.
         currentTAs = courseTAs.map(ta => ({ ...ta, isTA: true }));
-        
-        // Filter out students who are also TAs (to avoid duplicates if backend returns them in both)
-        // or if we want to show them as TAs.
         const taIds = new Set(currentTAs.map(ta => ta.userId));
-        const uniqueStudents = students.filter(s => !taIds.has(s.userId));
-        
-        // Combine: TAs first or mixed? User said "keep the student box from the TA in there".
-        // Let's put TAs at the top for visibility, or sort alphabetically.
-        // Let's just combine them.
-        currentStudents = [...currentTAs, ...uniqueStudents];
+        currentStudents = students.filter(s => !taIds.has(s.userId));
 
         // 4. Fetch cumulative Topic Dashboard time per student (#706)
         try {
@@ -495,6 +523,7 @@ async function loadStudents(courseId) {
             console.error('Error loading flag counts:', flagsErr);
             outstandingFlagCountByStudentId = {};
         }
+
 
         renderStudents(courseId);
         await loadLmsGrades(courseId);
@@ -1412,10 +1441,20 @@ function renderStudents(courseId) {
         return;
     }
 
-    container.innerHTML = sortedStudentsForRender().map(s => {
+    const query = studentSearchQuery.trim().toLowerCase();
+    const sorted = sortedStudentsForRender();
+    const studentsToRender = query
+        ? sorted.filter(s => (s.displayName || s.username || s.userId || '').toLowerCase().includes(query))
+        : sorted;
+
+    if (studentsToRender.length === 0) {
+        container.innerHTML = '<p>No students match your search.</p>';
+        return;
+    }
+
+    container.innerHTML = studentsToRender.map(s => {
         const enrolled = dirtyEnrollment.has(s.userId) ? dirtyEnrollment.get(s.userId) : !!s.enrolled;
-        const isTA = !!s.isTA;
-        const hasPendingTAInvite = !isTA && s.role === 'ta' && Array.isArray(s.invitedCourses) && s.invitedCourses.includes(courseId);
+        const hasPendingTAInvite = s.role === 'ta' && Array.isArray(s.invitedCourses) && s.invitedCourses.includes(courseId);
         const taInviteButtonLabel = s.role === 'ta' ? 'Invite to TA Course' : 'Promote to TA';
         const struggleTopicsSection = anonymizeStudentsEnabled ? '' : `
                     <div class="struggle-topics-section" style="margin-top: 15px; border-top: 1px solid #eee; padding-top: 10px;">
@@ -1435,20 +1474,19 @@ function renderStudents(courseId) {
         `;
         
         return `
-            <div class="student-card ${isTA ? 'ta-card' : ''}" style="${isTA ? 'border-left: 4px solid #17a2b8;' : ''}">
+            <div class="student-card">
                 <div class="student-header">
                     <div style="display: flex; align-items: center; gap: 10px;">
                         <h3 class="student-name">${escapeHTML(s.displayName || s.username || s.userId)}</h3>
-                        ${isTA ? '<span class="badge badge-info" style="background: #117a8b; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8em;">TA</span>' : ''}
-                        ${!isTA && needsAttention(s) ? '<span class="badge badge-warning" style="background: #dc3545; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8em;">Needs attention</span>' : ''}
+                        ${needsAttention(s) ? '<span class="badge badge-warning" style="background: #dc3545; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.8em;">Needs attention</span>' : ''}
                     </div>
                 </div>
                 <div class="student-info">
                     <p><strong>Username:</strong> ${escapeHTML(s.username || '—')}</p>
                     <p><strong>Email:</strong> ${escapeHTML(s.email || '—')}</p>
                     <p><strong>Last Login:</strong> ${s.lastLogin ? new Date(s.lastLogin).toLocaleString() : '—'}</p>
-                    ${isTA ? '' : `<p><strong>Topic Dashboard time:</strong> ${formatDashboardDuration(topicDashboardTimeByUserId[s.userId])}</p>`}
-                    ${isTA ? '' : renderStudentGrades(s.userId)}
+                    <p><strong>Topic Dashboard time:</strong> ${formatDashboardDuration(topicDashboardTimeByUserId[s.userId])}</p>
+                    ${renderStudentGrades(s.userId)}
                     ${struggleTopicsSection}
                 </div>
                 <div class="student-actions">
@@ -1460,14 +1498,10 @@ function renderStudents(courseId) {
                         </span>
                         <span>Enrolled</span>
                     </label>
-                    <button class="btn-small btn-secondary btn-accent" id="save-${s.userId}" disabled
+                    <button class="btn-small btn-secondary btn-accent" id="save-${s.userId}" ${isEnrollmentDirty(s.userId) ? '' : 'disabled'}
                             onclick="saveEnrollment('${courseId}','${s.userId}')">Save</button>
-                    
-                    ${isTA ? `
-                        <button class="btn-small btn-danger" onclick="demoteFromTA('${s.userId}', '${escapeHTML(s.displayName || s.username)}', '${courseId}')">
-                            Demote from TA
-                        </button>
-                    ` : hasPendingTAInvite ? `
+
+                    ${hasPendingTAInvite ? `
                          <button class="btn-small btn-secondary" disabled style="opacity: 0.7; cursor: default;">
                             Pending TA joining course
                         </button>
@@ -1571,16 +1605,24 @@ window.demoteFromTA = async function(studentId, studentName, courseId) {
     }
 };
 
+/**
+ * Whether studentId's pending toggle actually differs from its last-persisted
+ * enrolled state - toggling off and back on (or vice versa) lands back on the
+ * original state, so there's nothing to save. Shared by toggleEnrollment
+ * (same-render DOM update) and renderStudents (a later re-render, e.g. from
+ * typing in the search box, must reach the same disabled/enabled verdict).
+ */
+function isEnrollmentDirty(studentId) {
+    if (!dirtyEnrollment.has(studentId)) return false;
+    const original = currentStudents.find(s => s.userId === studentId);
+    return !!dirtyEnrollment.get(studentId) !== !!(original && original.enrolled);
+}
+
 window.toggleEnrollment = function(courseId, studentId, value) {
     dirtyEnrollment.set(studentId, !!value);
     const btn = document.getElementById(`save-${studentId}`);
     if (!btn) return;
-    // Only enable Save when the toggle actually differs from the
-    // last-persisted value - toggling off and back on (or vice versa)
-    // lands back on the original state, so there's nothing to save.
-    const original = currentStudents.find(s => s.userId === studentId);
-    const isDirty = !!value !== !!(original && original.enrolled);
-    btn.disabled = !isDirty;
+    btn.disabled = !isEnrollmentDirty(studentId);
 };
 
 window.saveEnrollment = async function(courseId, studentId) {
