@@ -943,6 +943,12 @@ async function batchApproveSelectedFlags() {
 
     loadFlagStats();
     await loadFlaggedContent();
+
+    // The list just re-rendered (new checkboxes, new button instances), so
+    // the DOM node that had focus before this started is gone and focus
+    // silently drops to <body>. Send it somewhere deliberate.
+    const selectAllAfterRefresh = document.getElementById('batch-select-all-flags');
+    if (selectAllAfterRefresh) selectAllAfterRefresh.focus();
 }
 
 /**
@@ -980,14 +986,23 @@ function createFlagElement(flag) {
     const concernTitle = flag.reporterRole === 'instructor' ? "Instructor's Concern" : "Student's Concern";
     const breadcrumbsHtml = createSourceBreadcrumbsHtml(flag);
     
+    // Batch resolve (#692): only pending flags get Approve/Dismiss buttons
+    // (see createActionButtons), so only those should be selectable for a
+    // batch approve - otherwise Select all → Approve Selected would send
+    // "resolved" for flags that are already dismissed/resolved.
+    const selectCheckboxHtml = flag.flagStatus === 'pending' ? `
+                <label class="flag-select-label">
+                    <input type="checkbox" class="flag-select-checkbox" data-select-flag-id="${flag.flagId}"
+                           ${selectedFlagIds.has(flag.flagId) ? 'checked' : ''}
+                           onchange="toggleFlagSelection('${flag.flagId}', this.checked)">
+                    <span class="visually-hidden">Select flag from ${escapeHtml(reporterName)}, ${timestamp}, for a batch action</span>
+                </label>` : '';
+
     // Header Section
     let headerHtml = `
         <div class="flag-card-header">
             <div class="flag-header-left">
-                <input type="checkbox" class="flag-select-checkbox" data-select-flag-id="${flag.flagId}"
-                       aria-label="Select this flag for a batch action"
-                       ${selectedFlagIds.has(flag.flagId) ? 'checked' : ''}
-                       onchange="toggleFlagSelection('${flag.flagId}', this.checked)">
+                ${selectCheckboxHtml}
                 <span class="flag-type-badge ${flag.flagReason}">${flagReasonDisplay}</span>
                 <span class="flag-priority-badge ${flag.priority || 'medium'}">priority: ${flag.priority || 'medium'}</span>
             </div>
