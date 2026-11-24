@@ -432,8 +432,8 @@ function displayTAs() {
                 </div>
 
                 <div class="ta-actions">
-                    <button class="btn-small btn-secondary" onclick="openRemoveFromCourseModal('${ta.userId}')">Remove from this course</button>
-                    <button class="btn-small btn-danger" onclick="openRemoveTAModal('${ta.userId}')">Remove</button>
+                    <button type="button" class="btn-small btn-secondary" onclick="openRemoveFromCourseModal('${ta.userId}')">Remove from this course<span class="visually-hidden">: ${displayLabel}</span></button>
+                    <button type="button" class="btn-small btn-danger" onclick="openRemoveTAModal('${ta.userId}')">Remove<span class="visually-hidden">: ${displayLabel}</span></button>
                 </div>
             </div>
         `;
