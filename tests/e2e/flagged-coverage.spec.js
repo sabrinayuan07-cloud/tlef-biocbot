@@ -423,8 +423,11 @@ test.describe('flagged.js — instructor render & moderation', () => {
         await expect(card.locator('.approve-btn')).toBeHidden();
         await expect(card.locator('.dismiss-btn')).toBeHidden();
 
-        // Cancel — hideApprovalForm restores buttons.
-        await card.locator('.cancel-btn').click();
+        // Cancel — hideApprovalForm restores buttons. Scoped to the approval
+        // form: the card also has a Dismiss-with-note form (#694) with its
+        // own .cancel-btn, which a bare card-level locator would ambiguously
+        // match too.
+        await page.locator('#approval-form-flag_approve').locator('.cancel-btn').click();
         await expect(page.locator('#approval-form-flag_approve')).toBeHidden();
         await expect(card.locator('.approve-btn')).toBeVisible();
 
