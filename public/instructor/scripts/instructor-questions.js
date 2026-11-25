@@ -975,8 +975,7 @@ function updateQuestionsDisplay(week) {
     // buttons, so each button's (visually hidden) name says which question and
     // which unit it belongs to.
     questionsContainer.removeAttribute('role');
-    const unitLabel = typeof getUnitReference === 'function' ? getUnitReference(week) : week;
-    const context = typeof unitContext === 'function' ? unitContext(escapeHTML(unitLabel), ', ') : '';
+    const unitReference = typeof getUnitReference === 'function' ? getUnitReference(week) : week;
 
     let html = '';
     questions.forEach((question, index) => {
@@ -988,8 +987,8 @@ function updateQuestionsDisplay(week) {
                     <span class="question-type-badge ${questionType}">${getQuestionTypeLabel(questionType)}</span>
                     <span class="question-number">Question ${index + 1}</span>
                     <div class="question-action-buttons">
-                        <button type="button" class="edit-question-btn" onclick="openQuestionLearningObjectiveModal('${week}', '${questionKey}')" title="Edit learning objective">${Icons.pencil}<span class="visually-hidden">Edit learning objective of question ${index + 1}${context}</span></button>
-                        <button type="button" class="delete-question-btn" onclick="deleteQuestion('${week}', '${questionKey}')" title="Delete question"><span aria-hidden="true">×</span><span class="visually-hidden">Delete question ${index + 1}${context}</span></button>
+                        <button type="button" class="edit-question-btn" onclick="openQuestionLearningObjectiveModal('${week}', '${questionKey}')" title="Edit learning objective">${Icons.pencil}${unitContext(unitReference, `Edit Learning Objective${CourseUploadNames.getQuestionLead(index + 1)}`)}</button>
+                        <button type="button" class="delete-question-btn" onclick="deleteQuestion('${week}', '${questionKey}')" title="Delete question"><span aria-hidden="true">×</span>${unitContext(unitReference, `Delete${CourseUploadNames.getQuestionLead(index + 1)}`)}</button>
                     </div>
                 </div>
                 <div class="question-content">

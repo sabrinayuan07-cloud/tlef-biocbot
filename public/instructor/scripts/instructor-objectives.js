@@ -7,8 +7,8 @@
  *
  * The remove control is named after the objective it removes, and its "×" is
  * hidden from assistive technology so it is not read out. refreshObjectiveNames()
- * adds the objective's position and unit once the item is in its list.
- * The objective is set as text, never as HTML.
+ * adds a position when the objective repeats, and the unit, once the item is
+ * in its list. The objective is set as text, never as HTML.
  * @param {string} objectiveText - The objective as the instructor wrote it
  * @returns {HTMLLIElement}
  */
@@ -28,7 +28,7 @@ function createObjectiveItem(objectiveText) {
     icon.textContent = '×';
     const name = document.createElement('span');
     name.className = 'visually-hidden objective-remove-name';
-    name.textContent = `Remove objective: ${objectiveText}`;
+    name.textContent = `Remove Objective${CourseUploadNames.formatContext(`"${objectiveText}"`)}`;
     remove.append(icon, name);
     remove.addEventListener('click', () => removeObjective(remove));
 
@@ -42,29 +42,27 @@ function createObjectiveItem(objectiveText) {
 }
 
 /**
- * Name every "remove objective" control in a unit's list by its position, its
- * objective and its unit ("Remove objective 2: Explain osmosis from Cell
- * Structure, unit 2"). The same objective can be written twice in one unit,
- * and in another unit too, so the text alone does not keep the controls apart.
- * Call this after the list changes.
+ * Name every "remove objective" control in a unit's list by its objective and
+ * its unit ('Remove Objective ("Explain osmosis") (1. Cell Structure)'). The
+ * same objective can be written twice in one unit, so a repeated one also
+ * gets its position ('("Explain osmosis" - 2 of 2)'), worked out from the list
+ * every time. Call this after the list changes.
  * @param {HTMLElement|null} list - A unit's ol.objectives-list
  */
 function refreshObjectiveNames(list) {
     if (!list) return;
     const unitName = list.closest('.accordion-item')?.getAttribute('data-unit-name');
     const unitReference = unitName && typeof getUnitReference === 'function' ? getUnitReference(unitName) : '';
-    list.querySelectorAll(':scope > .objective-display-item').forEach((item, index) => {
+    const items = Array.from(list.querySelectorAll(':scope > .objective-display-item'));
+    const objectives = items.map((item, index) => ({
+        id: String(index),
+        title: item.querySelector('.objective-text')?.textContent || '',
+    }));
+    items.forEach((item, index) => {
         const name = item.querySelector('.objective-remove-name');
         if (!name) return;
-        const text = (item.querySelector('.objective-text')?.textContent || '').trim();
-        const parts = [document.createTextNode(`Remove objective ${index + 1}: ${text}`)];
-        if (unitReference) {
-            const reference = document.createElement('span');
-            reference.className = 'unit-name-ref';
-            reference.textContent = unitReference;
-            parts.push(document.createTextNode(' from '), reference);
-        }
-        name.replaceChildren(...parts);
+        const label = `Remove Objective${CourseUploadNames.getObjectiveLead(objectives, String(index))}`;
+        name.replaceChildren(document.createTextNode(label), ...unitReferenceNodes(unitReference));
     });
 }
 

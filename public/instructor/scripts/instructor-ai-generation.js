@@ -290,7 +290,10 @@ async function generateAIQuestionContent() {
         const materials = [];
         const fileItems = weekAccordionItem.querySelectorAll('.course-materials-section .file-item');
         fileItems.forEach(item => {
-            const title = item.querySelector('.file-info .file-title, .file-info h3')?.textContent;
+            // The file's own title, without the "(1 of 2)" shown when it repeats.
+            const title = typeof getMaterialTitle === 'function'
+                ? getMaterialTitle(item)
+                : item.querySelector('.file-info .file-title, .file-info h3')?.textContent;
             const status = item.querySelector('.status-text')?.textContent;
             const docId = item.dataset.documentId;
             materials.push({ title, status, documentId: docId });
