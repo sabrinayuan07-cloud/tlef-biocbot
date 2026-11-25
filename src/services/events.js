@@ -179,6 +179,41 @@ function loadToolkit() {
     return toolkit;
 }
 
+const GAMIFICATION_PUBSUB_PACKAGE = '@ubc/genai-toolkit-gamification-pubsub';
+
+/**
+ * The gamification toolkit's award events (`gamification.badge.earned` and the
+ * rest), which its listener announces after a student earns something
+ * (src/services/gamification.js). They go in BiocBot's dictionary so the bus
+ * accepts them. Empty where the gamification packages aren't installed.
+ *
+ * @returns {object[]}
+ */
+function loadAwardEvents() {
+    try {
+        return require(GAMIFICATION_PUBSUB_PACKAGE).AWARD_EVENTS;
+    } catch (error) {
+        if (error.code !== 'MODULE_NOT_FOUND') throw error;
+        return [];
+    }
+}
+
+/**
+ * BiocBot's dictionary: its own events, gamification's award events where
+ * installed, and pub/sub's general ones.
+ *
+ * @param {{ events: any }} loaded - From loadToolkit()
+ * @returns {any} The toolkit's `Dictionary`
+ */
+function buildDictionary(loaded) {
+    return loaded.events.defineDictionary({
+        app: 'biocbot',
+        extends: loaded.events.generalDictionary,
+        events: [...EVENT_DEFINITIONS, ...loadAwardEvents()],
+        collections: { modes: MODES }
+    });
+}
+
 /** @type {any | null | undefined} */
 let events;
 
@@ -197,12 +232,7 @@ function getEvents() {
             return events;
         }
         const bus = loaded.core.createEventBus();
-        const dictionary = loaded.events.defineDictionary({
-            app: 'biocbot',
-            extends: loaded.events.generalDictionary,
-            events: EVENT_DEFINITIONS,
-            collections: { modes: MODES }
-        });
+        const dictionary = buildDictionary(loaded);
         // A listener that throws affects nobody else and comes back here. Only
         // the type and the code are logged: never an event's data.
         bus.subscribe('bus.failed', failed => {
@@ -302,6 +332,7 @@ module.exports = {
     REPORTABLE_TYPES,
     serverName,
     loadToolkit,
+    buildDictionary,
     getEvents,
     publishEvent,
     subscribe,
