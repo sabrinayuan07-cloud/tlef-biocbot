@@ -14,7 +14,8 @@
  * + button disables. A remove button deletes an option and re-letters what
  * follows; dragging a row by any part of its bar (not just the grip icon)
  * reorders it, pushing the other rows out of the way live as it moves, and
- * re-letters everything on drop.
+ * re-letters everything on drop. Move up/down buttons do the same reorder
+ * for anyone who can't (or would rather not) drag.
  *
  * Re-lettering only ever changes a row's *label* (data-option, placeholder,
  * radio value) - the row's typed text and whichever radio is checked are
@@ -38,6 +39,11 @@ const MCQ_MAX_OPTIONS = 6;
 // at a time in this UI.
 let mcqDraggedRow = null;
 
+// Stamped onto each row's input/label pair so the <label for> association
+// survives reordering - letters (and therefore data-option) get reassigned
+// on every insert/remove/move, but a row's own identity shouldn't.
+let mcqRowIdCounter = 0;
+
 function mcqOptionLetter(index) {
     return String.fromCharCode(65 + index); // 0 -> 'A', 1 -> 'B', ...
 }
@@ -46,6 +52,7 @@ function buildMcqOptionRow() {
     const row = document.createElement('div');
     row.className = 'mcq-option';
     row.draggable = true;
+    const inputId = `mcq-option-input-${++mcqRowIdCounter}`;
     row.innerHTML = `
         <span class="mcq-option-drag-handle" aria-hidden="true">
             <svg width="10" height="16" viewBox="0 0 10 16" fill="currentColor" aria-hidden="true">
@@ -54,12 +61,17 @@ function buildMcqOptionRow() {
                 <circle cx="2" cy="14" r="1.5"></circle><circle cx="8" cy="14" r="1.5"></circle>
             </svg>
         </span>
-        <input type="text" class="mcq-input" aria-label="">
+        <div class="mcq-option-move-controls">
+            <button type="button" class="mcq-option-move-btn" data-move="up" title="Move up"><span aria-hidden="true">&uarr;</span><span class="visually-hidden">Move up</span></button>
+            <button type="button" class="mcq-option-move-btn" data-move="down" title="Move down"><span aria-hidden="true">&darr;</span><span class="visually-hidden">Move down</span></button>
+        </div>
+        <label class="visually-hidden" for="${inputId}"></label>
+        <input type="text" class="mcq-input" id="${inputId}">
         <label class="radio-option">
             <input type="radio" name="mcq-correct" disabled>
             <span class="correct-label">Correct</span>
         </label>
-        <button type="button" class="mcq-option-remove" aria-label="">&times;</button>
+        <button type="button" class="mcq-option-remove"><span aria-hidden="true">&times;</span><span class="visually-hidden"></span></button>
     `;
     return row;
 }
@@ -102,26 +114,37 @@ function appendMcqOptionRow(container, row) {
 
 /**
  * Re-letter every option row in document order - this is the only place
- * that assigns data-option/placeholder/aria-label/radio value, so inserting,
+ * that assigns data-option/placeholder/label text/radio value, so inserting,
  * removing, or reordering a row just means rebuilding this once afterward.
  * Doesn't touch typed text or which radio is checked, so content and the
  * correct-answer choice both keep following their row under its new letter.
- * Also syncs the remove button's visibility and the footer's
- * add-button/hint to the current count.
+ * Also syncs the remove button's visibility, the move buttons' disabled
+ * state (first/last row), and the footer's add-button/hint to the current
+ * count.
  */
 function relabelMcqOptions(container) {
     const rows = mcqOptionRows(container);
     rows.forEach((row, index) => {
         const letter = mcqOptionLetter(index);
         const input = row.querySelector('.mcq-input');
+        const label = row.querySelector('label.visually-hidden');
         const radio = row.querySelector('input[name="mcq-correct"]');
         const removeBtn = row.querySelector('.mcq-option-remove');
         input.dataset.option = letter;
         input.placeholder = `Option ${letter}`;
-        input.setAttribute('aria-label', `Option ${letter} text`);
+        label.textContent = `Option ${letter}`;
         radio.value = letter;
-        removeBtn.setAttribute('aria-label', `Remove option ${letter}`);
+        removeBtn.querySelector('.visually-hidden').textContent = `Remove (Option ${letter})`;
         row.setAttribute('aria-label', `Option ${letter}, drag to reorder`);
+
+        const isFirst = index === 0;
+        const isLast = index === rows.length - 1;
+        const moveUp = row.querySelector('.mcq-option-move-btn[data-move="up"]');
+        const moveDown = row.querySelector('.mcq-option-move-btn[data-move="down"]');
+        moveUp.disabled = isFirst;
+        moveUp.querySelector('.visually-hidden').textContent = `Move Up (Option ${letter})`;
+        moveDown.disabled = isLast;
+        moveDown.querySelector('.visually-hidden').textContent = `Move Down (Option ${letter})`;
     });
 
     // Hiding (not removing) the remove button below the minimum keeps the
@@ -147,10 +170,39 @@ function mcqOptionRows(container) {
     return Array.from(container.querySelectorAll('.mcq-option'));
 }
 
+/**
+ * Move a row up/down a slot - the keyboard- (and otherwise drag-free-)
+ * accessible alternative to dragging, same pattern as the move buttons on
+ * units/flashcards. A `.mcq-option-move-btn[data-move]` button's own click
+ * handler, not a global function, since this module doesn't use inline
+ * onclick attributes anywhere else.
+ */
+function moveMcqOption(row, container, direction) {
+    const sibling = direction === 'up' ? row.previousElementSibling : row.nextElementSibling;
+    if (!sibling || !sibling.classList.contains('mcq-option')) return;
+
+    if (direction === 'up') {
+        sibling.insertAdjacentElement('beforebegin', row);
+    } else {
+        sibling.insertAdjacentElement('afterend', row);
+    }
+    relabelMcqOptions(container);
+
+    const button = row.querySelector(`.mcq-option-move-btn[data-move="${direction}"]`);
+    if (!button.disabled) button.focus({ preventScroll: true });
+}
+
 function wireMcqOptionRow(container, row) {
     const input = row.querySelector('.mcq-input');
     const radio = row.querySelector('input[name="mcq-correct"]');
     const removeBtn = row.querySelector('.mcq-option-remove');
+
+    row.querySelector('.mcq-option-move-btn[data-move="up"]').addEventListener('click', () => {
+        moveMcqOption(row, container, 'up');
+    });
+    row.querySelector('.mcq-option-move-btn[data-move="down"]').addEventListener('click', () => {
+        moveMcqOption(row, container, 'down');
+    });
 
     // A row can only be marked "correct" once it has text - matches the
     // existing validation an instructor already relies on.
@@ -192,7 +244,7 @@ function wireMcqOptionRow(container, row) {
     // suppressed so those keep their normal click/typing behavior instead of
     // hijacking the gesture into a drag.
     row.addEventListener('dragstart', (event) => {
-        if (event.target.closest('.mcq-input, .radio-option, .mcq-option-remove')) {
+        if (event.target.closest('.mcq-input, .radio-option, .mcq-option-remove, .mcq-option-move-controls')) {
             event.preventDefault();
             return;
         }

@@ -191,8 +191,8 @@ test.describe('Issue 724: Course Upload page', () => {
     });
 
     finding(11, 'the unchecked publish toggle has 3:1 contrast against its surroundings', async ({ page, note }) => {
-        const toggle = page.locator('.publish-toggle .toggle-switch').first();
-        await expect(page.locator('.publish-toggle input').first()).not.toBeChecked();
+        const toggle = page.locator('.header-actions .publish-toggle .toggle-switch').first();
+        await expect(page.locator('.header-actions .publish-toggle input').first()).not.toBeChecked();
         const measured = await toolkit.graphicContrast(toggle, { pad: 4 });
         note('pixels', measured);
         expect(measured.ratio).toBeGreaterThanOrEqual(3);
@@ -223,7 +223,7 @@ test.describe('Issue 724: Course Upload page', () => {
 
     finding(15, 'the publish status message announces only its own text', async ({ page, note }) => {
         const { announced } = await statusMessageChecks(page, note,
-            () => page.locator('.publish-toggle .toggle-switch').nth(1).click(), /published/i);
+            () => page.locator('.header-actions .publish-toggle .toggle-switch').nth(1).click(), /published/i);
         for (const a of announced) {
             expect(a.controlsInside).toEqual([]);
             expect(a.text).not.toMatch(/dismiss/i);
@@ -233,7 +233,7 @@ test.describe('Issue 724: Course Upload page', () => {
     });
 
     finding(16, 'controls inside status messages can be reached from the keyboard', async ({ page, note }) => {
-        await statusMessageChecks(page, note, () => page.locator('.publish-toggle .toggle-switch').nth(1).click(), /published/i);
+        await statusMessageChecks(page, note, () => page.locator('.header-actions .publish-toggle .toggle-switch').nth(1).click(), /published/i);
         // A message that does carry a control (errors must be dismissable) has to
         // put that control where Tab can find it.
         await page.evaluate(() => /** @type {any} */ (window).showNotification('Could not save the unit.', 'error'));
@@ -246,7 +246,7 @@ test.describe('Issue 724: Course Upload page', () => {
 
     finding(17, 'status messages with controls are not taken away on a timer', async ({ page, note }) => {
         const { observed } = await statusMessageChecks(page, note, async () => {
-            await page.locator('.publish-toggle .toggle-switch').nth(1).click();
+            await page.locator('.header-actions .publish-toggle .toggle-switch').nth(1).click();
             await page.evaluate(() => /** @type {any} */ (window).showNotification('Could not save the unit.', 'error'));
         }, /published/i);
         const timedOutWithControls = observed.messages.filter((m) => m.controls.length && m.removedAfterMs !== null);
@@ -382,7 +382,7 @@ test.describe('Issue 724: Course Upload page', () => {
         [55, 'Back (textbox)', /flashcard-back-input/],
         [60, 'Add Card', /addManualFlashcard/],
         [61, 'Save Draft', /saveFlashcardDraft/],
-        [62, 'Publish to Students', /flashcard-publish-btn/],
+        [62, 'Published (toggle)', /flashcard-publish-/],
         [63, 'protégé threshold (number field)', /pass-threshold-/],
         [64, 'Add Question', /add-question-btn/],
     ]);
@@ -415,7 +415,7 @@ test.describe('Issue 724: Course Upload page', () => {
                 [unit1.locator('.unit-rename-btn'), 'Rename Unit (1. Cell Structure)'],
                 [unit1.locator('.unit-move-btn').first(), 'Move Up (1. Cell Structure)'],
                 [unit1.locator('.unit-move-btn').nth(1), 'Move Down (1. Cell Structure)'],
-                [unit1.locator('.publish-toggle input'), 'Publish (1. Cell Structure)'],
+                [unit1.locator('.header-actions .publish-toggle input'), 'Publish (1. Cell Structure)'],
                 [unit1.locator('.delete-unit-btn'), 'Delete Unit (1. Cell Structure)'],
                 [unit1.locator('.toggle-section').first(), 'Learning Objectives (1. Cell Structure)'],
                 [unit1.locator('.objective-input'), 'New learning objective (1. Cell Structure)'],
@@ -436,8 +436,8 @@ test.describe('Issue 724: Course Upload page', () => {
                 [unit1.locator('.flashcard-back-input').nth(1), 'Back (Card 2) (1. Cell Structure)'],
                 [unit1.locator('.flashcard-add-btn'), 'Add Card (Student Flashcards) (1. Cell Structure)'],
                 [unit1.locator('.flashcard-save-btn'), 'Save Draft (Student Flashcards) (1. Cell Structure)'],
-                [unit1.locator('.flashcard-publish-btn'), 'Publish to Students (Student Flashcards) (1. Cell Structure)'],
-                [unit3.locator('.flashcard-unpublish-btn'), 'Unpublish (Student Flashcards) (3. Metabolism)'],
+                [unit1.locator('.flashcard-editor-actions .publish-toggle input'), 'Publish (Student Flashcards) (1. Cell Structure)'],
+                [unit3.locator('.flashcard-editor-actions .publish-toggle input'), 'Publish (Student Flashcards) (3. Metabolism)'],
                 [unit1.locator('.threshold-input'), 'Number of correct answers required for BIOCBOT to be in protégé mode (1. Cell Structure)'],
                 [unit1.locator('.edit-question-btn').first(), 'Edit Learning Objective (Question 1) (1. Cell Structure)'],
                 [unit1.locator('.delete-question-btn').first(), 'Delete (Question 1) (1. Cell Structure)'],
@@ -447,8 +447,10 @@ test.describe('Issue 724: Course Upload page', () => {
             const actual = [];
             for (const [locator] of expected) actual.push((await toolkit.describe(locator)).name);
             expect(actual).toEqual(expected.map(([, name]) => name));
-            // The visible word beside the publish switch is the start of its name.
-            await expect(unit1.locator('.publish-toggle .toggle-label')).toHaveText('Publish');
+            // The visible word beside each publish switch is the start of its name -
+            // the unit's own switch and the flashcard deck's both say "Publish".
+            await expect(unit1.locator('.header-actions .toggle-label')).toHaveText('Publish');
+            await expect(unit1.locator('.flashcard-editor-actions .toggle-label')).toHaveText('Publish');
             // No control on the page is named with aria-label (house rule: text inside the control).
             const ariaLabelled = await page.locator('#dynamic-units-container [aria-label]').count();
             expect(ariaLabelled).toBe(0);
@@ -718,7 +720,7 @@ test.describe('Course Upload: generic sweep of every state', () => {
         await capture('upload-dialog-paste', '#upload-modal');
         await page.locator('#upload-modal').getByRole('button', { name: 'Cancel' }).click();
 
-        await page.locator('.accordion-item').first().getByRole('button', { name: /Add Question/ }).click();
+        await page.locator('.accordion-item').first().locator('.add-question-btn').click();
         await expect(page.locator('#question-modal')).toBeVisible();
         await capture('question-dialog', '#question-modal');
         await page.locator('#question-modal').getByRole('button', { name: 'Cancel' }).click();

@@ -2508,10 +2508,53 @@ fieldset.radio-group-fieldset {
     gap: 0.5rem;
 }
 
+/* Keyboard- (and drag-free-) alternative to dragging a row into place,
+   same pattern as .flashcard-move-controls/.flashcard-move-btn. */
+.mcq-option-move-controls {
+    display: inline-flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.mcq-option-move-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 1px solid #c7d0db;
+    border-radius: var(--bb-radius);
+    background: #fff;
+    color: var(--primary-color);
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.mcq-option-move-btn:hover:not(:disabled) {
+    background: rgba(74, 111, 165, 0.08);
+    border-color: var(--primary-color);
+}
+
+.mcq-option-move-btn:focus-visible {
+    outline: 3px solid rgba(74, 111, 165, 0.25);
+    outline-offset: 1px;
+}
+
+.mcq-option-move-btn:disabled {
+    color: #5b6470;
+    background: #f3f4f6;
+    border-style: dashed;
+    cursor: not-allowed;
+}
+
 /* Remove button for a dynamically-added option row. Hidden (not removed)
    below the minimum option count, via JS, so the row's layout stays put
    instead of the input jumping wider when there's nothing to remove. */
 .mcq-option-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
     width: 24px;
     height: 24px;

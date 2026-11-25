@@ -93,7 +93,7 @@ test.describe('instructor flashcard editor', () => {
             publishedCards: []
         });
 
-        await page.getByRole('button', { name: 'Remove this card' }).first().click();
+        await page.locator('.flashcard-remove-btn').first().click();
         await expect.poll(() => page.evaluate(() => /** @type {any} */ (window).testFlashcardState.putBodies.length)).toBe(1);
         await expect(page.locator('.flashcard-editor-row')).toHaveCount(1);
         await expect(page.locator('.flashcard-front-input')).toHaveValue('Second card');
@@ -124,7 +124,7 @@ test.describe('instructor flashcard editor', () => {
         // this click to unpublish.
         await toggle.click();
         await expect(toggle).not.toBeChecked();
-        await expect(page.getByRole('button', { name: 'Remove this card' })).toBeVisible();
+        await expect(page.locator('.flashcard-remove-btn')).toBeVisible();
 
         // Now hasDraft=true (unpublish recovers the deck as an editable draft)
         // and isPublished=false -> routes to publish.
@@ -202,7 +202,7 @@ test.describe('instructor flashcard editor', () => {
         });
 
         expect(await frontValues()).toEqual(['Card two', 'Card three', 'Card one']);
-        await expect(page.locator('.flashcard-editor-row-heading strong')).toHaveText(['Card 1', 'Card 2', 'Card 3']);
+        await expect(page.locator('.flashcard-card-title')).toHaveText(['Card 1', 'Card 2', 'Card 3']);
 
         await page.getByRole('button', { name: 'Save Draft' }).click();
         await expect.poll(() => page.evaluate(() => /** @type {any} */ (window).testFlashcardState.putBodies.length)).toBe(1);
@@ -226,7 +226,7 @@ test.describe('instructor flashcard editor', () => {
         });
 
         await expect(page.locator('#flashcard-status-unit-1')).toHaveText('Unpublished draft');
-        await expect(page.getByRole('button', { name: 'Remove this card' })).toBeVisible();
+        await expect(page.locator('.flashcard-remove-btn')).toBeVisible();
         const toggle = page.locator('#flashcard-publish-unit-1');
         await expect(toggle).not.toBeChecked();
         await toggle.click();

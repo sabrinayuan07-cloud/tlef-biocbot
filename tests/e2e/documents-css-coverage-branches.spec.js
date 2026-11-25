@@ -292,20 +292,22 @@ function branchHarness() {
                         <textarea id="branch-text">Paste text.</textarea>
                     </div>
 
-                    <div class="assessment-actions">
-                        <button class="add-question-btn" id="add-question-btn" type="button">
-                            <span class="btn-icon">+</span>
-                            Add Question
-                        </button>
-                        <button class="auto-link-btn" id="auto-link-btn" type="button">Auto-link</button>
-                        <button class="generate-ai-btn" id="generate-ai-btn" type="button">Generate with AI</button>
-                    </div>
+                    <div class="assessment-questions-section">
+                        <div class="assessment-actions">
+                            <button class="add-question-btn" id="add-question-btn" type="button">
+                                <span class="btn-icon">+</span>
+                                Add Question
+                            </button>
+                            <button class="auto-link-btn" id="auto-link-btn" type="button">Auto-link</button>
+                            <button class="generate-ai-btn" id="generate-ai-btn" type="button">Generate with AI</button>
+                        </div>
 
-                    <div class="question-header">
-                        <span class="question-type-badge multiple-choice">Multiple Choice</span>
-                        <span class="question-type-badge short-answer">Short Answer</span>
-                        <button class="edit-question-btn" id="edit-question-btn" type="button">e</button>
-                        <button class="delete-question-btn" id="delete-question-btn" type="button">x</button>
+                        <div class="question-header">
+                            <span class="question-type-badge multiple-choice">Multiple Choice</span>
+                            <span class="question-type-badge short-answer">Short Answer</span>
+                            <button class="edit-question-btn" id="edit-question-btn" type="button">e</button>
+                            <button class="delete-question-btn" id="delete-question-btn" type="button">x</button>
+                        </div>
                     </div>
 
                     <div class="struggle-topic-actions">
