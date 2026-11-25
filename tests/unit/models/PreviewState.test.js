@@ -150,6 +150,11 @@ describe('destroySandbox', () => {
                 { sessionId: 'c2', studentId: 'real-student', courseId: COURSE_ID }
             ],
             quizAttempts: [{ studentId: PREVIEW_ID }],
+            // Which chats the sandbox started (src/models/ChatSessionStart.js).
+            chatSessionStarts: [
+                { userId: PREVIEW_ID, sessionId: 'c1', courseId: COURSE_ID },
+                { userId: 'real-student', sessionId: 'c2', courseId: COURSE_ID }
+            ],
             users: [
                 { userId: PREVIEW_ID, isPreview: true, studentOnboardingComplete: true },
                 { userId: 'real-student', role: 'student' }
@@ -162,6 +167,8 @@ describe('destroySandbox', () => {
 
         expect(await db.collection('chat_sessions').findOne({ studentId: PREVIEW_ID })).toBeNull();
         expect(await db.collection('quizAttempts').findOne({ studentId: PREVIEW_ID })).toBeNull();
+        expect(await db.collection('chatSessionStarts').findOne({ userId: PREVIEW_ID })).toBeNull();
+        expect(await db.collection('chatSessionStarts').findOne({ userId: 'real-student' })).not.toBeNull();
         expect(await db.collection('users').findOne({ userId: PREVIEW_ID })).toBeNull();
         expect(await db.collection('previewStates').findOne({ previewUserId: PREVIEW_ID })).toBeNull();
 

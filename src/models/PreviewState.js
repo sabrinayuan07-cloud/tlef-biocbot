@@ -34,7 +34,8 @@ const PREVIEW_DATA_COLLECTIONS = [
     { collection: 'struggleActivity', field: 'userId' },
     { collection: 'userAgreements', field: 'userId' },
     { collection: 'student_super_course_chat_sessions', field: 'studentId' },
-    { collection: 'superchats', field: 'studentId' }
+    { collection: 'superchats', field: 'studentId' },
+    { collection: 'chatSessionStarts', field: 'userId' }
 ];
 
 /**

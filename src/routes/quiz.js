@@ -9,6 +9,7 @@ const router = express.Router();
 const CourseModel = require('../models/Course');
 const QuizAttempt = require('../models/QuizAttempt');
 const DocumentModel = require('../models/Document');
+const activityEvents = require('../services/activityEvents');
 const gridfs = require('../services/gridfs');
 const prompts = require('../services/prompts');
 const BadWordsFilter = require('bad-words');
@@ -377,6 +378,13 @@ router.post('/attempt', async (req, res) => {
             studentAnswer: String(studentAnswer),
             correct: Boolean(correct),
             feedback: feedback || ''
+        });
+
+        // Practice activity gamification can count. Never in the way of the answer.
+        activityEvents.publishQuestionAnswered(req.user, {
+            courseId,
+            unit: lectureName,
+            correct: Boolean(correct)
         });
 
         res.json({ success: true, attemptId: result.attemptId });

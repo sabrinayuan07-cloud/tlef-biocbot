@@ -2,12 +2,14 @@
  * BiocBot's events, on the UBC GenAI pub/sub toolkit
  * (@ubc/genai-toolkit-pubsub-*, rung 3 of its PRD, section 8).
  *
- * BiocBot announces two things it only recorded before: a student's switch
- * between tutor and protégé mode, and a struggle topic becoming active or being
- * cleared. Each event carries what it means, copied from BiocBot's dictionary
- * below, so a listener needs nothing else. The toolkit stores nothing: the
- * chat, the saved chat and the struggleActivity rows are unchanged, and only
- * listeners BiocBot registers get the events.
+ * BiocBot announces a student's switch between tutor and protégé mode, a
+ * struggle topic becoming active or being cleared, and what a student does that
+ * the gamification toolkit can count: starting a chat about a unit, each chat
+ * message, and each practice question answered (src/services/activityEvents.js).
+ * Each event carries what it means, copied from BiocBot's dictionary below, so
+ * a listener needs nothing else. The toolkit stores nothing: the chat, the
+ * saved chat and the struggleActivity rows are unchanged, and only listeners
+ * BiocBot registers (src/listeners) get the events.
  *
  * The packages are on GitHub Packages, so, like the agents framework, they are
  * optional dependencies. An install without a registry token has none of
@@ -107,6 +109,40 @@ const EVENT_DEFINITIONS = Object.freeze([
         requires: ['user'],
         props: {
             topic: { type: 'text', label: 'Topic' }
+        }
+    },
+    // What a student does in BiocBot, named as the gamification toolkit's
+    // sample app names them, so its templates read the same here. A unit is
+    // the unit's name as text: the toolkit has no per-course list of units yet,
+    // and each course has its own.
+    {
+        type: 'chat.session.started',
+        version: 1,
+        label: 'chats with BiocBot about a unit',
+        description: 'The student sent the first message of a new chat with BiocBot about one unit. The chat is its session.',
+        requires: ['user', 'course', 'session'],
+        props: {
+            unit: { type: 'text', label: 'Unit' }
+        }
+    },
+    {
+        type: 'chat.message.sent',
+        version: 1,
+        label: 'sends BiocBot a message',
+        description: 'One message the student sent in a chat with BiocBot, after the language check. Counts raw activity.',
+        requires: ['user', 'course', 'session'],
+        volume: true
+    },
+    {
+        type: 'quiz.question.answered',
+        version: 1,
+        label: 'answers a practice question',
+        description: "The student answered one of a unit's practice questions, to try themselves out. Nothing is graded. For a short answer, whether it was right is BiocBot's check as the page reported it.",
+        requires: ['user', 'course'],
+        volume: true,
+        props: {
+            correct: { type: 'boolean', label: 'Correct' },
+            unit: { type: 'text', label: 'Unit' }
         }
     }
 ]);

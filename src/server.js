@@ -13,6 +13,7 @@ const { ensureIndexes: ensureMessageFeedbackIndexes } = require('./models/Messag
 const { ensureIndexes: ensureChatSurveyResponseIndexes } = require('./models/ChatSurveyResponse');
 const { ensureIndexes: ensureFlashcardIndexes } = require('./models/FlashcardDeck');
 const { ensureIndexes: ensureTopicDashboardTimeIndexes } = require('./models/TopicDashboardTime');
+const { ensureIndexes: ensureChatSessionStartIndexes } = require('./models/ChatSessionStart');
 const { ensureIndexes: ensureProviderMigrationIndexes } = require('./services/providerMigrationService');
 const { resumePendingMigrations } = require('./services/providerMigrationRunner');
 const { backfillExistingScopes } = require('./services/scopeModelSettings');
@@ -51,6 +52,7 @@ const previewRoutes = require('./routes/preview');
 const vendorRoutes = require('./routes/vendor');
 const { createEventReportRoute } = require('./routes/events');
 const { getEvents, serverName } = require('./services/events');
+const { startListeners } = require('./listeners');
 const { createHealthRouter } = require('./routes/health');
 const { createCanvasLmsRouter } = require('./routes/canvasLms');
 const { createLmsGradesRouter } = require('./routes/lmsGrades');
@@ -711,6 +713,8 @@ function setupAPIRoutes() {
         ? `📣 Events are on (pub/sub toolkit installed), from server "${serverName()}"`
         : 'ℹ️ Events are off: the pub/sub toolkit is not installed');
     app.post('/api/events/:courseId', createEventReportRoute(authMiddleware));
+    // The listeners for those events, such as gamification's (src/listeners).
+    startListeners();
 
     // Preview control plane. Deliberately mounted without a role gate: calls
     // arrive from a tab that is already wearing the sandboxed student identity,
@@ -767,6 +771,7 @@ async function startServer() {
         await ensureChatSurveyResponseIndexes(db);
         await ensureFlashcardIndexes(db);
         await ensureTopicDashboardTimeIndexes(db);
+        await ensureChatSessionStartIndexes(db);
         await ensureProviderMigrationIndexes(db);
         const materializedModelScopes = await backfillExistingScopes(db);
         console.log(`✅ Materialized per-scope model settings for ${materializedModelScopes} AI surface(s)`);

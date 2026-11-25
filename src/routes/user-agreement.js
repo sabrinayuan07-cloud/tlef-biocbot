@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { getUserAgreement, createOrUpdateUserAgreement } = require('../models/UserAgreement');
+const activityEvents = require('../services/activityEvents');
 
 /**
  * GET /api/user-agreement/status
@@ -66,7 +67,11 @@ router.post('/agree', async (req, res) => {
         // Get client IP and user agent
         const ipAddress = req.ip || req.connection.remoteAddress;
         const userAgent = req.get('User-Agent');
-        
+
+        // Whether this version was already accepted, so a repeat isn't announced.
+        const before = await getUserAgreement(db, userId, role);
+        const alreadyAccepted = !!(before && before.hasAgreed && before.agreementVersion === agreementVersion);
+
         // Create or update agreement record
         const agreement = await createOrUpdateUserAgreement(db, userId, role, {
             hasAgreed: true,
@@ -74,7 +79,11 @@ router.post('/agree', async (req, res) => {
             ipAddress: ipAddress,
             userAgent: userAgent
         });
-        
+
+        if (!alreadyAccepted && agreement && agreement.hasAgreed) {
+            activityEvents.publishAgreementAccepted(req.user, agreement.agreementVersion);
+        }
+
         res.json({
             success: true,
             message: 'Agreement recorded successfully',
