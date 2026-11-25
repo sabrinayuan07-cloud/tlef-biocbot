@@ -92,8 +92,11 @@ function startGamification({ events, db, store, logger = console }) {
     let storeToUse = store;
     if (!storeToUse) {
         const mongoStore = loaded.store.createMongoStore(db);
-        // Safe on every start. Counting works while it runs; a retry of the
-        // same event could count twice until the unique index exists.
+        // Safe on every start, and not waited for: these indexes are for
+        // lookups only. A retried event counts once regardless, because the
+        // store keys each event by its id (`_id`). Two processes saving the
+        // same student's state can't overwrite each other: the store checks a
+        // version before it saves (0.1.0-rc.2).
         mongoStore.ensureIndexes().catch(error => {
             logger.error('❌ [GAMIFICATION] Could not create its indexes:', error && error.message);
         });
