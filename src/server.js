@@ -714,7 +714,9 @@ function setupAPIRoutes() {
         : 'ℹ️ Events are off: the pub/sub toolkit is not installed');
     app.post('/api/events/:courseId', createEventReportRoute(authMiddleware));
     // The listeners for those events, such as gamification's (src/listeners).
-    startListeners();
+    // Gamification gets the driver's raw Db, like the startup migrations: its
+    // gamification_* collections hold no encrypted field.
+    startListeners({ db });
 
     // Preview control plane. Deliberately mounted without a role gate: calls
     // arrive from a tab that is already wearing the sandboxed student identity,

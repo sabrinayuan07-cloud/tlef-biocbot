@@ -1,7 +1,8 @@
 /**
- * Where BiocBot turns on its event listeners (src/listeners), and the one it
- * has today: BIOCBOT_EVENTS_LOG=1 prints each event in a laptop's terminal.
- * It's off unless asked for, ignored in production, does nothing without the
+ * Where BiocBot turns on its event listeners (src/listeners). Gamification
+ * starts only with BIOCBOT_GAMIFICATION=1, on BiocBot's publisher and
+ * database. BIOCBOT_EVENTS_LOG=1 prints each event in a laptop's terminal:
+ * it's off unless asked for, ignored in production, does nothing without the
  * toolkit, and never prints a sensitive event or an event's meaning.
  */
 const eventsService = require('../../../src/services/events');
@@ -24,7 +25,56 @@ function fakeEvents({ installed = true } = {}) {
     };
 }
 
-const logger = () => ({ log: jest.fn(), warn: jest.fn() });
+const logger = () => ({ log: jest.fn(), warn: jest.fn(), error: jest.fn() });
+
+function fakeGamification({ installed = true } = {}) {
+    const stop = jest.fn();
+    return {
+        stop,
+        startGamification: jest.fn(() => (installed ? { gamification: {}, stop } : null))
+    };
+}
+
+describe('startListeners: gamification', () => {
+    test('starts nothing unless BIOCBOT_GAMIFICATION is 1', () => {
+        for (const env of [{}, { BIOCBOT_GAMIFICATION: '0' }, { BIOCBOT_GAMIFICATION: 'true' }]) {
+            const gamification = fakeGamification();
+            startListeners({ env, logger: logger(), events: fakeEvents(), gamification });
+            expect(gamification.startGamification).not.toHaveBeenCalled();
+        }
+    });
+
+    test('starts on BiocBot\'s publisher and database, and stops when asked', () => {
+        const events = fakeEvents();
+        const gamification = fakeGamification();
+        const log = logger();
+        const db = { databaseName: 'biocbot' };
+
+        const stop = startListeners({ env: { BIOCBOT_GAMIFICATION: '1' }, logger: log, events, db, gamification });
+
+        expect(gamification.startGamification).toHaveBeenCalledWith({ events: {}, db, logger: log });
+        expect(log.log).toHaveBeenCalledWith(expect.stringContaining('Counting what students do'));
+        stop();
+        expect(gamification.stop).toHaveBeenCalled();
+    });
+
+    test('warns when asked for but the gamification toolkit is not installed', () => {
+        const log = logger();
+        startListeners({
+            env: { BIOCBOT_GAMIFICATION: '1' },
+            logger: log,
+            events: fakeEvents(),
+            gamification: fakeGamification({ installed: false })
+        });
+        expect(log.warn).toHaveBeenCalledWith(expect.stringContaining('gamification toolkit is not installed'));
+    });
+
+    test('does nothing where the pub/sub toolkit is not installed', () => {
+        const gamification = fakeGamification();
+        startListeners({ env: { BIOCBOT_GAMIFICATION: '1' }, logger: logger(), events: fakeEvents({ installed: false }), gamification });
+        expect(gamification.startGamification).not.toHaveBeenCalled();
+    });
+});
 
 describe('startListeners', () => {
     test('starts nothing unless BIOCBOT_EVENTS_LOG is 1', () => {
