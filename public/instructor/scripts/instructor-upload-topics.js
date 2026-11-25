@@ -704,11 +704,12 @@ function buildDocumentActionButtons(documentId, documentTitle = '') {
         return '';
     }
 
-    // Each button's name ends with the document's title, as visually hidden
-    // text ("View lecture-3.pdf"), so a list of documents is not a list of
-    // indistinguishable "View, Download, Delete" controls.
+    // Each button's name continues with the document's title, as visually
+    // hidden text ("View lecture-3.pdf"), so a list of documents is not a list
+    // of indistinguishable "View, Download, Delete" controls.
     // refreshMaterialNames() (instructor-units.js) completes this once the item
-    // is in its list: a copy number when the title repeats there, and the unit.
+    // is in its list: a position when the title repeats there, and the unit
+    // ("View lecture-3.pdf (2 of 2) (1. Cell Structure)").
     const hiddenTitle = `<span class="visually-hidden material-context">${documentTitle ? ` ${escapeHTML(documentTitle)}` : ''}</span>`;
     return `
         <button type="button" class="action-button view" id="doc-view-${documentId}" onclick="viewDocument('${documentId}')">View${hiddenTitle}</button>

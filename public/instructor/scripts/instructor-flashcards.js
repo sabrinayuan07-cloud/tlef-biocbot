@@ -59,18 +59,29 @@ async function loadFlashcardDecks() {
 }
 
 /**
- * Visually hidden text that finishes a repeated control's name with the unit
- * it belongs to ("Save Draft" + " for 1. Cell Structure"), so no two controls
- * on the page share a name. See unitContext() in instructor-units.js.
+ * Visually hidden text that finishes a repeated control's name: what it acts
+ * on, then the unit ("Save Draft" + " (Student Flashcards) (1. Cell Structure)"),
+ * so no two controls on the page share a name. See unitContext() in
+ * instructor-units.js and the builders in instructor-names.js.
  * @param {string} unitName - Internal unit name (e.g. "Unit 1")
- * @param {string} [lead] - Words between the control's text and the unit title
+ * @param {string} [lead] - What in the unit the control acts on, e.g. " (Card 2)"
  * @returns {string} HTML for the hidden span
  */
-function flashcardContext(unitName, lead) {
+function flashcardContext(unitName, lead = '') {
     const label = typeof getUnitReference === 'function' ? getUnitReference(unitName) : unitName;
     return typeof unitContext === 'function'
-        ? unitContext(flashcardEscapeHtml(label), lead)
-        : `<span class="visually-hidden"> for ${flashcardEscapeHtml(label)}</span>`;
+        ? unitContext(label, lead)
+        : `<span class="visually-hidden">${flashcardEscapeHtml(lead)} (${flashcardEscapeHtml(label)})</span>`;
+}
+
+/** " (Student Flashcards)": the deck-wide controls' target. */
+function flashcardDeckLead() {
+    return typeof CourseUploadNames !== 'undefined' ? CourseUploadNames.getSectionLead('flashcards') : ' (Student Flashcards)';
+}
+
+/** " (Card 2)": one card's controls and fields. @param {number} cardNumber */
+function flashcardCardLead(cardNumber) {
+    return typeof CourseUploadNames !== 'undefined' ? CourseUploadNames.getCardLead(cardNumber) : ` (Card ${cardNumber})`;
 }
 
 /**
@@ -166,11 +177,11 @@ function renderInstructorFlashcardSection(unitName) {
         </ul>
         <div class="flashcard-editor-actions">
             ${isEditableDraft ? `
-                <button type="button" class="secondary-button flashcard-add-btn" id="flashcard-add-${unitId}" onclick="addManualFlashcard('${unitName}')">Add Card${flashcardContext(unitName, ' to ')}</button>
-                <button type="button" class="secondary-button flashcard-save-btn" id="flashcard-save-${unitId}" onclick="saveFlashcardDraft('${unitName}')">Save Draft${flashcardContext(unitName)}</button>
-                <button type="button" class="flashcard-publish-btn" id="flashcard-publish-${unitId}" onclick="publishFlashcardDeck('${unitName}', this)">Publish to Students<span class="visually-hidden">: the deck</span>${flashcardContext(unitName)}</button>
+                <button type="button" class="secondary-button flashcard-add-btn" id="flashcard-add-${unitId}" onclick="addManualFlashcard('${unitName}')">Add Card${flashcardContext(unitName, flashcardDeckLead())}</button>
+                <button type="button" class="secondary-button flashcard-save-btn" id="flashcard-save-${unitId}" onclick="saveFlashcardDraft('${unitName}')">Save Draft${flashcardContext(unitName, flashcardDeckLead())}</button>
+                <button type="button" class="flashcard-publish-btn" id="flashcard-publish-${unitId}" onclick="publishFlashcardDeck('${unitName}', this)">Publish to Students${flashcardContext(unitName, flashcardDeckLead())}</button>
             ` : ''}
-            ${deck.isPublished ? `<button type="button" class="flashcard-unpublish-btn" id="flashcard-unpublish-${unitId}" onclick="unpublishFlashcardDeck('${unitName}', this)">Unpublish<span class="visually-hidden"> the deck</span>${flashcardContext(unitName)}</button>` : ''}
+            ${deck.isPublished ? `<button type="button" class="flashcard-unpublish-btn" id="flashcard-unpublish-${unitId}" onclick="unpublishFlashcardDeck('${unitName}', this)">Unpublish${flashcardContext(unitName, flashcardDeckLead())}</button>` : ''}
         </div>
     `;
     initializeInstructorFlashcardPreviews(editor);
@@ -183,12 +194,12 @@ function renderFlashcardEditorRow(card, index, readOnly, unitName) {
     // heading says, so they stay right after a card is added or removed and
     // the list is re-rendered.
     const key = `${flashcardUnitId(unitName)}-${index + 1}`;
-    const which = `<span class="visually-hidden"> of card ${index + 1}${flashcardContext(unitName, ', ')}</span>`;
+    const which = flashcardContext(unitName, flashcardCardLead(index + 1));
     return `
         <li class="flashcard-editor-row" data-card-id="${flashcardEscapeHtml(card.cardId || '')}" data-source="${sourceData}">
             <div class="flashcard-editor-row-heading">
                 <h6 class="flashcard-card-title" id="flashcard-title-${key}" tabindex="-1">Card ${index + 1}</h6>
-                ${readOnly ? '' : `<button type="button" class="flashcard-remove-btn" id="flashcard-remove-${key}" onclick="removeFlashcardEditorRow(this)">Remove<span class="visually-hidden"> card ${index + 1}${flashcardContext(unitName, ', ')}</span></button>`}
+                ${readOnly ? '' : `<button type="button" class="flashcard-remove-btn" id="flashcard-remove-${key}" onclick="removeFlashcardEditorRow(this)">Remove${which}</button>`}
             </div>
             <label for="flashcard-front-${key}">Front${which}</label>
             <textarea class="flashcard-front-input" id="flashcard-front-${key}" rows="2" maxlength="300" ${readOnly ? 'readonly' : ''}>${flashcardEscapeHtml(card.front)}</textarea>

@@ -158,8 +158,10 @@ test.describe('Issue 724: Course Upload page', () => {
     finding(12, 'each "Rename unit" control names its unit', async ({ page, note }) => {
         const controls = await toolkit.describeAll(page.locator('.unit-rename-btn'));
         note('names', controls.map((c) => c.name));
-        expect(new Set(controls.map((c) => c.name)).size).toBe(controls.length);
-        for (const control of controls) expect(control.name).toMatch(/rename .*(Cell Structure|Enzymes|Metabolism)/i);
+        // House format: the action, then the unit in parentheses.
+        expect(controls.map((c) => c.name)).toEqual([
+            'Rename Unit (1. Cell Structure)', 'Rename Unit (2. Enzymes)', 'Rename Unit (3. Metabolism)',
+        ]);
     });
 
     finding(13, 'unit names are headings', async ({ page, note }) => {
@@ -259,11 +261,11 @@ test.describe('Issue 724: Course Upload page', () => {
     finding(19, 'section show/hide controls are named after their section', async ({ page, note }) => {
         const controls = await toolkit.describeAll(page.locator('.accordion-item').first().locator('.unit-section .toggle-section'));
         note('names', controls.map((c) => c.name));
-        // Section name first, then the unit, so the four sections of every unit
-        // are distinct from the same four in the next unit.
+        // Section name first, then the unit in parentheses, so the four sections
+        // of every unit are distinct from the same four in the next unit.
         expect(controls.map((c) => c.name)).toEqual([
-            'Learning Objectives: 1. Cell Structure', 'Course Materials: 1. Cell Structure',
-            'Student Flashcards: 1. Cell Structure', 'Assessment Questions: 1. Cell Structure',
+            'Learning Objectives (1. Cell Structure)', 'Course Materials (1. Cell Structure)',
+            'Student Flashcards (1. Cell Structure)', 'Assessment Questions (1. Cell Structure)',
         ]);
         expect(controls.every((c) => c.role === 'button')).toBe(true);
     });
@@ -296,7 +298,7 @@ test.describe('Issue 724: Course Upload page', () => {
         const controls = await toolkit.describeAll(page.locator('.remove-objective'));
         note('names', controls.map((c) => c.name));
         expect(new Set(controls.map((c) => c.name)).size).toBe(controls.length);
-        expect(controls[0].name).toMatch(/remove .*Describe the cell membrane/i);
+        expect(controls[0].name).toBe('Remove Objective ("Describe the cell membrane") (1. Cell Structure)');
     });
 
     finding(24, 'the "remove objective" icon is hidden from assistive technology', async ({ page, note }) => {
@@ -336,8 +338,9 @@ test.describe('Issue 724: Course Upload page', () => {
     finding(28, 'the "add objective" control says what it does', async ({ page, note }) => {
         const controls = await toolkit.describeAll(page.locator('.add-objective-btn-inline'));
         note('names', controls.map((c) => c.name));
-        expect(new Set(controls.map((c) => c.name)).size).toBe(controls.length);
-        for (const control of controls) expect(control.name).toMatch(/add (learning )?objective/i);
+        expect(controls.map((c) => c.name)).toEqual([
+            'Add objective (1. Cell Structure)', 'Add objective (2. Enzymes)', 'Add objective (3. Metabolism)',
+        ]);
     });
 
     finding(29, 'the "add objective" icon has 3:1 contrast', async ({ page, note }) => {
@@ -395,6 +398,61 @@ test.describe('Issue 724: Course Upload page', () => {
             expect(found).toEqual([]);
         });
     }
+
+    // The house format (ubc/ltic-accessibility-skills,
+    // descriptive-button-and-call-to-action-link-names.md): the visible label
+    // first, then hidden context in parentheses from most to least specific.
+    // A plain test, not finding(): it spans many findings, and finding() would
+    // overwrite each one's evidence file with this test's.
+    test('repeated controls are named in the house format (#3, #12, #19, #23, #28, #32-36, #45-47, #53-55, #60-64)',
+        async ({ page }) => {
+            await openCourseUpload(page);
+            const unit1 = page.locator('.accordion-item[data-unit-name="Unit 1"]');
+            const unit3 = page.locator('.accordion-item[data-unit-name="Unit 3"]');
+            /** @type {Array<[import('@playwright/test').Locator, string]>} */
+            const expected = [
+                [unit1.locator('.accordion-trigger'), '1. Cell Structure'],
+                [unit1.locator('.unit-rename-btn'), 'Rename Unit (1. Cell Structure)'],
+                [unit1.locator('.unit-move-btn').first(), 'Move Up (1. Cell Structure)'],
+                [unit1.locator('.unit-move-btn').nth(1), 'Move Down (1. Cell Structure)'],
+                [unit1.locator('.publish-toggle input'), 'Publish (1. Cell Structure)'],
+                [unit1.locator('.delete-unit-btn'), 'Delete Unit (1. Cell Structure)'],
+                [unit1.locator('.toggle-section').first(), 'Learning Objectives (1. Cell Structure)'],
+                [unit1.locator('.objective-input'), 'New learning objective (1. Cell Structure)'],
+                [unit1.locator('.add-objective-btn-inline'), 'Add objective (1. Cell Structure)'],
+                [unit1.locator('.remove-objective').nth(1), 'Remove Objective ("Name the organelles") (1. Cell Structure)'],
+                [unit1.locator('.file-item .action-button.view').first(), 'View unit-1-lecture.txt (1. Cell Structure)'],
+                [unit1.locator('.file-item .action-button.download').first(), 'Download unit-1-lecture.txt (1. Cell Structure)'],
+                [unit1.locator('.file-item .action-button.delete').first(), 'Delete unit-1-lecture.txt (1. Cell Structure)'],
+                [unit3.locator('.placeholder-item .action-button.upload').first(), 'Upload lecture notes (3. Metabolism)'],
+                [unit1.locator('.add-content-btn.lecture-notes'), 'Add Lecture Notes (1. Cell Structure)'],
+                [unit1.locator('.add-content-btn.practice-quiz'), 'Add Practice Questions/Tutorial (1. Cell Structure)'],
+                [unit1.locator('.add-content-btn.additional-material'), 'Add Additional Material (1. Cell Structure)'],
+                [unit1.locator('select[id^="flashcard-count-"]'), 'Cards (1. Cell Structure)'],
+                [unit1.locator('input[id^="flashcard-chemistry-"]'), 'Chemistry notation (1. Cell Structure)'],
+                [unit1.locator('.flashcard-generate-btn'), 'Generate Draft (Student Flashcards) (1. Cell Structure)'],
+                [unit1.locator('.flashcard-remove-btn').nth(1), 'Remove (Card 2) (1. Cell Structure)'],
+                [unit1.locator('.flashcard-front-input').nth(1), 'Front (Card 2) (1. Cell Structure)'],
+                [unit1.locator('.flashcard-back-input').nth(1), 'Back (Card 2) (1. Cell Structure)'],
+                [unit1.locator('.flashcard-add-btn'), 'Add Card (Student Flashcards) (1. Cell Structure)'],
+                [unit1.locator('.flashcard-save-btn'), 'Save Draft (Student Flashcards) (1. Cell Structure)'],
+                [unit1.locator('.flashcard-publish-btn'), 'Publish to Students (Student Flashcards) (1. Cell Structure)'],
+                [unit3.locator('.flashcard-unpublish-btn'), 'Unpublish (Student Flashcards) (3. Metabolism)'],
+                [unit1.locator('.threshold-input'), 'Number of correct answers required for BIOCBOT to be in protégé mode (1. Cell Structure)'],
+                [unit1.locator('.edit-question-btn').first(), 'Edit Learning Objective (Question 1) (1. Cell Structure)'],
+                [unit1.locator('.delete-question-btn').first(), 'Delete (Question 1) (1. Cell Structure)'],
+                [unit1.locator('.add-question-btn'), 'Add Question (Assessment Questions) (1. Cell Structure)'],
+                [unit1.locator('.auto-link-btn'), 'Auto-link Questions (1. Cell Structure)'],
+            ];
+            const actual = [];
+            for (const [locator] of expected) actual.push((await toolkit.describe(locator)).name);
+            expect(actual).toEqual(expected.map(([, name]) => name));
+            // The visible word beside the publish switch is the start of its name.
+            await expect(unit1.locator('.publish-toggle .toggle-label')).toHaveText('Publish');
+            // No control on the page is named with aria-label (house rule: text inside the control).
+            const ariaLabelled = await page.locator('#dynamic-units-container [aria-label]').count();
+            expect(ariaLabelled).toBe(0);
+        });
 
     // ----------------------------------------------------------- LMS dialogs
 
