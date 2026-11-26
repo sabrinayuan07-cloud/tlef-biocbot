@@ -139,6 +139,14 @@
     font-size: 14px;
     font-weight: 700;
     cursor: pointer;
+    transition: color 0.15s ease;
+}
+
+/* #760: this is a real <button>, but had no hover/focus color change, so it
+   just read as a plain heading rather than something clickable. */
+.super-course-history-toggle:hover,
+.super-course-history-toggle:focus-visible {
+    color: var(--primary-color, #0055b7);
 }
 
 .super-course-history-caret {
@@ -258,11 +266,25 @@
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+/* #760: neither state had a :hover - nothing signaled these were clickable
+   until the cursor icon changed. */
+.super-course-history-action:hover {
+    background: #f5f7fb;
+    border-color: var(--primary-color, #0055b7);
+    color: var(--primary-color, #0055b7);
 }
 
 .super-course-history-action.primary {
     border-color: var(--primary-color, #0055b7);
     color: var(--primary-color, #0055b7);
+}
+
+.super-course-history-action.primary:hover {
+    background: var(--primary-color, #0055b7);
+    color: #fff;
 }
 
 .super-course-history-empty {
