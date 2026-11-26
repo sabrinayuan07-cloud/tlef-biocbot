@@ -73,12 +73,18 @@
                     <!-- Course Selection Section -->
                     <div class="course-selection-container" id="course-selection-container" style="display: none;">
                         <div class="current-course-display" id="current-course-display">
-                            <span class="course-label">Current Course:</span>
-                            <span class="course-name-display" id="course-name-display">No course selected</span>
-                            <span class="course-code-label" id="student-course-code-label" style="margin-left: 15px; font-weight: bold; display: none;">Student Code:</span>
-                            <span class="course-code-display" id="student-course-code-display" style="font-family: monospace; background: #e9ecef; padding: 4px 8px; border-radius: 4px; font-weight: bold; color: #495057; display: none;"></span>
-                            <span class="course-code-label" id="instructor-course-code-label" style="margin-left: 15px; font-weight: bold; display: none;">Instructor Code:</span>
-                            <span class="course-code-display" id="instructor-course-code-display" style="font-family: monospace; background: #e9ecef; padding: 4px 8px; border-radius: 4px; font-weight: bold; color: #495057; display: none;"></span>
+                            <div class="current-course-name-row">
+                                <span class="course-label">Current Course:</span>
+                                <span class="course-name-display" id="course-name-display">No course selected</span>
+                            </div>
+                            <div class="current-course-codes-row">
+                                <span class="course-code-label" id="student-course-code-label" style="font-weight: bold; display: none;">Student Code:</span>
+                                <span class="course-code-display" id="student-course-code-display" style="font-family: monospace; background: #e9ecef; padding: 4px 8px; border-radius: 4px; font-weight: bold; color: #495057; display: none;"></span>
+                                <span class="course-code-label" id="instructor-course-code-label" style="font-weight: bold; display: none;">Instructor Code:</span>
+                                <span class="course-code-display" id="instructor-course-code-display" style="font-family: monospace; background: #e9ecef; padding: 4px 8px; border-radius: 4px; font-weight: bold; color: #495057; display: none;"></span>
+                            </div>
+                            <!-- Change Course sits below the instructor/student code row (#753
+                                 follow-up), not inline after Current Course. -->
                             <button class="action-btn secondary" id="change-course-btn">Change Course</button>
                         </div>
                         <div class="course-selector" id="course-selector" style="display: none;">

@@ -26,10 +26,21 @@
   margin: 0 auto;
 }
 
+/* Stacked rows (#753 follow-up): course name, then student/instructor
+   codes, then Change Course below both - instead of everything inline,
+   where Change Course could land right after the course name. */
 .current-course-display {
   display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.current-course-name-row,
+.current-course-codes-row {
+  display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
