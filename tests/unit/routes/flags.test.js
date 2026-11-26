@@ -219,6 +219,33 @@ describe('PUT /:flagId/response', () => {
 });
 
 describe('POST / — validation, normalization, and Super Course flags', () => {
+    test.each([
+        ['an unknown reason', 'other'],
+        ['markup', '<img src=x onerror=alert(1)>'],
+        ['a non-string', ['incorrect']],
+    ])('refuses a flag reason that is not on the list: %s', async (_label, flagReason) => {
+        const db = memoryDb({});
+        const res = await request(app({ db, user: student })).post('/').send({
+            questionId: 'sq1', courseId: 'SUPER_COURSE', isSuperCourseFlag: true,
+            flagReason, flagDescription: 'x',
+        });
+        expect(res.status).toBe(400);
+        expect(res.body.message).toMatch(/Invalid flagReason/);
+        expect(await db.collection('flaggedQuestions').find({}).toArray()).toHaveLength(0);
+    });
+
+    test.each(['incorrect', 'inappropriate', 'unclear', 'confusing', 'typo', 'offensive', 'irrelevant'])(
+        'accepts the chat menu reason %s',
+        async (flagReason) => {
+            const db = memoryDb({});
+            const res = await request(app({ db, user: student })).post('/').send({
+                questionId: 'sq1', courseId: 'SUPER_COURSE', isSuperCourseFlag: true,
+                flagReason, flagDescription: 'x',
+            });
+            expect(res.status).toBe(200);
+        }
+    );
+
     test('rejects an invalid bot mode and a missing database', async () => {
         let res = await request(app({ db: memoryDb({}), user: student }))
             .post('/').send({ ...validFlag, botMode: 'oracle' });
@@ -234,7 +261,7 @@ describe('POST / — validation, normalization, and Super Course flags', () => {
         const res = await request(app({ db, user: { ...instructor, displayName: 'Professor' } }))
             .post('/')
             .send({
-                questionId: 'sq1', courseId: 'ignored', flagReason: 'other',
+                questionId: 'sq1', courseId: 'ignored', flagReason: 'irrelevant',
                 flagDescription: 'Needs review', isSuperCourseFlag: true,
                 sourceCourseIds: [' C1 ', 'C1', '', null, 7],
                 sourceCourseNames: 'not-an-array', superchatId: 42,

@@ -99,6 +99,14 @@ describe('LlmRegistry cache behavior (keys not enforced)', () => {
         await expect(reg.forCourse(db, '')).rejects.toMatchObject({ name: 'LlmKeyError', code: 'LLM_KEY_MISSING' });
         await expect(reg.forSuperchat(db, null)).rejects.toMatchObject({ name: 'LlmKeyError' });
     });
+
+    test('forCourse names a course only with a string, so another course\'s key is never chosen', async () => {
+        const reg = new LlmRegistry();
+        const db = memoryDb({ courses: [{ courseId: 'C1' }] });
+        for (const courseId of [{ $gte: '' }, { $in: ['C1'] }, ['C1']]) {
+            await expect(reg.forCourse(db, courseId)).rejects.toMatchObject({ name: 'LlmKeyError', code: 'LLM_KEY_MISSING', scope: { type: 'course', id: null } });
+        }
+    });
 });
 
 describe('LlmRegistry with scoped keys enforced (openai)', () => {

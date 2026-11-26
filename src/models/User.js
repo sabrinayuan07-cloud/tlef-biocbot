@@ -225,12 +225,14 @@ async function authenticateUser(db, username, password) {
     const collection = getUsersCollection(db);
     const normalizedUsername = normalizeEmail(username) || username;
     
-    // Find user by username or email
+    // Find a local account by username or email. A CWL account may share
+    // the email, so it is left out here rather than refused after the lookup.
     const user = await collection.findOne({
         $or: [
             { username: username },
             { email: normalizedUsername }
         ],
+        authProvider: 'basic',
         isActive: true
     });
     
@@ -241,24 +243,23 @@ async function authenticateUser(db, username, password) {
         };
     }
     
-    // A basic-auth account without a stored hash is malformed and must fail
-    // closed. Otherwise the missing hash would skip password verification and
-    // accept any supplied password.
-    if (user.authProvider === 'basic') {
-        if (!user.passwordHash) {
-            return {
-                success: false,
-                error: 'Invalid username or password'
-            };
-        }
+    // Only a local ('basic') account signs in with a password here, and only
+    // when it has a stored hash. A CWL account, or a roster placeholder
+    // waiting for its first CWL sign-in, has no local password, so it is
+    // refused with the same message as a wrong password.
+    if (user.authProvider !== 'basic' || !user.passwordHash) {
+        return {
+            success: false,
+            error: 'Invalid username or password'
+        };
+    }
 
-        const isValidPassword = await bcrypt.compare(password, user.passwordHash);
-        if (!isValidPassword) {
-            return {
-                success: false,
-                error: 'Invalid username or password'
-            };
-        }
+    const isValidPassword = await bcrypt.compare(password, user.passwordHash);
+    if (!isValidPassword) {
+        return {
+            success: false,
+            error: 'Invalid username or password'
+        };
     }
     
     // Update last login

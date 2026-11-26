@@ -230,6 +230,43 @@ describe('Course.userHasCourseAccess', () => {
         const db = memoryDb({ courses: [] });
         expect(await Course.userHasCourseAccess(db, 'NOPE', 'i1', 'instructor')).toBe(false);
     });
+
+    test('false unless both IDs are non-empty strings, even when an object would match', async () => {
+        const db = memoryDb({ courses: [
+            { courseId: 'C1', instructorId: 'i1', tas: ['t1'], studentEnrollment: { s1: { enrolled: true } } },
+            { courseId: 'C2', instructorId: 'i2' },
+        ] });
+        for (const courseId of [{ $in: ['C2', 'C1'] }, { $gte: '' }, ['C1'], '', null, undefined, 7]) {
+            expect(await Course.userHasCourseAccess(db, courseId, 'i1', 'instructor')).toBe(false);
+            expect(await Course.userHasCourseAccess(db, courseId, 't1', 'ta')).toBe(false);
+            expect(await Course.userHasCourseAccess(db, courseId, 's1', 'student')).toBe(false);
+        }
+        for (const userId of [{ $ne: null }, ['i1'], '', null, undefined]) {
+            expect(await Course.userHasCourseAccess(db, 'C1', userId, 'instructor')).toBe(false);
+        }
+    });
+});
+
+describe('Course.checkTAPermission', () => {
+    test('false unless the course and TA IDs are non-empty strings', async () => {
+        const db = memoryDb({ courses: [{ courseId: 'C1', tas: ['t1'], taPermissions: { t1: { materials: true } } }] });
+        expect(await Course.checkTAPermission(db, 'C1', 't1', 'materials')).toBe(true);
+        for (const courseId of [{ $in: ['C1'] }, ['C1'], '']) {
+            expect(await Course.checkTAPermission(db, courseId, 't1', 'materials')).toBe(false);
+        }
+        expect(await Course.checkTAPermission(db, 'C1', { $ne: null }, 'materials')).toBe(false);
+    });
+});
+
+describe('Course.addDocumentToUnit', () => {
+    test('adding or updating a document leaves the course owner unchanged', async () => {
+        const db = memoryDb({ courses: [{ courseId: 'C1', instructorId: 'i1', instructors: ['i1', 'i2'], lectures: [{ name: 'Unit 1', documents: [] }] }] });
+        await expect(Course.addDocumentToUnit(db, 'C1', 'Unit 1', { documentId: 'd1' }, 'i2')).resolves.toMatchObject({ success: true, created: true });
+        await expect(Course.addDocumentToUnit(db, 'C1', 'Unit 1', { documentId: 'd1', filename: 'v2.pdf' }, 'i2')).resolves.toMatchObject({ success: true, created: false });
+        const course = await db.collection('courses').findOne({ courseId: 'C1' });
+        expect(course.instructorId).toBe('i1');
+        expect(course.lectures[0].documents).toEqual([expect.objectContaining({ documentId: 'd1', filename: 'v2.pdf' })]);
+    });
 });
 
 describe('Course.getTAPermissions / updateTAPermissions', () => {

@@ -11,7 +11,7 @@ const { buildKeySubdocument, credentialSetFields, publicKeySummary, publicProvid
 const providerKeys = require('../services/providerKeyService');
 const scopeModelSettings = require('../services/scopeModelSettings');
 const { normalizeProvider, providerLabel } = require('../services/llmProviders');
-const { generateCourseId } = require('./courses.shared');
+const { generateCourseId, hasInstructorAccess } = require('./courses.shared');
 
 /**
  * POST /api/courses
@@ -408,7 +408,11 @@ router.get('/:courseId', async (req, res) => {
             aiAvailable: publicProviderKeyState(course).aiAvailable,
             courseCode: course.courseCode, // Backward compatible student code field
             studentCourseCode: course.courseCode,
-            instructorCourseCode: course.instructorCourseCode,
+            // The code that joins a course as an instructor is for its
+            // instructors only, not for its TAs.
+            instructorCourseCode: hasInstructorAccess(course, instructorId)
+                ? course.instructorCourseCode
+                : undefined,
             approvedStruggleTopics: CourseModel.normalizeTopicList(course.approvedStruggleTopics || []),
             approvedStruggleTopicDetails: CourseModel.normalizeTopicObjectList(course.approvedStruggleTopics || []),
             weeks: course.courseStructure?.weeks || 0,

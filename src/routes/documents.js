@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
+const { requirePlainRequestValues } = require('../middleware/plainRequestValues');
 const path = require('path');
 
 // Import the Document model and Course model
@@ -97,6 +98,11 @@ async function requireCourseDocumentAccess(req, res, db, courseId, { instructorI
         return null;
     }
 
+    if (typeof courseId !== 'string') {
+        res.status(400).json({ success: false, message: 'courseId must be a single course ID' });
+        return null;
+    }
+
     const course = await db.collection('courses').findOne(
         { courseId },
         { projection: { _id: 1, instructorId: 1 } }
@@ -176,7 +182,7 @@ router.use(express.json({ limit: '50mb' }));
  * POST /api/documents/upload
  * Upload a file document
  */
-router.post('/upload', upload.single('file'), async (req, res) => {
+router.post('/upload', upload.single('file'), requirePlainRequestValues, async (req, res) => {
     try {
         const { courseId, lectureName, documentType, instructorId } = req.body;
         const file = req.file;

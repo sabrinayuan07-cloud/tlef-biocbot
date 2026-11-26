@@ -55,7 +55,9 @@ const ROLE_PRESETS = {
  * @returns {Promise<boolean>}
  */
 async function hasPermission(db, user, courseId, permission) {
-    if (!user || !courseId) return false;
+    // A course ID is a non-empty string. Anything else names no course, for
+    // admins too.
+    if (!user || typeof courseId !== 'string' || !courseId) return false;
     if (hasSystemAdminAccess(user)) return true;
     if (user.role === 'instructor') {
         return CourseModel.userHasCourseAccess(db, courseId, user.userId, 'instructor');

@@ -116,7 +116,38 @@ describe('POST /upload — multipart document upload', () => {
         const stored = await db.collection('documents').findOne({ documentId: res.body.data.documentId });
         expect(stored.instructorId).toBe('i1');
     });
+
+    test('400 when a form field name starts with "$"', async () => {
+        const db = twoCourseDb();
+        const res = await request(app({ db, user: otherInstructor })).post('/upload')
+            .field('courseId[$in][0]', 'C2')
+            .field('courseId[$in][1]', 'C1')
+            .field('lectureName', 'Unit 1')
+            .field('documentType', 'lecture-notes')
+            .field('instructorId', 'i2')
+            .attach('file', Buffer.from('notes'), { filename: 'notes.txt', contentType: 'text/plain' });
+        expect(res.status).toBe(400);
+        await expectCourseUntouched(db);
+    });
 });
+
+// C1 belongs to i1. C2 belongs to i2, who teaches nothing else.
+function twoCourseDb() {
+    return memoryDb({
+        courses: [
+            { courseId: 'C1', instructorId: 'i1', instructors: ['i1'], lectures: [{ name: 'Unit 1', documents: [] }] },
+            { courseId: 'C2', instructorId: 'i2', instructors: ['i2'], lectures: [{ name: 'Unit 1', documents: [] }] },
+        ],
+        documents: [],
+    });
+}
+
+async function expectCourseUntouched(db) {
+    const course = await db.collection('courses').findOne({ courseId: 'C1' });
+    expect(course.instructorId).toBe('i1');
+    expect(course.lectures[0].documents).toEqual([]);
+    expect(await db.collection('documents').find({ courseId: 'C1' }).toArray()).toEqual([]);
+}
 
 describe('POST /text', () => {
     const payload = {
@@ -138,6 +169,29 @@ describe('POST /text', () => {
     test('403 when an instructor submits another instructorId', async () => {
         const res = await request(app({ db: documentsDb(), user: otherInstructor })).post('/text').send(payload);
         expect(res.status).toBe(403);
+    });
+
+    test.each([
+        ['a list of courses', { $in: ['C2', 'C1'] }],
+        ['a comparison', { $gte: '' }],
+        ['an array', ['C1']],
+    ])('400 when courseId is %s rather than one course ID', async (_label, courseId) => {
+        const db = twoCourseDb();
+        const res = await request(app({ db, user: otherInstructor })).post('/text')
+            .send({ ...payload, courseId, instructorId: 'i2' });
+        expect(res.status).toBe(400);
+        await expectCourseUntouched(db);
+        expect(await db.collection('documents').find({}).toArray()).toEqual([]);
+    });
+
+    test('adding a document leaves the course owner unchanged', async () => {
+        const db = documentsDb({ documents: [], course: { instructors: ['i1', 'i2'] } });
+        const res = await request(app({ db, user: otherInstructor })).post('/text')
+            .send({ ...payload, instructorId: 'i2' });
+        expect(res.status).toBe(200);
+        const course = await db.collection('courses').findOne({ courseId: 'C1' });
+        expect(course.instructorId).toBe('i1');
+        expect(course.lectures[0].documents).toHaveLength(1);
     });
 
     test('stores text metadata and reports vector processing', async () => {

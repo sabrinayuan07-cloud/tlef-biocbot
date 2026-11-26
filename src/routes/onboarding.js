@@ -348,9 +348,16 @@ router.get('/:courseId', async (req, res) => {
             });
         }
         
+        const data = stripPrivateKeyFields(courseData);
+        // The code that joins a course as an instructor is for its
+        // instructors only, not for its TAs.
+        if (!hasInstructorAccess(courseData, user.userId)) {
+            delete data.instructorCourseCode;
+        }
+
         res.json({
             success: true,
-            data: stripPrivateKeyFields(courseData)
+            data
         });
         
     } catch (error) {

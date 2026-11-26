@@ -7,6 +7,9 @@ const { createId } = require('../services/id');
 
 const { MongoClient } = require('mongodb');
 const VALID_FLAG_STATUSES = new Set(['pending', 'reviewed', 'resolved', 'dismissed']);
+// The reasons the chat pages' flag menus offer (student chat, both Super
+// Course chats). A flag must give one of them.
+const FLAG_REASONS = Object.freeze(['incorrect', 'inappropriate', 'unclear', 'confusing', 'typo', 'offensive', 'irrelevant']);
 
 /**
  * Flagged Question Schema Structure:
@@ -298,6 +301,10 @@ function isValidFlagStatus(status) {
     return VALID_FLAG_STATUSES.has(status);
 }
 
+function isValidFlagReason(reason) {
+    return FLAG_REASONS.includes(reason);
+}
+
 /**
  * Delete a flagged question (for cleanup purposes)
  * @param {Object} db - MongoDB database instance
@@ -327,5 +334,7 @@ module.exports = {
     updateFlagStatus,
     getFlagStatistics,
     deleteFlaggedQuestion,
-    isValidFlagStatus
+    isValidFlagStatus,
+    FLAG_REASONS,
+    isValidFlagReason
 };

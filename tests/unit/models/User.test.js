@@ -218,6 +218,46 @@ describe('User.authenticateUser', () => {
         const stored = await db.collection(COLL).findOne({ userId: 'u1' });
         expect(stored.lastLogin).toBeNull();
     });
+
+    test.each([
+        ['a CWL account', { authProvider: 'saml', passwordHash: null }],
+        ['a CWL account that still has an old local hash', { authProvider: 'saml', passwordHash: 'from-elsewhere' }],
+        ['an account with no provider recorded', { authProvider: undefined, passwordHash: 'from-elsewhere' }],
+    ])('signs in only local accounts with a password: refuses %s', async (_label, overrides) => {
+        const passwordHash = overrides.passwordHash === 'from-elsewhere'
+            ? await bcrypt.hash('secret-pass', 4)
+            : overrides.passwordHash;
+        const db = memoryDb({ [COLL]: [userDoc({
+            username: 'cwl-admin',
+            email: 'cwl.admin@ubc.ca',
+            role: 'instructor',
+            permissions: { systemAdmin: true },
+            ...overrides,
+            passwordHash,
+        })] });
+
+        for (const password of ['anything', 'secret-pass']) {
+            await expect(User.authenticateUser(db, 'cwl.admin@ubc.ca', password)).resolves.toEqual({
+                success: false,
+                error: 'Invalid username or password',
+            });
+        }
+
+        const stored = await db.collection(COLL).findOne({ userId: 'u1' });
+        expect(stored.lastLogin).toBeNull();
+    });
+
+    test('a local account still signs in when a CWL account has the same email', async () => {
+        const passwordHash = await bcrypt.hash('secret-pass', 4);
+        const db = memoryDb({ [COLL]: [
+            userDoc({ userId: 'cwl', username: 'shared@ubc.ca', email: 'shared@ubc.ca', authProvider: 'saml', passwordHash: null }),
+            userDoc({ userId: 'local', username: 'shared-local', email: 'shared@ubc.ca', passwordHash }),
+        ] });
+
+        await expect(User.authenticateUser(db, 'shared@ubc.ca', 'secret-pass'))
+            .resolves.toMatchObject({ success: true, user: { userId: 'local', authProvider: 'basic' } });
+        await expect(User.authenticateUser(db, 'shared@ubc.ca', 'wrong')).resolves.toMatchObject({ success: false });
+    });
 });
 
 describe('User.getUserById / getUserByPuid', () => {

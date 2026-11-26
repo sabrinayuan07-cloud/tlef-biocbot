@@ -406,6 +406,35 @@ test.describe('flagged.js — instructor render & moderation', () => {
         await expect(list.locator('.flag-card')).toHaveCount(0);
     });
 
+    test('a stored flag\'s reason, priority, mode and status render as text, never as markup', async ({ page }) => {
+        const markup = '"><img src=x onerror="window.__flagMarkupRan=true">';
+        await installFlaggedRoutes(page, {
+            flags: [
+                buildFlag({ flagId: 'flag_markup', flagReason: markup, priority: markup, botMode: markup }),
+                buildFlag({ flagId: 'flag_markup_status', flagStatus: markup }),
+            ],
+            stats: { total: 2, pending: 1 },
+        });
+
+        await page.goto(`/instructor/flagged?courseId=${COURSE_ID}`);
+        const list = page.locator('#flagged-list');
+        await page.locator('#status-filter').selectOption('all');
+        await expect(list.locator('.flag-card')).toHaveCount(2, { timeout: 15_000 });
+
+        await expect(list.locator('img')).toHaveCount(0);
+        const markupCard = list.locator('[data-flag-id="flag_markup"]');
+        await expect(markupCard.locator('.flag-type-badge')).toHaveText(markup);
+        await expect(markupCard).toContainText(`${markup} mode`);
+        for (const selector of ['.flag-type-badge', '.flag-priority-badge']) {
+            expect(await markupCard.locator(selector).evaluate((el) => el.getAttributeNames())).toEqual(['class']);
+        }
+        const statusCard = list.locator('[data-flag-id="flag_markup_status"]');
+        await expect(statusCard.locator('.flag-status-badge')).toHaveText(markup);
+        await expect(statusCard.locator('.action-status-msg strong')).toHaveText(markup);
+        expect(await statusCard.locator('.flag-status-badge').evaluate((el) => el.getAttributeNames())).toEqual(['class']);
+        expect(await page.evaluate(() => /** @type {any} */ (window).__flagMarkupRan)).toBeUndefined();
+    });
+
     test('approve flow: open form, send approve, payload contains response + resolved status', async ({ page }) => {
         const captured = await installFlaggedRoutes(page, {
             flags: [buildFlag({ flagId: 'flag_approve', flagDescription: 'Need a reply.' })],

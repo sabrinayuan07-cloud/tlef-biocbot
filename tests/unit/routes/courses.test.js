@@ -90,6 +90,25 @@ describe('GET /:courseId', () => {
         const db = memoryDb({ courses: [{ courseId: 'C1', courseName: 'Bio', tas: ['t1'] }] });
         expect((await request(app({ db, user: ta })).get('/C1')).status).toBe(200);
     });
+
+    test('the instructor join code goes to the course\'s instructors, not its TAs', async () => {
+        const course = {
+            courseId: 'C1', courseName: 'Bio', instructorId: 'i1', instructors: ['i3'],
+            tas: ['t1', 'i2'], courseCode: 'STU123', instructorCourseCode: 'INS456',
+        };
+        const owner = await request(app({ db: memoryDb({ courses: [course] }), user: instructor })).get('/C1');
+        expect(owner.body.data).toMatchObject({ studentCourseCode: 'STU123', instructorCourseCode: 'INS456' });
+
+        const coInstructor = await request(app({ db: memoryDb({ courses: [course] }), user: { userId: 'i3', role: 'instructor' } })).get('/C1');
+        expect(coInstructor.body.data.instructorCourseCode).toBe('INS456');
+
+        for (const user of [ta, otherInstructor]) {
+            const res = await request(app({ db: memoryDb({ courses: [course] }), user })).get('/C1');
+            expect(res.status).toBe(200);
+            expect(res.body.data.studentCourseCode).toBe('STU123');
+            expect(res.body.data).not.toHaveProperty('instructorCourseCode');
+        }
+    });
 });
 
 describe('POST /:courseId/tas — add a TA', () => {
@@ -111,6 +130,32 @@ describe('POST /:courseId/tas — add a TA', () => {
 
     test('400 when the course does not exist', async () => {
         const res = await request(app({ db: memoryDb({ courses: [] }), user: instructor })).post('/NOPE/tas').send({ taId: 't1' });
+        expect(res.status).toBe(400);
+    });
+
+    test('a co-instructor can add a TA', async () => {
+        const db = memoryDb({ courses: [{ courseId: 'C1', instructorId: 'i2', instructors: ['i1'] }] });
+        const res = await request(app({ db, user: instructor })).post('/C1/tas').send({ taId: 't1' });
+        expect(res.status).toBe(200);
+        expect((await db.collection('courses').findOne({ courseId: 'C1' })).tas).toContain('t1');
+    });
+
+    test('403 for an instructor of another course, and the TA list is unchanged', async () => {
+        const db = memoryDb({ courses: [{ courseId: 'C1', instructorId: 'i1', tas: [] }] });
+        const res = await request(app({ db, user: otherInstructor })).post('/C1/tas').send({ taId: 'i2' });
+        expect(res.status).toBe(403);
+        expect((await db.collection('courses').findOne({ courseId: 'C1' })).tas).toEqual([]);
+    });
+
+    test('400 for a deleted course', async () => {
+        const db = memoryDb({ courses: [{ courseId: 'C1', instructorId: 'i1', status: 'deleted' }] });
+        const res = await request(app({ db, user: instructor })).post('/C1/tas').send({ taId: 't1' });
+        expect(res.status).toBe(400);
+    });
+
+    test('400 when taId is not a string', async () => {
+        const db = memoryDb({ courses: [{ courseId: 'C1', instructorId: 'i1' }] });
+        const res = await request(app({ db, user: instructor })).post('/C1/tas').send({ taId: ['t1'] });
         expect(res.status).toBe(400);
     });
 });

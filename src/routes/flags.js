@@ -235,6 +235,13 @@ router.post('/', async (req, res) => {
             });
         }
         
+        if (!FlaggedQuestionModel.isValidFlagReason(flagReason)) {
+            return res.status(400).json({
+                success: false,
+                message: `Invalid flagReason. Must be one of: ${FlaggedQuestionModel.FLAG_REASONS.join(', ')}`
+            });
+        }
+
         // Validate botMode if provided.
         if (botMode && !VALID_BOT_MODES.has(botMode)) {
             return res.status(400).json({

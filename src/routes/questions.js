@@ -120,6 +120,11 @@ async function requireCourseQuestionAccess(req, res, db, courseId, { mode, instr
         return null;
     }
 
+    if (typeof courseId !== 'string') {
+        res.status(400).json({ success: false, message: 'courseId must be a single course ID' });
+        return null;
+    }
+
     if (mode === 'write') {
         if (user.role === 'instructor' && instructorId && instructorId !== user.userId) {
             res.status(403).json({

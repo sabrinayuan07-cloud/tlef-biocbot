@@ -65,6 +65,7 @@ const { isAcademicApiEnabled } = require('./services/academicApi');
 const { createLmsIntegration, ensureLmsIndexes, getLmsDiagnostics } = require('./services/lmsIntegration');
 const createAuthMiddleware = require('./middleware/auth');
 const { crossSiteGuard, parseTrustProxy } = require('./middleware/crossSiteGuard');
+const { requirePlainRequestValues } = require('./middleware/plainRequestValues');
 const initializePassport = require('./config/passport');
 
 const app = express();
@@ -339,6 +340,9 @@ async function connectToMongoDB() {
 // Middleware for parsing request bodies
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+// Request values reach MongoDB as values, never as operators
+// (src/middleware/plainRequestValues.js).
+app.use(requirePlainRequestValues);
 
 // Create a promise that will resolve to the MongoDB client
 // This allows us to configure session middleware early with MongoDB store

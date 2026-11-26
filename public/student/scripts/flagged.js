@@ -138,16 +138,17 @@ function renderStudentFlagItem(flag) {
     div.className = 'flag-card';
     const ts = formatStudentTimestamp(flag.createdAt);
     
-    // Determine card status class for styling
-    const statusClass = flag.flagStatus || 'pending';
+    // Determine card status class for styling. Stored values are escaped,
+    // and reduced to a plain word where they become a class name.
+    const statusClass = toClassName(flag.flagStatus || 'pending');
     
     // Header Section
     let headerHtml = `
         <div class="flag-card-header">
-            <div class="flag-type-badge ${flag.flagReason}">${mapReason(flag.flagReason)}</div>
+            <div class="flag-type-badge ${toClassName(flag.flagReason)}">${escapeHtml(mapReason(flag.flagReason))}</div>
             <div class="flag-meta-info">
                 <span class="flag-date">${ts}</span>
-                <span class="flag-status-badge ${statusClass}">${mapStatus(flag.flagStatus)}</span>
+                <span class="flag-status-badge ${statusClass}">${escapeHtml(mapStatus(flag.flagStatus))}</span>
             </div>
         </div>
     `;
@@ -164,8 +165,8 @@ function renderStudentFlagItem(flag) {
         <div class="flag-section context-section">
             <h4 class="flag-section-title">Flagged Content</h4>
             <div class="flag-context-meta">
-                <span class="context-tag">${unitName}</span>
-                <span class="context-tag">${botMode} mode</span>
+                <span class="context-tag">${escapeHtml(unitName)}</span>
+                <span class="context-tag">${escapeHtml(botMode)} mode</span>
             </div>
             <div class="flag-quote">
                 "${escapeHtml(questionText)}"
@@ -272,4 +273,14 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text || '';
     return div.innerHTML;
+}
+
+/**
+ * A stored value as one plain class name: lowercase letters, digits, "-" and
+ * "_" only. The known values ("incorrect", "pending") pass unchanged.
+ * @param {*} value
+ * @returns {string}
+ */
+function toClassName(value) {
+    return String(value ?? '').toLowerCase().replace(/[^a-z0-9_-]/g, '');
 }

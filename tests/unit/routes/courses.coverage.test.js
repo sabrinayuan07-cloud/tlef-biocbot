@@ -206,7 +206,7 @@ describe('unhappy-path contracts', () => {
 
     test('model failure responses are preserved for TA and enrollment mutations', async () => {
         const add = jest.spyOn(CourseModel, 'addTAToCourse').mockResolvedValueOnce({ success: false, error: 'no course' });
-        let res = await request(app({ db: memoryDb({}), user: instructor })).post('/C1/tas').send({ taId: 't1' });
+        let res = await request(app({ db: memoryDb({ courses: [{ courseId: 'C1', instructorId: 'i1' }] }), user: instructor })).post('/C1/tas').send({ taId: 't1' });
         expect(res.status).toBe(400);
         expect(res.body.message).toBe('no course');
         add.mockRestore();

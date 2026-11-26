@@ -314,6 +314,16 @@ function normalizeTopicObjectList(topics = [], defaults = {}, existingTopics = [
 }
 
 /**
+ * IDs that go into a course query must be non-empty strings: a request could
+ * otherwise put an object there, which MongoDB would read as a query.
+ * @param {unknown} value
+ * @returns {boolean}
+ */
+function isNonEmptyString(value) {
+    return typeof value === 'string' && value.length > 0;
+}
+
+/**
  * Get the courses collection from the database
  * @param {Object} db - MongoDB database instance
  * @returns {Collection} Courses collection
@@ -1471,7 +1481,8 @@ async function updateUnitDisplayName(db, courseId, unitName, displayName, instru
  * @param {string} courseId - Course identifier
  * @param {string} unitName - Name of the unit
  * @param {Object} documentData - Document data to store
- * @param {string} instructorId - ID of the instructor
+ * @param {string} [instructorId] - Who added it. Not stored on the course:
+ *   adding a document never changes who owns the course.
  * @returns {Promise<Object>} Update result
  */
 async function addDocumentToUnit(db, courseId, unitName, documentData, instructorId) {
@@ -1509,8 +1520,7 @@ async function addDocumentToUnit(db, courseId, unitName, documentData, instructo
                             updatedAt: now
                         },
                         'lectures.$.updatedAt': now,
-                        updatedAt: now,
-                        instructorId
+                        updatedAt: now
                     }
                 }
             );
@@ -1538,8 +1548,7 @@ async function addDocumentToUnit(db, courseId, unitName, documentData, instructo
                     },
                     $set: {
                         'lectures.$.updatedAt': now,
-                        updatedAt: now,
-                        instructorId
+                        updatedAt: now
                     }
                 }
             );
@@ -1762,6 +1771,11 @@ async function getCoursesForUser(db, userId, role) {
  * @returns {Promise<boolean>} True if user has access
  */
 async function userHasCourseAccess(db, courseId, userId, role) {
+    // Both IDs go into the query below, so each must be a non-empty string.
+    if (!isNonEmptyString(courseId) || !isNonEmptyString(userId)) {
+        return false;
+    }
+
     const collection = getCoursesCollection(db);
 
     // A "View as Student" sandbox has no enrollment record, so grant it access
@@ -2039,6 +2053,10 @@ async function checkTAPermission(db, courseId, taId, feature) {
     // unguarded permissions[feature] read would let 'updatedAt' resolve as
     // a granted permission for any TA who's ever been touched.
     if (!TA_PERMISSION_KEYS.includes(feature)) {
+        return false;
+    }
+
+    if (!isNonEmptyString(courseId) || !isNonEmptyString(taId)) {
         return false;
     }
 
