@@ -112,12 +112,15 @@
 .char-counter { font-size: 0.8rem; color: #999; white-space: nowrap; }
 .char-counter.warn { color: #b3261e; }
 
-.editor-footer { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; margin-top: 0.5rem; flex-wrap: wrap; }
-.editor-tags { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; flex: 1; }
+/* .editor-footer itself stays nowrap so Cancel/Save never drop below the tag
+   input - .editor-tags wraps its own chips onto extra lines internally
+   instead of pushing editor-actions down with it (#757). */
+.editor-footer { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; margin-top: 0.5rem; flex-wrap: nowrap; }
+.editor-tags { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; flex: 1; min-width: 0; }
 .editor-tags input { border: 1px solid var(--bb-ink-16); border-radius: 6px; padding: 0.3rem 0.55rem; font-size: 0.82rem; width: 130px; }
 .tag-chip { background: #eef2f7; color: var(--bb-steel); border-radius: 12px; padding: 0.2rem 0.65rem; font-size: 0.8rem; display: inline-flex; align-items: center; gap: 0.35rem; }
 .tag-chip button { background: none; border: none; color: #6b7a8a; cursor: pointer; font-size: 0.9rem; line-height: 1; padding: 0; }
-.editor-actions { display: flex; gap: 0.5rem; }
+.editor-actions { display: flex; gap: 0.5rem; flex-shrink: 0; }
 
 /* Duplicate warning */
 .duplicate-warning {
