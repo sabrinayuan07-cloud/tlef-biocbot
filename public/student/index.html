@@ -61,16 +61,21 @@
             <!-- Chat Header -->
             <header class="chat-header">
                 <h1 id="main" tabindex="-1">Chat with BiocBot</h1>
-                <div class="current-course">
-                    <span class="course-label">Course:</span>
-                    <span class="course-name">Select Course</span>
-                </div>
-                <!-- Unit Selection Dropdown -->
-                <div class="unit-selection-container" id="unit-selection-container" style="display: none;">
-                    <label for="unit-select" class="unit-label">Select Unit:</label>
-                    <select id="unit-select" class="unit-select">
-                        <option value="">Choose a unit...</option>
-                    </select>
+                <!-- Course name and unit selector move together as a pair, so the
+                     unit selector always stays beside the course name instead of
+                     wrapping onto its own line below it. -->
+                <div class="chat-header-course-group">
+                    <div class="current-course">
+                        <span class="course-label">Course:</span>
+                        <span class="course-name">Select Course</span>
+                    </div>
+                    <!-- Unit Selection Dropdown -->
+                    <div class="unit-selection-container" id="unit-selection-container" style="display: none;">
+                        <label for="unit-select" class="unit-label">Select Unit:</label>
+                        <select id="unit-select" class="unit-select">
+                            <option value="">Choose a unit...</option>
+                        </select>
+                    </div>
                 </div>
             </header>
 

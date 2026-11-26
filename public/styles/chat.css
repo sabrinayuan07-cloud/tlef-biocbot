@@ -1808,6 +1808,17 @@ input:checked+.toggle-slider:before {
     flex-shrink: 0;
 }
 
+/* Keeps the course name and unit selector paired as one unit: they wrap
+   onto their own line together on narrow screens instead of the unit
+   selector splitting off below the course name. */
+.chat-header-course-group {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    flex-wrap: nowrap;
+    min-width: 0;
+}
+
 .current-course {
     display: flex;
     align-items: center;
