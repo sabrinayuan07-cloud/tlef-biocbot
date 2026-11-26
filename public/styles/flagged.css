@@ -531,6 +531,30 @@
     transition: all 0.2s;
 }
 
+/* Approve/Dismiss at the card's top level (#755): previously unstyled
+   .action-btn (browser-default white), making the two actions hard to tell
+   apart from each other and from the page background. Match the colors
+   their own form buttons already use below (.send-approve-btn/.send-dismiss-btn). */
+.approve-btn {
+    background: #10b981;
+    color: white;
+}
+
+.approve-btn:hover {
+    background: #059669;
+}
+
+.dismiss-btn,
+.dismiss-with-note-btn {
+    background: #dc3545;
+    color: white;
+}
+
+.dismiss-btn:hover,
+.dismiss-with-note-btn:hover {
+    background: #b02a37;
+}
+
 .cancel-btn {
     background: #6b7280;
     color: white;
