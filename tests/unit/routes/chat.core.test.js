@@ -206,6 +206,20 @@ describe('summary, service utilities, and saved chats', () => {
         expect(res.status).toBe(200);
         expect(await db.collection('chat_sessions').findOne({ sessionId: 'v1' })).toMatchObject({ courseId: 'C1', studentId: 's1', isDeleted: false });
     });
+
+    test('save stores the signed-in account\'s name, whatever name the page sends', async () => {
+        const db = memoryDb({});
+        const payload = { sessionId: 'v2', courseId: 'C1', studentId: 's1' };
+        await request(app({ db, user: student })).post('/save')
+            .send({ ...payload, studentName: '<img src=x onerror=alert(1)>' }).expect(200);
+        expect((await db.collection('chat_sessions').findOne({ sessionId: 'v2' })).studentName).toBe('Student One');
+
+        // The page's name is no longer needed, and an account without a
+        // display name falls back the way the Super Course save does.
+        await request(app({ db, user: { userId: 's1', role: 'student', username: 'stu1' } })).post('/save')
+            .send({ ...payload, sessionId: 'v3' }).expect(200);
+        expect((await db.collection('chat_sessions').findOne({ sessionId: 'v3' })).studentName).toBe('stu1');
+    });
 });
 
 describe('source-attributed document downloads', () => {

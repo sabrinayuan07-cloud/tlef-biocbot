@@ -242,7 +242,7 @@ test.describe('POST /api/flags', () => {
         }
     });
 
-    test('happy path with default botMode and `other` reason hits determinePriority `low` fallback', async ({ baseURL }) => {
+    test('happy path with default botMode and the `irrelevant` reason gets determinePriority\'s `low` fallback', async ({ baseURL }) => {
         const api = await request.newContext({ baseURL, storageState: storageStatePath('student') });
         try {
             const res = await api.post('/api/flags', {
@@ -250,7 +250,7 @@ test.describe('POST /api/flags', () => {
                     questionId: QUESTION_ID,
                     courseId: COURSE_A,
                     unitName: UNIT_NAME,
-                    flagReason: 'something-not-known', // exercises priority='low' branch
+                    flagReason: 'irrelevant', // neither high nor medium, so priority='low'
                     flagDescription: 'I have a different concern.',
                 },
             });

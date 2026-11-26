@@ -1017,11 +1017,15 @@ function createFlagElement(flag) {
     // Format timestamp
     const timestamp = formatTimestamp(flag.createdAt);
     
-    // Display texts
-    const flagReasonDisplay = getFlagReasonDisplay(flag.flagReason);
-    const botModeDisplay = getBotModeDisplay(flag.botMode);
-    const statusDisplayText = getStatusDisplayText(flag.flagStatus);
-    const statusClass = flag.flagStatus || 'pending';
+    // Display texts. A stored flag's reason, mode, status and priority are
+    // escaped like its other fields, and reduced to a plain word where they
+    // become a class name.
+    const flagReasonDisplay = escapeHtml(getFlagReasonDisplay(flag.flagReason));
+    const botModeDisplay = escapeHtml(getBotModeDisplay(flag.botMode));
+    const statusDisplayText = escapeHtml(getStatusDisplayText(flag.flagStatus));
+    const statusClass = toClassName(flag.flagStatus || 'pending');
+    const reasonClass = toClassName(flag.flagReason);
+    const priority = toClassName(flag.priority || 'medium');
     
     // Question content
     const questionContent = flag.questionContent || {};
@@ -1056,8 +1060,8 @@ function createFlagElement(flag) {
         <div class="flag-card-header">
             <div class="flag-header-left">
                 ${selectCheckboxHtml}
-                <span class="flag-type-badge ${flag.flagReason}">${flagReasonDisplay}</span>
-                <span class="flag-priority-badge ${flag.priority || 'medium'}">priority: ${flag.priority || 'medium'}</span>
+                <span class="flag-type-badge ${reasonClass}">${flagReasonDisplay}</span>
+                <span class="flag-priority-badge ${priority}">priority: ${priority}</span>
             </div>
             <div class="flag-meta-info">
                 <span class="flag-student">
@@ -1248,7 +1252,7 @@ function createActionButtons(flag) {
     } else {
         return `
              <div class="action-status-msg">
-                Item is <strong>${flag.flagStatus}</strong>.
+                Item is <strong>${escapeHtml(flag.flagStatus)}</strong>.
             </div>
             <!-- Future: View Details or Re-open buttons could go here -->
         `;
@@ -1801,6 +1805,17 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+/**
+ * A stored value as one plain class name: lowercase letters, digits, "-" and
+ * "_" only. The known values ("incorrect", "high", "pending") pass unchanged.
+ * escapeHtml leaves quotes alone, so it isn't enough inside an attribute.
+ * @param {*} value
+ * @returns {string}
+ */
+function toClassName(value) {
+    return String(value ?? '').toLowerCase().replace(/[^a-z0-9_-]/g, '');
 }
 
 /**

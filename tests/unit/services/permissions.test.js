@@ -20,6 +20,15 @@ describe('hasPermission', () => {
         expect(await hasPermission(db, admin, 'C1', 'materials')).toBe(true);
     });
 
+    test('denies a course ID that is not a non-empty string, for admins and owners alike', async () => {
+        const db = memoryDb({ courses: [{ courseId: 'C1', instructorId: 'i1' }, { courseId: 'C2', instructorId: 'i2' }] });
+        const admin = { userId: 'a1', role: 'instructor', permissions: { systemAdmin: true } };
+        for (const courseId of [{ $in: ['C2', 'C1'] }, { $gte: '' }, ['C1'], '', 7]) {
+            expect(await hasPermission(db, admin, courseId, 'materials')).toBe(false);
+            expect(await hasPermission(db, { userId: 'i1', role: 'instructor' }, courseId, 'materials')).toBe(false);
+        }
+    });
+
     test('grants an instructor who owns the course, denies one who does not', async () => {
         const db = memoryDb({ courses: [{ courseId: 'C1', instructorId: 'i1' }] });
         expect(await hasPermission(db, { userId: 'i1', role: 'instructor' }, 'C1', 'materials')).toBe(true);

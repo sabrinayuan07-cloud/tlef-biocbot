@@ -579,4 +579,95 @@ test.describe('Instructor downloads page branch coverage', () => {
         expect(payload.students[0].sessions.map((session) => session.sessionId)).toEqual(['course-export-ok-session']);
         expect(dialogs).toEqual([]);
     });
+
+    test('saved-chat fields render as text, and their IDs stay IDs, never markup or script', async ({ page }) => {
+        const markup = '"><img src=x onerror="window.__savedChatMarkupRan=true">';
+        const studentId = `quoted_student'"`;
+        const sessionId = `quoted_session');window.__savedChatMarkupRan=true;//" x="`;
+        await mockDownloadsApi(page, {
+            studentsResult: {
+                success: true,
+                data: {
+                    totalStudents: 1,
+                    totalSessions: 1,
+                    students: [{ studentId, studentName: markup, totalSessions: 1 }],
+                },
+            },
+            sessionsByStudent: {
+                [studentId]: {
+                    success: true,
+                    data: {
+                        studentName: 'quoted_student',
+                        sessions: [{
+                            sessionId,
+                            studentId,
+                            title: markup,
+                            unitName: markup,
+                            messageCount: markup,
+                            duration: markup,
+                            savedAt: '2026-02-03T10:00:00.000Z',
+                        }],
+                    },
+                },
+            },
+            sessionDetailsById: {
+                [sessionId]: {
+                    success: true,
+                    data: {
+                        sessionId,
+                        studentId,
+                        courseId: COURSE_ID,
+                        studentName: 'quoted_student',
+                        savedAt: '2026-02-03T10:00:00.000Z',
+                        chatData: {
+                            messages: [
+                                { type: 'user', content: '<img src=x onerror="window.__savedChatMarkupRan=true">Hello there' },
+                                { type: 'bot', content: '<b>Bold reply</b>' },
+                            ],
+                        },
+                    },
+                },
+            },
+        });
+
+        await openDownloadsPage(page);
+        const card = page.locator('.student-card');
+        await expect(card).toHaveCount(1);
+        await expect(card.locator('.student-name')).toHaveText(markup);
+        await expect(card.locator('.student-id')).toHaveText(`ID: ${studentId}`);
+
+        await card.getByRole('button', { name: 'View Sessions' }).click();
+        const modal = page.locator('#student-modal');
+        await expect(modal).toBeVisible();
+        const session = modal.locator('.session-item-wrapper');
+        await expect(session.locator('.session-title')).toHaveText(markup);
+        await expect(session.locator('.session-details')).toContainText(`Unit: ${markup}`);
+
+        await session.getByRole('button', { name: 'Preview Chat' }).click();
+        const preview = session.locator('.chat-preview');
+        await expect(preview).toContainText('Hello there');
+        await expect(preview).toContainText('Bold reply');
+        expect(await preview.getAttribute('id')).toBe(`preview-${sessionId}`);
+
+        await session.getByRole('button', { name: 'Download ▾' }).click();
+        await expect(session.locator('.download-dropdown-toggle')).toHaveAttribute('aria-expanded', 'true');
+        const [download] = await Promise.all([
+            page.waitForEvent('download'),
+            session.getByRole('button', { name: 'Download TXT' }).click(),
+        ]);
+        const text = await readDownloadedText(download);
+        expect(text).toContain('Hello there');
+        expect(text).not.toContain('<img');
+
+        // Only the page's own logo is an image, and only its own static
+        // buttons have inline handlers; nothing built from a saved chat has
+        // either.
+        await expect(page.locator('#students-list img, #sessions-list img')).toHaveCount(0);
+        await expect(page.locator('#students-list [onclick], #sessions-list [onclick]')).toHaveCount(0);
+        // An image parsed outside the page (the old preview and TXT helpers)
+        // never shows up above, but its handler still runs: give one a
+        // moment to fail and fire.
+        await page.waitForTimeout(500);
+        expect(await page.evaluate(() => /** @type {any} */ (window).__savedChatMarkupRan)).toBeUndefined();
+    });
 });

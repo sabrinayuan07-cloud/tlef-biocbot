@@ -68,6 +68,19 @@ describe('POST / — create a question', () => {
         expect(res.status).toBe(403);
     });
 
+    test.each([
+        ['a list of courses', { $in: ['C2', 'C1'] }],
+        ['an array', ['C1']],
+    ])('400 when courseId is %s, and nothing is written', async (_label, courseId) => {
+        const db = courseDb();
+        const res = await request(app({ db, user: otherInstructor })).post('/')
+            .send({ ...payload, courseId, instructorId: 'i2' });
+        expect(res.status).toBe(400);
+        expect(await db.collection('questions').find({}).toArray()).toEqual([]);
+        const course = await db.collection('courses').findOne({ courseId: 'C1' });
+        expect(course.lectures[0].assessmentQuestions).toHaveLength(1);
+    });
+
     test('accepts boolean false as an explicit answer and normalizes the objective', async () => {
         const res = await request(app({ db: courseDb(), user: instructor })).post('/').send(payload);
         expect(res.status).toBe(200);

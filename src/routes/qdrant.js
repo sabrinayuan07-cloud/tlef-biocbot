@@ -40,6 +40,11 @@ async function requireDirectQdrantAccess(req, res, { courseId, requireExistingCo
         return user;
     }
 
+    if (typeof courseId !== 'string') {
+        res.status(400).json({ success: false, message: 'courseId must be a single course ID' });
+        return null;
+    }
+
     const db = req.app.locals.db;
     if (!db) {
         res.status(503).json({

@@ -510,7 +510,7 @@ async function downloadAllCourseSessions(format = 'json', anonymized = false) {
             
             try {
                 // Fetch sessions list for this student
-                const sessionsResponse = await fetch(withEmptyChatsParam(`/api/students/${currentCourseId}/${student.studentId}/sessions`), {
+                const sessionsResponse = await fetch(withEmptyChatsParam(`/api/students/${currentCourseId}/${encodeURIComponent(student.studentId)}/sessions`), {
                     method: 'GET',
                     credentials: 'include'
                 });
@@ -533,7 +533,7 @@ async function downloadAllCourseSessions(format = 'json', anonymized = false) {
                             }
                             
                             try {
-                                const sessionResponse = await fetch(`/api/students/${currentCourseId}/${student.studentId}/sessions/${session.sessionId}`, {
+                                const sessionResponse = await fetch(`/api/students/${currentCourseId}/${encodeURIComponent(student.studentId)}/sessions/${encodeURIComponent(session.sessionId)}`, {
                                     method: 'GET',
                                     credentials: 'include'
                                 });
@@ -749,25 +749,30 @@ function createStudentCard(student) {
         }
     }
     
-    const firstLetter = studentName && typeof studentName === 'string' ? studentName.charAt(0).toUpperCase() : '?';
+    studentName = String(studentName);
+    const firstLetter = studentName ? studentName.charAt(0).toUpperCase() : '?';
     
+    // Saved-chat fields are escaped, and the button's handler is attached in
+    // code, so nothing a saved chat holds is read as markup or script.
     const card = document.createElement('div');
     card.className = 'student-card';
     card.innerHTML = `
         <div class="student-info">
-            <div class="student-avatar">${firstLetter}</div>
+            <div class="student-avatar">${escapeHtml(firstLetter)}</div>
             <div class="student-details">
-                <h3 class="student-name">${studentName}</h3>
-                <p class="student-id">ID: ${student.studentId}</p>
-                <p class="student-stats">${student.totalSessions} saved chat${student.totalSessions !== 1 ? 's' : ''}</p>
+                <h3 class="student-name">${escapeHtml(studentName)}</h3>
+                <p class="student-id">ID: ${escapeHtml(student.studentId)}</p>
+                <p class="student-stats">${escapeHtml(student.totalSessions)} saved chat${student.totalSessions !== 1 ? 's' : ''}</p>
             </div>
         </div>
         <div class="student-actions">
-            <button class="btn-primary" onclick="viewStudentSessions('${student.studentId}', '${studentName.replace(/'/g, "\\'")}')">
+            <button class="btn-primary">
                 View Sessions
             </button>
         </div>
     `;
+    card.querySelector('.student-actions .btn-primary')
+        .addEventListener('click', () => viewStudentSessions(student.studentId, studentName));
     
     return card;
 }
@@ -794,7 +799,7 @@ async function viewStudentSessions(studentId, studentName) {
             return;
         }
 
-        const response = await fetch(withEmptyChatsParam(`/api/students/${currentCourseId}/${studentId}/sessions`), {
+        const response = await fetch(withEmptyChatsParam(`/api/students/${currentCourseId}/${encodeURIComponent(studentId)}/sessions`), {
             method: 'GET',
             credentials: 'include'
         });
@@ -886,37 +891,52 @@ function createSessionElement(session) {
     const savedTime = session.savedAt ? new Date(session.savedAt).toLocaleTimeString() : 'Unknown time';
     const previewId = `preview-${session.sessionId}`;
 
+    // Saved-chat fields are escaped. The session ID, which the saving page
+    // chose, is set as a property and passed to handlers attached in code, so
+    // it never becomes markup or script.
     sessionDiv.innerHTML = `
         <div class="session-item">
             <div class="session-info">
-                <h4 class="session-title">${session.title}</h4>
+                <h4 class="session-title">${escapeHtml(session.title)}</h4>
                 <p class="session-details">
-                    ${session.unitName ? `Unit: ${session.unitName} | ` : ''}Messages: ${session.messageCount} |
-                    Duration: ${session.duration}
+                    ${session.unitName ? `Unit: ${escapeHtml(session.unitName)} | ` : ''}Messages: ${escapeHtml(session.messageCount)} |
+                    Duration: ${escapeHtml(session.duration)}
                 </p>
-                <p class="session-date">Saved: ${savedDate} at ${savedTime}</p>
+                <p class="session-date">Saved: ${escapeHtml(savedDate)} at ${escapeHtml(savedTime)}</p>
             </div>
             <div class="session-actions">
-                <button class="btn-outline" onclick="toggleChatPreview('${session.sessionId}', '${session.studentId}')">
+                <button class="btn-outline session-preview-toggle">
                     Preview Chat
                 </button>
                 <div class="download-dropdown">
-                    <button class="btn-secondary download-dropdown-toggle" onclick="toggleDownloadMenu(event, '${session.sessionId}')" aria-expanded="false" aria-haspopup="menu">
+                    <button class="btn-secondary download-dropdown-toggle" aria-expanded="false" aria-haspopup="menu">
                         Download &#9662;
                     </button>
-                    <div class="download-dropdown-menu" id="download-menu-${session.sessionId}">
-                        <button onclick="downloadSession('${session.sessionId}', 'json')">Download JSON</button>
-                        <button onclick="downloadSession('${session.sessionId}', 'json', true)">Download anonymized JSON</button>
-                        <button onclick="downloadSession('${session.sessionId}', 'txt')">Download TXT</button>
-                        <button onclick="downloadSession('${session.sessionId}', 'txt', true)">Download anonymized TXT</button>
+                    <div class="download-dropdown-menu">
+                        <button data-format="json">Download JSON</button>
+                        <button data-format="json" data-anonymized="true">Download anonymized JSON</button>
+                        <button data-format="txt">Download TXT</button>
+                        <button data-format="txt" data-anonymized="true">Download anonymized TXT</button>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="chat-preview" id="${previewId}" style="display: none;">
+        <div class="chat-preview" style="display: none;">
             <div class="chat-preview-loading">Loading chat preview...</div>
         </div>
     `;
+
+    sessionDiv.querySelector('.chat-preview').id = previewId;
+    sessionDiv.querySelector('.download-dropdown-menu').id = `download-menu-${session.sessionId}`;
+    sessionDiv.querySelector('.session-preview-toggle')
+        .addEventListener('click', () => toggleChatPreview(session.sessionId, session.studentId));
+    sessionDiv.querySelector('.download-dropdown-toggle')
+        .addEventListener('click', (event) => toggleDownloadMenu(event, session.sessionId));
+    sessionDiv.querySelectorAll('.download-dropdown-menu button').forEach((button) => {
+        button.addEventListener('click', () => {
+            downloadSession(session.sessionId, button.dataset.format, button.dataset.anonymized === 'true');
+        });
+    });
 
     return sessionDiv;
 }
@@ -991,8 +1011,8 @@ async function toggleChatPreview(sessionId, studentId) {
 
     try {
         const url = currentScope.type === 'superchat'
-            ? `/api/superchats/${currentScope.superchatId}/chat-sessions/${studentId}/${sessionId}`
-            : `/api/students/${currentCourseId}/${studentId}/sessions/${sessionId}`;
+            ? `/api/superchats/${currentScope.superchatId}/chat-sessions/${encodeURIComponent(studentId)}/${encodeURIComponent(sessionId)}`
+            : `/api/students/${currentCourseId}/${encodeURIComponent(studentId)}/sessions/${encodeURIComponent(sessionId)}`;
         const response = await fetch(url, {
             method: 'GET',
             credentials: 'include'
@@ -1042,20 +1062,32 @@ async function toggleChatPreview(sessionId, studentId) {
 
 /**
  * Escape HTML to prevent XSS
+ * (quotes too, so the result is also safe inside an attribute).
  */
 function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+    return String(text ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+/**
+ * The text of an HTML string. A <template> parses it without loading images
+ * or running handlers; an element in the page would do both, even detached.
+ */
+function htmlToText(html) {
+    const template = document.createElement('template');
+    template.innerHTML = String(html ?? '');
+    return template.content.textContent || '';
 }
 
 /**
  * Strip HTML tags from a string and return plain text
  */
 function stripHtml(html) {
-    const div = document.createElement('div');
-    div.innerHTML = html;
-    return div.textContent || div.innerText || '';
+    return htmlToText(html);
 }
 
 /**
@@ -1073,10 +1105,7 @@ function getMsgRole(msg) {
  * Strip HTML for plain text export
  */
 function stripHtmlForText(html) {
-    // Server-side safe: no DOM available in some contexts, but this runs in browser
-    const div = document.createElement('div');
-    div.innerHTML = html;
-    return (div.textContent || div.innerText || '').trim();
+    return htmlToText(html).trim();
 }
 
 /**
@@ -1186,8 +1215,8 @@ async function downloadSession(sessionId, format = 'json', anonymized = false) {
         if (anonymized && !(await requireCompletePseudonymScope())) return;
 
         const url = isSuperchat
-            ? `/api/superchats/${currentScope.superchatId}/chat-sessions/${session.studentId}/${sessionId}`
-            : `/api/students/${currentCourseId}/${session.studentId}/sessions/${sessionId}`;
+            ? `/api/superchats/${currentScope.superchatId}/chat-sessions/${encodeURIComponent(session.studentId)}/${encodeURIComponent(sessionId)}`
+            : `/api/students/${currentCourseId}/${encodeURIComponent(session.studentId)}/sessions/${encodeURIComponent(sessionId)}`;
         const response = await fetch(url, {
             method: 'GET',
             credentials: 'include'
@@ -1259,7 +1288,7 @@ async function downloadAllSessions(format = 'json', anonymized = false) {
             const session = currentStudentSessions[i];
             
             try {
-                const response = await fetch(`/api/students/${currentCourseId}/${session.studentId}/sessions/${session.sessionId}`, {
+                const response = await fetch(`/api/students/${currentCourseId}/${encodeURIComponent(session.studentId)}/sessions/${encodeURIComponent(session.sessionId)}`, {
                     method: 'GET',
                     credentials: 'include'
                 });

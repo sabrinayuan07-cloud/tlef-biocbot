@@ -225,6 +225,22 @@ describe('GET /:courseId', () => {
         expect((await request(app({ db: memoryDb({ courses: [course] }), user: { userId: 'ta1', role: 'ta' } })).get('/C1')).status).toBe(200);
         expect((await request(app({ db: memoryDb({ courses: [course] }) })).get('/C1')).status).toBe(403);
     });
+
+    test('the instructor join code goes to the course\'s instructors, not its TAs', async () => {
+        const course = {
+            courseId: 'C1', instructorId: 'other', instructors: ['i1'], tas: ['ta1', 'i9'],
+            courseCode: 'STU123', instructorCourseCode: 'INS456',
+        };
+        const coInstructor = await request(app({ db: memoryDb({ courses: [course] }), user: instructor })).get('/C1');
+        expect(coInstructor.body.data).toMatchObject({ courseCode: 'STU123', instructorCourseCode: 'INS456' });
+
+        for (const user of [{ userId: 'ta1', role: 'ta' }, { userId: 'i9', role: 'instructor' }]) {
+            const res = await request(app({ db: memoryDb({ courses: [course] }), user })).get('/C1');
+            expect(res.status).toBe(200);
+            expect(res.body.data.courseCode).toBe('STU123');
+            expect(res.body.data).not.toHaveProperty('instructorCourseCode');
+        }
+    });
 });
 
 describe('GET /instructor/:instructorId', () => {

@@ -35,7 +35,7 @@ router.post('/:courseId/tas', async (req, res) => {
             });
         }
         
-        if (!taId) {
+        if (!taId || typeof taId !== 'string') {
             return res.status(400).json({
                 success: false,
                 message: 'taId is required'
@@ -48,6 +48,22 @@ router.post('/:courseId/tas', async (req, res) => {
             return res.status(503).json({
                 success: false,
                 message: 'Database connection not available'
+            });
+        }
+        
+        // Like removing a TA: only the course's own instructors add one.
+        const course = await db.collection('courses').findOne({ courseId });
+        if (!course || course.status === 'deleted') {
+            return res.status(400).json({
+                success: false,
+                message: 'Course not found'
+            });
+        }
+
+        if (!hasInstructorAccess(course, user.userId)) {
+            return res.status(403).json({
+                success: false,
+                message: 'Access denied. You can only add TAs to your own courses.'
             });
         }
         

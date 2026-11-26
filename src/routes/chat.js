@@ -2428,7 +2428,6 @@ router.post('/save', async (req, res) => {
             sessionId,
             courseId,
             studentId,
-            studentName,
             unitName,
             title,
             messageCount,
@@ -2438,12 +2437,16 @@ router.post('/save', async (req, res) => {
         } = req.body;
 
         // Validate required fields
-        if (!sessionId || !courseId || !studentId || !studentName) {
+        if (!sessionId || !courseId || !studentId) {
             return res.status(400).json({
                 success: false,
-                message: 'Missing required fields: sessionId, courseId, studentId, studentName'
+                message: 'Missing required fields: sessionId, courseId, studentId'
             });
         }
+
+        // The name staff see comes from the signed-in account, as in the Super
+        // Course save, not from the request.
+        const studentName = req.user?.displayName || req.user?.username || req.user?.email || studentId;
 
         if (req.user?.role === 'student' && req.user.userId !== studentId) {
             return res.status(403).json({

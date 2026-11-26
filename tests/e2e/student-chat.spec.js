@@ -879,16 +879,24 @@ test.describe('POST /api/chat/save — input validation', () => {
         expect(res.status()).toBe(400);
     });
 
-    test('returns 400 when studentName is missing', async ({ request: api }) => {
-        const res = await api.post('/api/chat/save', {
-            data: {
-                sessionId: `e2e_validation_${Date.now()}`,
-                courseId: STU_COURSE_ID,
-                studentId,
-                chatData: { messages: [] },
-            },
-        });
-        expect(res.status()).toBe(400);
+    test('saves under the signed-in account\'s name, whether or not the page sends one', async ({ request: api }) => {
+        const me = (await (await api.get('/api/auth/me')).json()).user;
+        const accountName = me.displayName || me.username;
+        for (const studentName of [undefined, '<b>Someone Else</b>']) {
+            const sessionId = `e2e_validation_${Date.now()}_${studentName ? 'named' : 'unnamed'}`;
+            const res = await api.post('/api/chat/save', {
+                data: {
+                    sessionId,
+                    courseId: STU_COURSE_ID,
+                    studentId,
+                    ...(studentName ? { studentName } : {}),
+                    chatData: { messages: [] },
+                },
+            });
+            expect(res.status()).toBe(200);
+            const list = await (await api.get(`/api/students/${STU_COURSE_ID}/${studentId}/sessions/own`)).json();
+            expect(list.data.sessions.find((session) => session.sessionId === sessionId).studentName).toBe(accountName);
+        }
     });
 
     test('round-trip preserves chatData verbatim', async ({ request: api }) => {

@@ -254,6 +254,33 @@ test.describe('public/student/scripts/flagged.js branch coverage', () => {
         await expect(list.locator('.flag-card')).toHaveCount(0);
     });
 
+    test('a stored flag\'s reason, unit, mode and status render as text, never as markup', async ({ page }) => {
+        const markup = '"><img src=x onerror="window.__flagMarkupRan=true">';
+        await installStudentFlaggedRoutes(page, {
+            flags: [flag({
+                flagId: 'flag_markup',
+                flagReason: markup,
+                flagStatus: markup,
+                unitName: markup,
+                botMode: markup,
+            })],
+        });
+
+        await page.goto('/student/flagged');
+        const list = page.locator('#flagged-list');
+        await expect(list.locator('.flag-card')).toHaveCount(1, { timeout: 15_000 });
+
+        await expect(list.locator('img')).toHaveCount(0);
+        await expect(list.locator('.flag-type-badge')).toHaveText(markup);
+        await expect(list.locator('.flag-status-badge')).toHaveText(markup);
+        await expect(list).toContainText(`${markup} mode`);
+        await expect(list.locator('.context-tag').first()).toHaveText(markup);
+        for (const selector of ['.flag-type-badge', '.flag-status-badge']) {
+            expect(await list.locator(selector).evaluate((el) => el.getAttributeNames())).toEqual(['class']);
+        }
+        expect(await page.evaluate(() => /** @type {any} */ (window).__flagMarkupRan)).toBeUndefined();
+    });
+
     test('shows a missing-course error before calling the flags endpoint', async ({ page }) => {
         const { flagRequests } = await installStudentFlaggedRoutes(page, {
             selectedCourseId: null,

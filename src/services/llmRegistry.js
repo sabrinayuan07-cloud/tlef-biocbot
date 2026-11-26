@@ -94,7 +94,10 @@ class LlmRegistry {
     }
 
     async forCourse(db, courseId) {
-        if (!courseId) throw new LlmKeyError(KEY_STATUSES.MISSING, { type: 'course', id: courseId });
+        // Only a non-empty string names a course.
+        if (typeof courseId !== 'string' || !courseId) {
+            throw new LlmKeyError(KEY_STATUSES.MISSING, { type: 'course', id: null });
+        }
         const course = await db.collection('courses').findOne(
             { courseId },
             { projection: { llmApiKey: 1, llmCredentials: 1, activeLlmProvider: 1, pendingLlmProvider: 1, providerMigrationId: 1, aiPreparationRequired: 1, llmModelSettings: 1 } }
