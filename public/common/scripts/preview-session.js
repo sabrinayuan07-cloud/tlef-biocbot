@@ -187,6 +187,15 @@
 
     if (isPreviewTab) {
         pinPreviewCourse();
+
+        // Reserve the banner's space before <body> is even parsed, via a class
+        // on <html> (the one element guaranteed to exist this early) rather
+        // than waiting for the real banner to land in init() on
+        // DOMContentLoaded. Without this, the page lays out once without the
+        // banner, then jumps down the moment init() inserts it - a visible
+        // reflow on every navigation. See preview.css's html.preview-pending
+        // rules, which mirror body.preview-mode so the swap is a no-op.
+        document.documentElement.classList.add('preview-pending');
     }
 
     /**
@@ -638,11 +647,18 @@
                 // Nothing to clean up.
             }
             window.BiocBotPreview.active = false;
+            // No real banner is coming, so the reserved space from the
+            // html.preview-pending class (added at parse time, before we
+            // knew this) needs to go too.
+            document.documentElement.classList.remove('preview-pending');
             return;
         }
 
         window.BiocBotPreview.state = state;
         document.body.classList.add('preview-mode');
+        // The real banner (below) now reserves its own space the same way
+        // html.preview-pending did, so the placeholder is redundant.
+        document.documentElement.classList.remove('preview-pending');
 
         const banner = buildBanner(state);
         document.body.insertBefore(banner, document.body.firstChild);

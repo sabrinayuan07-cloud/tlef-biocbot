@@ -192,8 +192,16 @@
 /* Make room for the banner by putting it in the flow as the first row of a
    column layout, rather than offsetting the shell beneath a fixed element.
    A margin-top on .app-container collapsed out through <body> instead, adding
-   the banner's height to the document and producing a second scrollbar. */
-body.preview-mode {
+   the banner's height to the document and producing a second scrollbar.
+
+   html.preview-pending gets the same layout, before <body> itself has even
+   been parsed: preview-session.js adds it synchronously, before any page
+   script runs, well before init() can confirm the preview and add the real
+   body.preview-mode. Without it the page lays out once without the banner,
+   then jumps the moment init() inserts it. The ::before placeholder below
+   stands in for the real banner until then - same flex slot, same height. */
+body.preview-mode,
+html.preview-pending body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
@@ -204,7 +212,14 @@ body.preview-mode .preview-banner {
     flex: 0 0 auto;
 }
 
-body.preview-mode .app-container {
+html.preview-pending body::before {
+    content: '';
+    flex: 0 0 auto;
+    height: var(--preview-banner-height);
+}
+
+body.preview-mode .app-container,
+html.preview-pending .app-container {
     flex: 1 1 auto;
     height: auto;
     min-height: 0;
@@ -213,7 +228,8 @@ body.preview-mode .app-container {
 /* chat.css sizes the chat box against the full viewport (100vh - 120px). In
    preview the banner takes a slice of that, so without this the box overflows
    .main-content and it scrolls behind the chat's own scroller. */
-body.preview-mode .chat-container {
+body.preview-mode .chat-container,
+html.preview-pending .chat-container {
     height: calc(100vh - 120px - var(--preview-banner-height) - var(--preview-banner-border));
 }
 
