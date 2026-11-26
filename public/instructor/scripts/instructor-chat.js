@@ -186,8 +186,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (newChatButton) {
-        newChatButton.addEventListener('click', () => {
-            if (conversationMessages.length && !confirm('Start a new Super Course chat?')) {
+        newChatButton.addEventListener('click', async () => {
+            // Design-system confirm dialog (#759) instead of the native browser one.
+            if (conversationMessages.length && !(await confirmDialog('Start a new Super Course chat?', { title: 'Start a new chat?' }))) {
                 return;
             }
             startNewChat();
@@ -863,7 +864,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function deleteHistorySession(sessionId) {
-        if (!sessionId || !confirm('Delete this Super Chat session?')) return;
+        if (!sessionId) return;
+        // Design-system confirm dialog (#759) instead of the native browser one.
+        if (!(await confirmDialog('Delete this Super Chat session?', { title: 'Delete this session?', confirmLabel: 'Delete', danger: true }))) return;
 
         try {
             const response = await fetch(`/api/instructor/chat/sessions/${encodeURIComponent(sessionId)}`, {

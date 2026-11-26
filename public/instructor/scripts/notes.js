@@ -212,7 +212,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ---------- Delete ----------
     async function deleteNote(noteId) {
-        if (!confirm('Delete this note? It will stop being used by the bot immediately.')) return;
+        // Design-system confirm dialog (#759) instead of the native browser one.
+        if (!(await confirmDialog('Delete this note? It will stop being used by the bot immediately.', { title: 'Delete this note?', confirmLabel: 'Delete', danger: true }))) return;
         try {
             const res = await fetch(`${API}/${encodeURIComponent(noteId)}`, {
                 method: 'DELETE',

@@ -2868,7 +2868,8 @@ async function removeApprovedTopic(index) {
     const removedTopic = topics[index];
     const removedLabel = removedTopic.topic;
 
-    if (!confirm(`Remove the topic "${removedLabel}"?`)) return;
+    // Design-system confirm dialog (#759) instead of the native browser one.
+    if (!(await confirmDialog(`Remove the topic "${removedLabel}"?`, { title: 'Remove this topic?', confirmLabel: 'Remove', danger: true }))) return;
 
     topics.splice(index, 1);
     setApprovedTopicGlobals(getSelectedCourseId(), topics);

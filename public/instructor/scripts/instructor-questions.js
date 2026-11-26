@@ -1224,7 +1224,8 @@ async function autoLinkQuestionsToLearningObjectives(week, buttonElement = null)
  * @param {string} questionId - Question ID
  */
 async function deleteQuestion(week, questionId) {
-    if (confirm('Are you sure you want to delete this question?')) {
+    // Design-system confirm dialog (#759) instead of the native browser one.
+    if (await confirmDialog('Are you sure you want to delete this question?', { title: 'Delete this question?', confirmLabel: 'Delete', danger: true })) {
         try {
             await deleteAssessmentQuestion(questionId, week);
             checkAIGenerationAvailability(week);

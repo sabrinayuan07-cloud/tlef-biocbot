@@ -960,7 +960,11 @@ async function batchApproveSelectedFlags() {
     const flagIds = getVisibleSelectedFlagIds();
     if (flagIds.length === 0) return;
 
-    const confirmed = confirm(`Approve ${flagIds.length} selected flag${flagIds.length === 1 ? '' : 's'}?`);
+    // Design-system confirm dialog (#759) instead of the native browser one.
+    const confirmed = await confirmDialog(`Approve ${flagIds.length} selected flag${flagIds.length === 1 ? '' : 's'}?`, {
+        title: 'Approve selected flags?',
+        confirmLabel: 'Approve'
+    });
     if (!confirmed) return;
 
     const approveBtn = document.getElementById('batch-approve-flags');

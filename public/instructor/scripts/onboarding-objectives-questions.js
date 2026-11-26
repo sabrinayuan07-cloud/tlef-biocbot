@@ -831,7 +831,8 @@ async function autoLinkQuestionsToLearningObjectives(week, buttonElement = null)
  * Delete assessment question
  */
 async function deleteAssessmentQuestion(week, questionId) {
-    if (!confirm('Are you sure you want to delete this question?')) {
+    // Design-system confirm dialog (#759) instead of the native browser one.
+    if (!(await confirmDialog('Are you sure you want to delete this question?', { title: 'Delete this question?', confirmLabel: 'Delete', danger: true }))) {
         return;
     }
     // During onboarding, we're always working with 'Onboarding' as the week

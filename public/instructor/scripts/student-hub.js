@@ -734,7 +734,8 @@ async function dropUnmatchedLmsStudents() {
     const button = document.getElementById('drop-unmatched-lms-students');
     if (!match?.syncToken || !currentGradeCourseId || !button) return;
     const count = match.dropCandidates?.length || 0;
-    if (!confirm(`Disable course access for ${count} student${count === 1 ? '' : 's'} who left the Canvas course? Their accounts and history will be kept.`)) return;
+    // Design-system confirm dialog (#759) instead of the native browser one.
+    if (!(await confirmDialog(`Disable course access for ${count} student${count === 1 ? '' : 's'} who left the Canvas course? Their accounts and history will be kept.`, { title: 'Disable course access?', confirmLabel: 'Disable access', danger: true }))) return;
 
     button.disabled = true;
     button.textContent = 'Disabling access…';
@@ -1318,9 +1319,11 @@ async function downloadChatSurveyResponsesAnonymized() {
 
         if (!statusResult.data.complete) {
             const count = statusResult.data.missingStudentIds.length;
-            const openManager = confirm(
+            // Design-system confirm dialog (#759) instead of the native browser one.
+            const openManager = await confirmDialog(
                 `Anonymized download blocked: ${count} student${count === 1 ? '' : 's'} still need a four-character ID. ` +
-                'Generate the missing IDs below before downloading. Open the anonymization ID manager now?'
+                'Generate the missing IDs below before downloading. Open the anonymization ID manager now?',
+                { title: 'Anonymized download blocked', confirmLabel: 'Open ID manager' }
             );
             if (openManager) {
                 const scopeTypeSelect = document.getElementById('pseudonym-scope-type');
@@ -1534,7 +1537,8 @@ window.promoteToTA = async function(studentId, studentName, courseId) {
         ? `Invite ${studentName} to join this course as a Teaching Assistant?`
         : `Are you sure you want to promote ${studentName} to a Teaching Assistant? This will give them TA permissions.`;
 
-    if (!confirm(confirmMessage)) {
+    // Design-system confirm dialog (#759) instead of the native browser one.
+    if (!(await confirmDialog(confirmMessage, { title: 'Promote to Teaching Assistant?', confirmLabel: 'Promote' }))) {
         return;
     }
 
@@ -1581,7 +1585,8 @@ window.demoteFromTA = async function(studentId, studentName, courseId) {
         return;
     }
 
-    if (!confirm(`Remove ${studentName} as a Teaching Assistant from this course? They will stay a TA in any other courses.`)) {
+    // Design-system confirm dialog (#759) instead of the native browser one.
+    if (!(await confirmDialog(`Remove ${studentName} as a Teaching Assistant from this course? They will stay a TA in any other courses.`, { title: 'Remove this Teaching Assistant?', confirmLabel: 'Remove', danger: true }))) {
         return;
     }
 

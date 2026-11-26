@@ -674,9 +674,11 @@ async function requireCompletePseudonymScope() {
 
         if (!result.data.complete) {
             const count = result.data.missingStudentIds.length;
-            const goToHub = confirm(
+            // Design-system confirm dialog (#759) instead of the native browser one.
+            const goToHub = await confirmDialog(
                 `Anonymized download blocked: ${count} student${count === 1 ? '' : 's'} still need a four-character ID. ` +
-                'Generate the missing IDs in Student Hub before downloading. Open Student Hub now?'
+                'Generate the missing IDs in Student Hub before downloading. Open Student Hub now?',
+                { title: 'Anonymized download blocked', confirmLabel: 'Open Student Hub' }
             );
             if (goToHub) {
                 const params = new URLSearchParams({ pseudonymScope: scope.type, pseudonymScopeId: scope.id });
