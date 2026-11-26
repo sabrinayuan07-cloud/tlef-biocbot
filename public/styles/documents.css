@@ -472,7 +472,10 @@ li.objective-display-item > .objective-display-row {
        This grey is 4.8:1 on white and still reads as "off" beside the blue "on". */
     background-color: #6b7280;
     transition: 0.3s var(--bb-ease-reveal);
-    border-radius: var(--bb-radius);
+    /* A toggle track reads as a pill everywhere else in the app and on the
+       web generally - --bb-radius (0, square corners) made this one look
+       rectangular instead (#758). */
+    border-radius: 999px;
 }
 
 .toggle-slider:before {

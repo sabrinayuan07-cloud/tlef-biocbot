@@ -996,7 +996,10 @@
     bottom: 0;
     background-color: #767676;
     transition: .4s var(--bb-ease-reveal);
-    border-radius: var(--bb-radius);
+    /* A toggle track reads as a pill everywhere else in the app and on the
+       web generally - --bb-radius (0, square corners) made this one look
+       rectangular instead (#758). */
+    border-radius: 999px;
 }
 
 .toggle-slider:before {
