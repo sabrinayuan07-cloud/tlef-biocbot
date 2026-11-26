@@ -789,7 +789,7 @@ function startAssessmentWithQuestions(questions, passThreshold = 0) {
     // answered, so say so up front instead of leaving the student wondering
     // why they can't just type a message.
     const questionCountNotice = questions.length > 0
-        ? `Your instructor has required you to complete ${questions.length} question${questions.length === 1 ? '' : 's'} before chatting with BiocBot.<br>`
+        ? `Your instructor has required you to complete <strong>${questions.length} question${questions.length === 1 ? '' : 's'}</strong> before chatting with BiocBot.<br>`
         : '';
 
     const messageText = document.createElement('p');
