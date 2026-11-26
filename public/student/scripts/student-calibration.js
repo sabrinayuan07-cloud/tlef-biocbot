@@ -785,9 +785,16 @@ function startAssessmentWithQuestions(questions, passThreshold = 0) {
     const contentDiv = document.createElement('div');
     contentDiv.classList.add('message-content');
 
+    // The chat input stays hidden (see below) until every question here is
+    // answered, so say so up front instead of leaving the student wondering
+    // why they can't just type a message.
+    const questionCountNotice = questions.length > 0
+        ? `Your instructor has required you to complete ${questions.length} question${questions.length === 1 ? '' : 's'} before chatting with BiocBot.<br>`
+        : '';
+
     const messageText = document.createElement('p');
     messageText.innerHTML = `<strong>Starting Assessment for ${unitName}</strong><br>
-    I'll ask you a few questions to understand your current knowledge level. This will help me provide the most helpful responses for your learning needs.`;
+    ${questionCountNotice}I'll ask you a few questions to understand your current knowledge level. This will help me provide the most helpful responses for your learning needs.`;
 
     contentDiv.appendChild(messageText);
 
