@@ -74,9 +74,20 @@
     box-shadow: 0 0 0 2px rgba(0, 85, 183, 0.15);
 }
 
+/* The global .secondary-button look (transparent background, faint border)
+   barely registered against the page background - give Shuffle a solid,
+   visibly distinct color instead of just adjusting its border. */
 #shuffle-btn {
     padding: 0.5rem 1rem;
     font-size: 0.85rem;
+    background-color: var(--secondary-color, #6b8cae);
+    border-color: var(--secondary-color, #6b8cae);
+    color: var(--light-text, #ffffff);
+}
+
+#shuffle-btn:hover {
+    background-color: var(--accent-color, #3d5a80);
+    border-color: var(--accent-color, #3d5a80);
 }
 
 /* Progress */
