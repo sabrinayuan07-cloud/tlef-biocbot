@@ -67,7 +67,7 @@ test.describe('Course Upload: repeated titles', () => {
         expect(await names(page.locator('.unit-rename-btn'))).toEqual([
             'Rename Unit (Cell Structure - 1 of 2)', 'Rename Unit (Cell Structure - 2 of 2)', 'Rename Unit (3. Metabolism)',
         ]);
-        expect(await names(page.locator('.publish-toggle input'))).toEqual([
+        expect(await names(page.locator('.header-actions .publish-toggle input'))).toEqual([
             'Publish (Cell Structure - 1 of 2)', 'Publish (Cell Structure - 2 of 2)', 'Publish (3. Metabolism)',
         ]);
 
