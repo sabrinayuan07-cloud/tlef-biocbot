@@ -345,6 +345,52 @@
     font-weight: 600;
 }
 
+/* Edit flag reason/description (#756) */
+.flag-section-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.flag-section-header-row .flag-section-title {
+    margin-bottom: 0;
+}
+
+.edit-flag-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    padding: 0.25rem;
+    border-radius: 4px;
+    color: #64748b;
+    cursor: pointer;
+}
+
+.edit-flag-btn:hover {
+    background: #e2e8f0;
+    color: #1d1f20;
+}
+
+.edit-flag-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.edit-flag-form {
+    margin-top: 0.5rem;
+}
+
+.edit-flag-reason-select {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
 /* Context Section */
 .context-section .flag-context-meta {
     margin-bottom: 0.75rem;

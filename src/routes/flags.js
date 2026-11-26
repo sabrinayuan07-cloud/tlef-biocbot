@@ -674,6 +674,66 @@ router.put('/:flagId/status', async (req, res) => {
 });
 
 /**
+ * PUT /api/flags/:flagId/details
+ * Edit a flag's own reason/description (#756) - for correcting a flag that
+ * was submitted incorrectly, as opposed to /response (the instructor's reply)
+ * or /status (resolve/dismiss).
+ */
+router.put('/:flagId/details', async (req, res) => {
+    try {
+        const { flagId } = req.params;
+        const { flagReason, flagDescription } = req.body;
+
+        if (flagReason === undefined && flagDescription === undefined) {
+            return res.status(400).json({
+                success: false,
+                message: 'Provide at least one of: flagReason, flagDescription'
+            });
+        }
+
+        if (flagReason !== undefined && !FlaggedQuestionModel.isValidFlagReason(flagReason)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid flag reason'
+            });
+        }
+
+        const db = req.app.locals.db;
+        if (!db) {
+            return res.status(503).json({
+                success: false,
+                message: 'Database connection not available'
+            });
+        }
+
+        const flag = await loadFlagAndAssertCourseAccess(req, res, flagId);
+        if (!flag) return;
+
+        const result = await FlaggedQuestionModel.updateFlagDetails(db, flagId, { flagReason, flagDescription });
+
+        if (!result.success) {
+            return res.status(400).json({
+                success: false,
+                message: result.error || 'Failed to update flag details'
+            });
+        }
+
+        res.json({
+            success: true,
+            message: 'Flag details updated successfully!',
+            data: { flagId, updatedAt: new Date().toISOString() }
+        });
+
+    } catch (error) {
+        console.error('Error updating flag details:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Internal server error while updating flag details'
+        });
+    }
+});
+
+/**
  * GET /api/flags/stats/:courseId
  * Get flag statistics for a course
  */

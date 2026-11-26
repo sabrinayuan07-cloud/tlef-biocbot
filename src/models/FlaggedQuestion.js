@@ -251,6 +251,42 @@ async function updateFlagStatus(db, flagId, newStatus, instructorId) {
 }
 
 /**
+ * Edit a flag's own reason/description (#756): lets an instructor correct a
+ * flag that was submitted incorrectly (e.g. wrong category), as opposed to
+ * updateInstructorResponse which records the instructor's reply to it.
+ * @param {Object} db - MongoDB database instance
+ * @param {string} flagId - Flag identifier
+ * @param {{flagReason?: string, flagDescription?: string}} edits - Fields to change
+ * @returns {Promise<Object>} Update result
+ */
+async function updateFlagDetails(db, flagId, edits) {
+    const collection = getFlaggedQuestionsCollection(db);
+
+    const updateData = { updatedAt: new Date() };
+    if (edits.flagReason !== undefined) {
+        if (!isValidFlagReason(edits.flagReason)) {
+            return { success: false, error: 'Invalid flag reason' };
+        }
+        updateData.flagReason = edits.flagReason;
+    }
+    if (edits.flagDescription !== undefined) {
+        updateData.flagDescription = edits.flagDescription;
+    }
+
+    const result = await collection.updateOne(
+        { flagId },
+        { $set: updateData }
+    );
+
+    if (result.matchedCount === 0) {
+        return { success: false, error: 'Flag not found' };
+    }
+
+    console.log(`Flag details updated for flag: ${flagId}`);
+    return { success: true, modifiedCount: result.modifiedCount };
+}
+
+/**
  * Get flag statistics for a course
  * @param {Object} db - MongoDB database instance
  * @param {string} courseId - Course identifier
@@ -332,6 +368,7 @@ module.exports = {
     getFlaggedQuestionsForStudent,
     updateInstructorResponse,
     updateFlagStatus,
+    updateFlagDetails,
     getFlagStatistics,
     deleteFlaggedQuestion,
     isValidFlagStatus,

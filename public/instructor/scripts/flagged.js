@@ -1094,12 +1094,35 @@ function createFlagElement(flag) {
         </div>
     `;
     
-    // 2. Student Concern
+    // 2. Student Concern - editable (#756): an instructor can correct a flag
+    // that was submitted incorrectly (e.g. wrong reason/category) instead of
+    // only being able to resolve/dismiss it as-is.
     bodyHtml += `
         <div class="flag-section note-section">
-            <h4 class="flag-section-title">${concernTitle}</h4>
-            <div class="flag-note">
+            <div class="flag-section-header-row">
+                <h4 class="flag-section-title">${concernTitle}</h4>
+                <button type="button" class="edit-flag-btn" id="edit-flag-btn-${flag.flagId}"
+                        onclick="showEditFlagForm('${flag.flagId}')"
+                        title="Edit flag reason and description">${Icons.pencil}<span class="visually-hidden">Edit this flag's reason and description</span></button>
+            </div>
+            <div class="flag-note" id="flag-note-display-${flag.flagId}">
                 ${escapeHtml(flag.flagDescription)}
+            </div>
+            <div class="edit-flag-form" id="edit-flag-form-${flag.flagId}" style="display: none;">
+                <div class="form-group">
+                    <label for="edit-flag-reason-${flag.flagId}">Reason:</label>
+                    <select id="edit-flag-reason-${flag.flagId}" class="edit-flag-reason-select">
+                        ${getFlagReasonOptionsHtml(flag.flagReason)}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="edit-flag-description-${flag.flagId}">Description:</label>
+                    <textarea id="edit-flag-description-${flag.flagId}" class="message-textarea" rows="3">${escapeHtml(flag.flagDescription)}</textarea>
+                </div>
+                <div class="form-actions-row">
+                    <button type="button" class="action-btn send-approve-btn" onclick="saveFlagEdit('${flag.flagId}')">Save</button>
+                    <button type="button" class="action-btn cancel-btn" onclick="hideEditFlagForm('${flag.flagId}')">Cancel</button>
+                </div>
             </div>
         </div>
     `;
@@ -1336,6 +1359,92 @@ function hideDismissForm(flagId) {
 
         if (approveButton) approveButton.style.display = 'inline-block';
         if (dismissButton) dismissButton.style.display = 'inline-block';
+    }
+}
+
+/**
+ * Show the edit form for a flag's own reason/description (#756), e.g. to fix
+ * a flag that was submitted with the wrong category.
+ * @param {string} flagId - The flag ID
+ */
+function showEditFlagForm(flagId) {
+    const display = document.getElementById(`flag-note-display-${flagId}`);
+    const form = document.getElementById(`edit-flag-form-${flagId}`);
+    const editBtn = document.getElementById(`edit-flag-btn-${flagId}`);
+
+    if (display) display.style.display = 'none';
+    if (editBtn) editBtn.style.display = 'none';
+    if (form) form.style.display = 'block';
+}
+
+/**
+ * Hide the edit form, discarding any unsaved changes by resetting the
+ * fields back to the flag's current values.
+ * @param {string} flagId - The flag ID
+ */
+function hideEditFlagForm(flagId) {
+    const display = document.getElementById(`flag-note-display-${flagId}`);
+    const form = document.getElementById(`edit-flag-form-${flagId}`);
+    const editBtn = document.getElementById(`edit-flag-btn-${flagId}`);
+    const reasonSelect = document.getElementById(`edit-flag-reason-${flagId}`);
+    const descriptionTextarea = document.getElementById(`edit-flag-description-${flagId}`);
+
+    const flag = appState.flags.find(f => f.flagId === flagId);
+    if (flag) {
+        if (reasonSelect) reasonSelect.value = flag.flagReason;
+        if (descriptionTextarea) descriptionTextarea.value = flag.flagDescription || '';
+    }
+
+    if (form) form.style.display = 'none';
+    if (display) display.style.display = 'block';
+    if (editBtn) editBtn.style.display = 'inline-flex';
+}
+
+/**
+ * Save edits to a flag's reason/description (#756).
+ * @param {string} flagId - The flag ID
+ */
+async function saveFlagEdit(flagId) {
+    const saveButton = document.querySelector(`#edit-flag-form-${flagId} .send-approve-btn`);
+    const cancelButton = document.querySelector(`#edit-flag-form-${flagId} .cancel-btn`);
+    try {
+        const reasonSelect = document.getElementById(`edit-flag-reason-${flagId}`);
+        const descriptionTextarea = document.getElementById(`edit-flag-description-${flagId}`);
+        const flagReason = reasonSelect ? reasonSelect.value : undefined;
+        const flagDescription = descriptionTextarea ? descriptionTextarea.value.trim() : undefined;
+
+        if (saveButton) saveButton.disabled = true;
+        if (cancelButton) cancelButton.disabled = true;
+
+        const response = await fetch(`/api/flags/${flagId}/details`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ flagReason, flagDescription })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        if (!result.success) {
+            throw new Error(result.message || 'Failed to update flag');
+        }
+
+        const flagIndex = appState.flags.findIndex(flag => flag.flagId === flagId);
+        if (flagIndex !== -1) {
+            appState.flags[flagIndex].flagReason = flagReason;
+            appState.flags[flagIndex].flagDescription = flagDescription;
+        }
+
+        applyFilters();
+        renderFlaggedContent();
+        showSuccessMessage('Flag updated successfully');
+    } catch (error) {
+        console.error('Error updating flag:', error);
+        showErrorMessage('Failed to update flag. Please try again.');
+        if (saveButton) saveButton.disabled = false;
+        if (cancelButton) cancelButton.disabled = false;
     }
 }
 
@@ -1746,18 +1855,30 @@ function formatTimestamp(timestamp) {
  * @param {string} flagReason - The flag reason
  * @returns {string} Display text for the flag reason
  */
+const FLAG_REASON_LABELS = {
+    'incorrect': 'Incorrect',
+    'inappropriate': 'Inappropriate',
+    'unclear': 'Unclear',
+    'confusing': 'Confusing',
+    'typo': 'Typo/Error',
+    'offensive': 'Offensive',
+    'irrelevant': 'Irrelevant'
+};
+
 function getFlagReasonDisplay(flagReason) {
-    const reasonMap = {
-        'incorrect': 'Incorrect',
-        'inappropriate': 'Inappropriate',
-        'unclear': 'Unclear',
-        'confusing': 'Confusing',
-        'typo': 'Typo/Error',
-        'offensive': 'Offensive',
-        'irrelevant': 'Irrelevant'
-    };
-    
-    return reasonMap[flagReason] || flagReason;
+    return FLAG_REASON_LABELS[flagReason] || flagReason;
+}
+
+/**
+ * <option> list for the edit-flag reason <select> (#756), matching the
+ * server's FLAG_REASONS/isValidFlagReason in src/models/FlaggedQuestion.js.
+ * @param {string} currentReason - The flag's current flagReason
+ * @returns {string} HTML for the <option> elements
+ */
+function getFlagReasonOptionsHtml(currentReason) {
+    return Object.entries(FLAG_REASON_LABELS)
+        .map(([value, label]) => `<option value="${value}" ${value === currentReason ? 'selected' : ''}>${escapeHtml(label)}</option>`)
+        .join('');
 }
 
 /**
