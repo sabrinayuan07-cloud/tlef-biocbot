@@ -1355,6 +1355,10 @@ async function sendDismissal(flagId) {
         const noteTextarea = document.getElementById(`dismiss-note-${flagId}`);
         const note = noteTextarea ? noteTextarea.value.trim() : '';
 
+        // Remember what this flag was before, so a misclick can be undone (#754).
+        const previousFlag = appState.flags.find(flag => flag.flagId === flagId);
+        const previousStatus = previousFlag ? previousFlag.flagStatus : 'pending';
+
         if (sendButton) {
             sendButton.textContent = 'Dismissing...';
             sendButton.disabled = true;
@@ -1413,7 +1417,9 @@ async function sendDismissal(flagId) {
         applyFilters();
         renderFlaggedContent();
         loadFlagStats();
-        showSuccessMessage('Flag dismissed successfully');
+        showSuccessMessage('Flag dismissed successfully', {
+            onUndo: () => undoFlagStatusChange(flagId, previousStatus)
+        });
     } catch (error) {
         console.error('Error dismissing flag:', error);
         showErrorMessage('Failed to dismiss flag. Please try again.');
@@ -1565,7 +1571,11 @@ async function handleFlagAction(flagId, action, skipSuccessMessage = false) {
         };
         
         const newStatus = actionMap[action] || action;
-        
+
+        // Remember what this flag was before, so a misclick can be undone (#754).
+        const previousFlag = appState.flags.find(flag => flag.flagId === flagId);
+        const previousStatus = previousFlag ? previousFlag.flagStatus : 'pending';
+
         // Update flag status using the new API
         const response = await fetch(`/api/flags/${flagId}/status`, {
             method: 'PUT',
@@ -1601,22 +1611,68 @@ async function handleFlagAction(flagId, action, skipSuccessMessage = false) {
             // Show success message only if not skipped
             if (!skipSuccessMessage) {
                 const actionText = newStatus === 'dismissed' ? 'dismissed' : newStatus;
-                showSuccessMessage(`Flag ${actionText} successfully`);
+                showSuccessMessage(`Flag ${actionText} successfully`, {
+                    onUndo: () => undoFlagStatusChange(flagId, previousStatus)
+                });
             }
-            
+
         } else {
             throw new Error(result.message || `Failed to ${newStatus} flag`);
         }
-        
+
     } catch (error) {
         const actionText = action === 'rejected' ? 'dismiss' : action;
         console.error(`Error ${actionText} flag:`, error);
         showErrorMessage(`Failed to ${actionText} flag. Please try again.`);
-        
+
         // Re-enable buttons
         const flagElement = document.querySelector(`[data-flag-id="${flagId}"]`);
         const buttons = flagElement.querySelectorAll('.action-btn');
         buttons.forEach(btn => btn.disabled = false);
+    }
+}
+
+/**
+ * Undo a status change made via handleFlagAction/sendDismissal (#754): puts
+ * the flag back to whatever status it had right before that action.
+ * @param {string} flagId - The flag ID
+ * @param {string} previousStatus - The flag's status before the action being undone
+ */
+async function undoFlagStatusChange(flagId, previousStatus) {
+    try {
+        const instructorId = getCurrentInstructorId();
+        if (!instructorId) {
+            console.error('No instructor ID found. User not authenticated.');
+            return;
+        }
+
+        const response = await fetch(`/api/flags/${flagId}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: previousStatus, instructorId })
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const result = await response.json();
+        if (!result.success) {
+            throw new Error(result.message || 'Failed to undo');
+        }
+
+        const flagIndex = appState.flags.findIndex(flag => flag.flagId === flagId);
+        if (flagIndex !== -1) {
+            appState.flags[flagIndex].flagStatus = previousStatus;
+        }
+
+        applyFilters();
+        renderFlaggedContent();
+        loadFlagStats();
+        showSuccessMessage('Action undone');
+    } catch (error) {
+        console.error('Error undoing flag action:', error);
+        showErrorMessage('Failed to undo. Please try again.');
     }
 }
 
@@ -1822,15 +1878,22 @@ function toClassName(value) {
  * Show success message (simple implementation)
  * @param {string} message - Success message
  */
-function showSuccessMessage(message) {
+/**
+ * @param {string} message
+ * @param {{ onUndo?: () => void }} [options] - onUndo (#754): when given, the
+ *   toast grows an Undo button that calls it then dismisses the toast, for
+ *   actions like dismiss/resolve that a misclick should be easy to reverse.
+ */
+function showSuccessMessage(message, options = {}) {
+    const { onUndo } = options;
+
     // Calculate position based on existing toasts
     const existingToasts = document.querySelectorAll('.success-toast');
     const topOffset = 20 + (existingToasts.length * 60); // Stack toasts 60px apart
-    
+
     // Simple toast notification implementation
     const toast = document.createElement('div');
     toast.className = 'success-toast';
-    toast.textContent = message;
     toast.style.cssText = `
         position: fixed;
         top: ${topOffset}px;
@@ -1844,10 +1907,50 @@ function showSuccessMessage(message) {
         font-size: 14px;
         font-weight: 500;
         animation: slideInRight 0.3s ease-out;
-        max-width: 300px;
+        max-width: 320px;
         word-wrap: break-word;
+        display: flex;
+        align-items: center;
+        gap: 14px;
     `;
-    
+
+    const messageSpan = document.createElement('span');
+    messageSpan.textContent = message;
+    messageSpan.style.flex = '1';
+    toast.appendChild(messageSpan);
+
+    const dismissToast = () => {
+        toast.style.animation = 'slideOutRight 0.3s ease-out';
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 300);
+    };
+
+    if (typeof onUndo === 'function') {
+        const undoBtn = document.createElement('button');
+        undoBtn.type = 'button';
+        undoBtn.textContent = 'Undo';
+        undoBtn.style.cssText = `
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.6);
+            border-radius: 4px;
+            padding: 4px 10px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            flex-shrink: 0;
+        `;
+        undoBtn.addEventListener('click', () => {
+            clearTimeout(autoDismissTimer);
+            dismissToast();
+            onUndo();
+        });
+        toast.appendChild(undoBtn);
+    }
+
     // Add animation keyframes to document if not already added
     if (!document.querySelector('#toast-animations')) {
         const style = document.createElement('style');
@@ -1864,19 +1967,12 @@ function showSuccessMessage(message) {
         `;
         document.head.appendChild(style);
     }
-    
+
     document.body.appendChild(toast);
-    
-    // Auto-remove after 4 seconds (longer for longer message)
-    setTimeout(() => {
-        toast.style.animation = 'slideOutRight 0.3s ease-out';
-        setTimeout(() => {
-            if (toast.parentNode) {
-                toast.parentNode.removeChild(toast);
-            }
-        }, 300);
-    }, 4000);
-    
+
+    // Auto-remove after 4 seconds (longer when there's an Undo button to read/click)
+    const autoDismissTimer = setTimeout(dismissToast, onUndo ? 6000 : 4000);
+
     console.log('Success:', message);
 }
 
