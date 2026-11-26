@@ -2214,6 +2214,19 @@ input:checked+.toggle-slider:before {
     border-color: var(--bb-ink-20);
 }
 
+/* Delete is destructive, unlike Download Markdown - give it its own color
+   instead of blending into the other secondary action. */
+.preview-actions #delete-chat-btn {
+    color: var(--danger-color);
+    border-color: var(--danger-color);
+}
+
+.preview-actions #delete-chat-btn:hover {
+    background-color: var(--danger-color);
+    color: var(--bb-white);
+    border-color: var(--danger-color);
+}
+
 /* Search Container */
 .search-container {
     margin-top: 12px;
@@ -2276,6 +2289,12 @@ input:checked+.toggle-slider:before {
     background-color: white;
     color: var(--bb-ink);
     border: 1px solid var(--bb-ink-16);
+}
+
+/* Same destructive-vs-neutral distinction as the desktop preview actions. */
+.mobile-action-btn.secondary[data-action="delete"] {
+    color: var(--danger-color);
+    border-color: var(--danger-color);
 }
 
 /* Responsive design for history page */
