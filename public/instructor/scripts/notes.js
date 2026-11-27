@@ -22,8 +22,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const titleInput = document.getElementById('note-title');
     const bodyInput = document.getElementById('note-body');
     const charCounter = document.getElementById('char-counter');
-    const tagsWrap = document.getElementById('editor-tags');
     const tagInput = document.getElementById('tag-input');
+    const tagChipsRow = document.getElementById('tag-chips-row');
     const saveBtn = document.getElementById('save-note');
     const cancelBtn = document.getElementById('cancel-note');
 
@@ -92,8 +92,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ---------- Tags ----------
     function renderTags() {
-        // Remove existing chips (keep the input)
-        tagsWrap.querySelectorAll('.tag-chip').forEach(chip => chip.remove());
+        // Chips render below the input (#757 follow-up), not mixed into the
+        // same wrapping row as it.
+        tagChipsRow.innerHTML = '';
         currentTags.forEach(tag => {
             const chip = document.createElement('span');
             chip.className = 'tag-chip';
@@ -107,7 +108,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 renderTags();
             });
             chip.appendChild(remove);
-            tagsWrap.insertBefore(chip, tagInput);
+            tagChipsRow.appendChild(chip);
         });
     }
 
