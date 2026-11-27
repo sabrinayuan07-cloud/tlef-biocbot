@@ -624,20 +624,24 @@ header.sidebar {
     word-break: break-word;
 }
 
-/* success/info keep their own darker shade rather than the raw
-   --success-color (#28a745) / --info-color (#17a2b8) tokens used
-   elsewhere (e.g. badges) - with white text those only hit a 3.1:1
-   contrast ratio, below the 4.5:1 WCAG AA minimum (caught by
-   tests/a11y/modals.a11y.spec.js). Same green/teal family as the design
-   tokens, just dark enough to stay readable as a solid white-on-color
-   toast instead of a light badge. */
+/* success keeps its own darker shade rather than the raw --success-color
+   (#28a745) token used elsewhere (e.g. badges) - with white text that only
+   hits a 3.1:1 contrast ratio, below the 4.5:1 WCAG AA minimum (caught by
+   tests/a11y/modals.a11y.spec.js). Same green family as the design token,
+   just dark enough to stay readable as a solid white-on-color toast instead
+   of a light badge. */
 .notification.success {
     background-color: #1e7e34;
     color: white;
 }
 
+/* info used a dark teal (#117a8b) that read as an odd blue-green blend and
+   didn't match the app's design-system blue anywhere else (#759 follow-up).
+   --bb-steel is already used as a solid white-on-color button background
+   elsewhere (e.g. chat.css's .preview-actions .primary-button), so it's
+   known to clear the same contrast minimum. */
 .notification.info {
-    background-color: #117a8b;
+    background-color: var(--bb-steel, #2c455d);
     color: white;
 }
 
