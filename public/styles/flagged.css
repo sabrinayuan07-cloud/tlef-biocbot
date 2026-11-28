@@ -586,12 +586,14 @@
     background: #4b5563;
 }
 
-.send-approve-btn {
+.send-approve-btn,
+.save-flag-edit-btn {
     background: #10b981;
     color: white;
 }
 
-.send-approve-btn:hover {
+.send-approve-btn:hover,
+.save-flag-edit-btn:hover {
     background: #059669;
 }
 

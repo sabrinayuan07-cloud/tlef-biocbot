@@ -1120,7 +1120,7 @@ function createFlagElement(flag) {
                     <textarea id="edit-flag-description-${flag.flagId}" class="message-textarea" rows="3">${escapeHtml(flag.flagDescription)}</textarea>
                 </div>
                 <div class="form-actions-row">
-                    <button type="button" class="action-btn send-approve-btn" onclick="saveFlagEdit('${flag.flagId}')">Save</button>
+                    <button type="button" class="action-btn save-flag-edit-btn" onclick="saveFlagEdit('${flag.flagId}')">Save</button>
                     <button type="button" class="action-btn cancel-btn" onclick="hideEditFlagForm('${flag.flagId}')">Cancel</button>
                 </div>
             </div>
@@ -1405,7 +1405,7 @@ function hideEditFlagForm(flagId) {
  * @param {string} flagId - The flag ID
  */
 async function saveFlagEdit(flagId) {
-    const saveButton = document.querySelector(`#edit-flag-form-${flagId} .send-approve-btn`);
+    const saveButton = document.querySelector(`#edit-flag-form-${flagId} .save-flag-edit-btn`);
     const cancelButton = document.querySelector(`#edit-flag-form-${flagId} .cancel-btn`);
     try {
         const reasonSelect = document.getElementById(`edit-flag-reason-${flagId}`);
@@ -1559,9 +1559,12 @@ async function sendApprovalMessage(flagId) {
         }
         
         // Disable form while processing
-        const sendButton = document.querySelector(`[data-flag-id="${flagId}"] .send-approve-btn`);
-        const cancelButton = document.querySelector(`[data-flag-id="${flagId}"] .cancel-btn`);
-        
+        // Scoped to this flag's approval form (#756 follow-up): a bare
+        // card-level selector is ambiguous now that the edit-flag form (which
+        // renders earlier in the card) also has a .cancel-btn.
+        const sendButton = document.querySelector(`#approval-form-${flagId} .send-approve-btn`);
+        const cancelButton = document.querySelector(`#approval-form-${flagId} .cancel-btn`);
+
         if (sendButton) {
             sendButton.textContent = 'Sending...';
             sendButton.disabled = true;
@@ -1631,10 +1634,10 @@ async function sendApprovalMessage(flagId) {
         console.error('Error sending approval message:', error);
         showErrorMessage('Failed to send message. Please try again.');
         
-        // Re-enable form
-        const sendButton = document.querySelector(`[data-flag-id="${flagId}"] .send-approve-btn`);
-        const cancelButton = document.querySelector(`[data-flag-id="${flagId}"] .cancel-btn`);
-        
+        // Re-enable form (scoped to this flag's approval form - see note above)
+        const sendButton = document.querySelector(`#approval-form-${flagId} .send-approve-btn`);
+        const cancelButton = document.querySelector(`#approval-form-${flagId} .cancel-btn`);
+
         if (sendButton) {
             sendButton.textContent = 'Send & Approve';
             sendButton.disabled = false;
