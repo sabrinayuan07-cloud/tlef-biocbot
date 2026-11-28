@@ -22,7 +22,11 @@
   background-color: var(--bb-ground);
   border-radius: var(--bb-radius);
   border: 1px solid var(--bb-ink-16);
-  max-width: 700px;
+  /* 900px (was 700px): 700 left no room for Change Course on the same row
+     as the course name + both codes once pushed to the right edge (#753
+     follow-up) - the row wrapped to a separate line below no matter what,
+     even with short codes. */
+  max-width: 900px;
   margin: 0 auto;
 }
 
@@ -31,6 +35,13 @@
   align-items: center;
   gap: 15px;
   flex-wrap: wrap;
+}
+
+/* Change Course stays on the same row/line as Current Course and the codes
+   (#753 follow-up), just pushed to the row's right edge instead of sitting
+   immediately after the Instructor Code value. */
+#change-course-btn {
+  margin-left: auto;
 }
 
 .course-label {
